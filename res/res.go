@@ -12,6 +12,9 @@ type ResourceManager interface {
 	// InstancesPerAccount returns a mapping from account/project
 	// to its associated instances
 	InstancesPerAccount() map[string][]Instance
+	// ImagesPerAccount returns a mapping from account/project
+	// to its associated images
+	ImagesPerAccount() map[string][]Image
 }
 
 // Resource represents a generic resource in any CSP. It should be
@@ -24,11 +27,18 @@ type Resource interface {
 	CreationTime() time.Time
 }
 
-// Instance inhertis the Resource interface, and descibes an instance
+// Instance composes the Resource interface, and descibes an instance
 // in any CSP.
 type Instance interface {
 	Resource
 	InstanceType() string
+}
+
+// Image composes the Resource interface, and descibe an image in
+// any CSP. Such as an AMI in AWS.
+type Image interface {
+	Resource
+	Name() string
 }
 
 type csp int
