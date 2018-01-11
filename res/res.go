@@ -15,6 +15,9 @@ type ResourceManager interface {
 	// ImagesPerAccount returns a mapping from account/project
 	// to its associated images
 	ImagesPerAccount() map[string][]Image
+	// VolumesPerAccount returns a mapping from account/project
+	// to its associated volumes
+	VolumesPerAccount() map[string][]Volume
 }
 
 // Resource represents a generic resource in any CSP. It should be
@@ -41,25 +44,35 @@ type Image interface {
 	Name() string
 }
 
+// Volume composes the Resource interface, and describe a volume in
+// any CSP.
+type Volume interface {
+	Resource
+	SizeGB() int64
+	Attached() bool
+	Encrypted() bool
+	VolumeType() string
+}
+
 type csp int
 
 const (
-	// AwsCSP is AWS
-	AwsCSP csp = iota
-	// GcpCSP is Google Cloud Platform
-	GcpCSP
+	// AWS is AWS
+	AWS csp = iota
+	// GCP is Google Cloud Platform
+	GCP
 )
 
 // NewManager will build a new resource manager for the specified CSP
 func NewManager(c csp, accounts ...string) ResourceManager {
 	switch c {
-	case AwsCSP:
+	case AWS:
 		log.Println("Initializing AWS Resource Manager")
 		manager := &awsResourceManager{
 			accounts: accounts,
 		}
 		return manager
-	case GcpCSP:
+	case GCP:
 		log.Fatalln("Unfortunately, GCP is currently not supported")
 	default:
 		log.Fatalln("Invalid CSP specified")

@@ -24,7 +24,6 @@ func (i *baseImage) Location() string {
 }
 
 func (i *baseImage) Public() bool {
-	// An instance being public in this case means it has a public IP
 	return i.public
 }
 

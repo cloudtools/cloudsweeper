@@ -11,8 +11,8 @@ const (
 
 func main() {
 	asd := []string{sharedQAaccount}
-	mngr := res.NewManager(res.AwsCSP, asd...)
-	t := mngr.ImagesPerAccount()
+	mngr := res.NewManager(res.AWS, asd...)
+	t := mngr.VolumesPerAccount()
 	for key, value := range t {
 		fmt.Println(key)
 		fmt.Println(len(value))

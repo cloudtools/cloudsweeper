@@ -28,6 +28,10 @@ type awsImage struct {
 	baseImage
 }
 
+type awsVolume struct {
+	baseVolume
+}
+
 const (
 	assumeRoleARNTemplate = "arn:aws:iam::%s:role/brkt-HouseKeeper"
 
@@ -83,6 +87,27 @@ func (m *awsResourceManager) ImagesPerAccount() map[string][]Image {
 	return resultMap
 }
 
+func (m *awsResourceManager) VolumesPerAccount() map[string][]Volume {
+	sess := session.Must(session.NewSession())
+	resultMap := make(map[string][]Volume)
+	m.forEachAccount(sess, func(account string, cred *credentials.Credentials) {
+		log.Println("Getting volumes for account", account)
+		forEachAWSRegion(func(region string) {
+			client := ec2.New(sess, &aws.Config{
+				Credentials: cred,
+				Region:      aws.String(region),
+			})
+			volumes, err := getAWSVolumes(client)
+			if err != nil {
+				handleAWSAccessDenied(account, err)
+			} else if len(volumes) > 0 {
+				resultMap[account] = append(resultMap[account], volumes...)
+			}
+		})
+	})
+	return resultMap
+}
+
 // forEachAccount is a higher order function that will, for
 // every account, create credentials and call the specified
 // function with those creds
@@ -123,9 +148,7 @@ func getAWSInstances(client *ec2.EC2) ([]Instance, error) {
 				tags:         make(map[string]string),
 				instanceType: *instance.InstanceType,
 			}}
-			for _, tag := range instance.Tags {
-				inst.tags[*tag.Key] = *tag.Value
-			}
+			inst.tags = convertAWSTags(instance.Tags)
 			result = append(result, &inst)
 		}
 	}
@@ -155,10 +178,35 @@ func getAWSImages(client *ec2.EC2) ([]Image, error) {
 			tags:         make(map[string]string),
 			name:         *ami.Name,
 		}}
-		for _, tag := range ami.Tags {
-			img.tags[*tag.Key] = *tag.Value
-		}
+		img.tags = convertAWSTags(ami.Tags)
 		result = append(result, &img)
+	}
+	return result, nil
+}
+
+// getAWSVolumes will get all volumes (both attached and un-attached)
+// in the current account
+func getAWSVolumes(client *ec2.EC2) ([]Volume, error) {
+	input := new(ec2.DescribeVolumesInput)
+	awsVolumes, err := client.DescribeVolumes(input)
+	if err != nil {
+		return nil, err
+	}
+	result := []Volume{}
+	for _, volume := range awsVolumes.Volumes {
+		vol := awsVolume{baseVolume{
+			id:           *volume.VolumeId,
+			location:     *client.Config.Region,
+			creationTime: *volume.CreateTime,
+			public:       false,
+			tags:         make(map[string]string),
+			sizeGB:       *volume.Size,
+			attached:     len(volume.Attachments) > 0,
+			encrypted:    *volume.Encrypted,
+			volumeType:   *volume.VolumeType,
+		}}
+		vol.tags = convertAWSTags(volume.Tags)
+		result = append(result, &vol)
 	}
 	return result, nil
 }
@@ -194,4 +242,12 @@ func handleAWSAccessDenied(account string, err error) {
 		//Some other non-AWS error occured
 		log.Fatalln(err)
 	}
+}
+
+func convertAWSTags(tags []*ec2.Tag) map[string]string {
+	result := make(map[string]string)
+	for _, tag := range tags {
+		result[*tag.Key] = *tag.Value
+	}
+	return result
 }
