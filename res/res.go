@@ -21,6 +21,9 @@ type ResourceManager interface {
 	// SnapshotsPerAccount returns a mapping from account/project
 	// to its associated snaphots
 	SnapshotsPerAccount() map[string][]Snapshot
+	// AllResourcesPerAccount will return a mapping from account/project
+	// to all of the resources associated with that account/project
+	AllResourcesPerAccount() map[string]*ResourceCollection
 }
 
 // Resource represents a generic resource in any CSP. It should be
@@ -63,6 +66,14 @@ type Snapshot interface {
 	Resource
 	Encrypted() bool
 	SizeGB() int64
+}
+
+// ResourceCollection encapsulates collections of multiple resources
+type ResourceCollection struct {
+	Instances []Instance
+	Images    []Image
+	Volumes   []Volume
+	Snapshots []Snapshot
 }
 
 type csp int

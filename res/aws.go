@@ -53,7 +53,7 @@ var (
 
 func (m *awsResourceManager) InstancesPerAccount() map[string][]Instance {
 	resultMap := make(map[string][]Instance)
-	getAllResources(m.accounts, func(client *ec2.EC2, account string) {
+	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		instances, err := getAWSInstances(client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
@@ -66,7 +66,7 @@ func (m *awsResourceManager) InstancesPerAccount() map[string][]Instance {
 
 func (m *awsResourceManager) ImagesPerAccount() map[string][]Image {
 	resultMap := make(map[string][]Image)
-	getAllResources(m.accounts, func(client *ec2.EC2, account string) {
+	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		images, err := getAWSImages(client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
@@ -79,7 +79,7 @@ func (m *awsResourceManager) ImagesPerAccount() map[string][]Image {
 
 func (m *awsResourceManager) VolumesPerAccount() map[string][]Volume {
 	resultMap := make(map[string][]Volume)
-	getAllResources(m.accounts, func(client *ec2.EC2, account string) {
+	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		volumes, err := getAWSVolumes(client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
@@ -92,13 +92,62 @@ func (m *awsResourceManager) VolumesPerAccount() map[string][]Volume {
 
 func (m *awsResourceManager) SnapshotsPerAccount() map[string][]Snapshot {
 	resultMap := make(map[string][]Snapshot)
-	getAllResources(m.accounts, func(client *ec2.EC2, account string) {
+	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		snapshots, err := getAWSSnapshots(client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
 		} else if len(snapshots) > 0 {
 			resultMap[account] = append(resultMap[account], snapshots...)
 		}
+	})
+	return resultMap
+}
+
+func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollection {
+	resultMap := make(map[string]*ResourceCollection)
+	for i := range m.accounts {
+		resultMap[m.accounts[i]] = new(ResourceCollection)
+	}
+	// TODO: Smarter error handling. If one request get access denied, then might as
+	// well abort. The rest are going to fail too.
+	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
+		result := resultMap[account]
+		var wg sync.WaitGroup
+		wg.Add(4)
+		go func() {
+			snapshots, err := getAWSSnapshots(client)
+			if err != nil {
+				handleAWSAccessDenied(account, err)
+			}
+			result.Snapshots = append(result.Snapshots, snapshots...)
+			wg.Done()
+		}()
+		go func() {
+			instances, err := getAWSInstances(client)
+			if err != nil {
+				handleAWSAccessDenied(account, err)
+			}
+			result.Instances = append(result.Instances, instances...)
+			wg.Done()
+		}()
+		go func() {
+			images, err := getAWSImages(client)
+			if err != nil {
+				handleAWSAccessDenied(account, err)
+			}
+			result.Images = append(result.Images, images...)
+			wg.Done()
+		}()
+		go func() {
+			volumes, err := getAWSVolumes(client)
+			if err != nil {
+				handleAWSAccessDenied(account, err)
+			}
+			result.Volumes = append(result.Volumes, volumes...)
+			wg.Done()
+		}()
+		wg.Wait()
+		resultMap[account] = result
 	})
 	return resultMap
 }
@@ -213,7 +262,7 @@ func getAWSSnapshots(client *ec2.EC2) ([]Snapshot, error) {
 	return result, nil
 }
 
-func getAllResources(accounts []string, funcToRun func(client *ec2.EC2, account string)) {
+func getAllEC2Resources(accounts []string, funcToRun func(client *ec2.EC2, account string)) {
 	sess := session.Must(session.NewSession())
 	forEachAccount(accounts, sess, func(account string, cred *credentials.Credentials) {
 		log.Println("Accessing account", account)

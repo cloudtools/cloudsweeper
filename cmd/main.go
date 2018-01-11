@@ -12,10 +12,14 @@ const (
 func main() {
 	asd := []string{sharedQAaccount}
 	mngr := res.NewManager(res.AWS, asd...)
-	t := mngr.InstancesPerAccount()
-	for key, value := range t {
-		fmt.Println(key)
-		fmt.Println(len(value))
-		fmt.Println(value[0].ID())
+	instances := mngr.InstancesPerAccount()
+	for _, val := range instances {
+		fmt.Println(val[0].ID())
+	}
+	resources := mngr.AllResourcesPerAccount()
+	for account, resource := range resources {
+		fmt.Println("Account:", account)
+		fmt.Println("Instances:", len(resource.Instances))
+		fmt.Println("Images:", len(resource.Images))
 	}
 }
