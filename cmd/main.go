@@ -1,7 +1,7 @@
 package main
 
 import (
-	"brkt/housekeeper/res"
+	"brkt/housekeeper/cloud"
 	"fmt"
 )
 
@@ -11,7 +11,7 @@ const (
 
 func main() {
 	asd := []string{sharedQAaccount}
-	mngr := res.NewManager(res.AWS, asd...)
+	mngr := cloud.NewManager(cloud.AWS, asd...)
 	instances := mngr.InstancesPerAccount()
 	for _, val := range instances {
 		fmt.Println(val[0].ID())
