@@ -16,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
 
+// awsResourceManager uses the AWS Go SDK. Docs can be found at:
+// https://docs.aws.amazon.com/sdk-for-go/api/service/ec2/
 type awsResourceManager struct {
 	accounts []string
 }
@@ -32,6 +34,10 @@ type awsVolume struct {
 	baseVolume
 }
 
+type awsSnapshot struct {
+	baseSnapshot
+}
+
 const (
 	assumeRoleARNTemplate = "arn:aws:iam::%s:role/brkt-HouseKeeper"
 
@@ -42,7 +48,7 @@ var (
 	instanceStateFilterName = "instance-state-name"
 	instanceStateRunning    = ec2.InstanceStateNameRunning
 
-	imageOwnerIDSelfValue = "self"
+	awsOwnerIDSelfValue = "self"
 )
 
 func (m *awsResourceManager) InstancesPerAccount() map[string][]Instance {
@@ -108,6 +114,27 @@ func (m *awsResourceManager) VolumesPerAccount() map[string][]Volume {
 	return resultMap
 }
 
+func (m *awsResourceManager) SnapshotsPerAccount() map[string][]Snapshot {
+	sess := session.Must(session.NewSession())
+	resultMap := make(map[string][]Snapshot)
+	m.forEachAccount(sess, func(account string, cred *credentials.Credentials) {
+		log.Println("Getting snapshots for account", account)
+		forEachAWSRegion(func(region string) {
+			client := ec2.New(sess, &aws.Config{
+				Credentials: cred,
+				Region:      aws.String(region),
+			})
+			snapshots, err := getAWSSnapshots(client)
+			if err != nil {
+				handleAWSAccessDenied(account, err)
+			} else if len(snapshots) > 0 {
+				resultMap[account] = append(resultMap[account], snapshots...)
+			}
+		})
+	})
+	return resultMap
+}
+
 // forEachAccount is a higher order function that will, for
 // every account, create credentials and call the specified
 // function with those creds
@@ -145,10 +172,9 @@ func getAWSInstances(client *ec2.EC2) ([]Instance, error) {
 				location:     *client.Config.Region,
 				launchTime:   *instance.LaunchTime,
 				public:       instance.PublicIpAddress != nil,
-				tags:         make(map[string]string),
+				tags:         convertAWSTags(instance.Tags),
 				instanceType: *instance.InstanceType,
 			}}
-			inst.tags = convertAWSTags(instance.Tags)
 			result = append(result, &inst)
 		}
 	}
@@ -158,7 +184,7 @@ func getAWSInstances(client *ec2.EC2) ([]Instance, error) {
 // getAWSImages will get all AMIs owned by the current account
 func getAWSImages(client *ec2.EC2) ([]Image, error) {
 	input := &ec2.DescribeImagesInput{
-		Owners: aws.StringSlice([]string{imageOwnerIDSelfValue}),
+		Owners: aws.StringSlice([]string{awsOwnerIDSelfValue}),
 	}
 	awsImages, err := client.DescribeImages(input)
 	if err != nil {
@@ -175,10 +201,9 @@ func getAWSImages(client *ec2.EC2) ([]Image, error) {
 			location:     *client.Config.Region,
 			creationTime: ti,
 			public:       *ami.Public,
-			tags:         make(map[string]string),
+			tags:         convertAWSTags(ami.Tags),
 			name:         *ami.Name,
 		}}
-		img.tags = convertAWSTags(ami.Tags)
 		result = append(result, &img)
 	}
 	return result, nil
@@ -199,14 +224,39 @@ func getAWSVolumes(client *ec2.EC2) ([]Volume, error) {
 			location:     *client.Config.Region,
 			creationTime: *volume.CreateTime,
 			public:       false,
-			tags:         make(map[string]string),
+			tags:         convertAWSTags(volume.Tags),
 			sizeGB:       *volume.Size,
 			attached:     len(volume.Attachments) > 0,
 			encrypted:    *volume.Encrypted,
 			volumeType:   *volume.VolumeType,
 		}}
-		vol.tags = convertAWSTags(volume.Tags)
 		result = append(result, &vol)
+	}
+	return result, nil
+}
+
+// getAWSSnapshots will get all snapshots in AWS owned
+// by the current account
+func getAWSSnapshots(client *ec2.EC2) ([]Snapshot, error) {
+	input := &ec2.DescribeSnapshotsInput{
+		OwnerIds: aws.StringSlice([]string{awsOwnerIDSelfValue}),
+	}
+	awsSnapshots, err := client.DescribeSnapshots(input)
+	if err != nil {
+		return nil, err
+	}
+	result := []Snapshot{}
+	for _, snapshot := range awsSnapshots.Snapshots {
+		snap := awsSnapshot{baseSnapshot{
+			id:           *snapshot.SnapshotId,
+			location:     *client.Config.Region,
+			creationTime: *snapshot.StartTime,
+			public:       false,
+			tags:         convertAWSTags(snapshot.Tags),
+			sizeGB:       *snapshot.VolumeSize,
+			encrypted:    *snapshot.Encrypted,
+		}}
+		result = append(result, &snap)
 	}
 	return result, nil
 }

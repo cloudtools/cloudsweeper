@@ -18,6 +18,9 @@ type ResourceManager interface {
 	// VolumesPerAccount returns a mapping from account/project
 	// to its associated volumes
 	VolumesPerAccount() map[string][]Volume
+	// SnapshotsPerAccount returns a mapping from account/project
+	// to its associated snaphots
+	SnapshotsPerAccount() map[string][]Snapshot
 }
 
 // Resource represents a generic resource in any CSP. It should be
@@ -52,6 +55,14 @@ type Volume interface {
 	Attached() bool
 	Encrypted() bool
 	VolumeType() string
+}
+
+// Snapshot composes the Resource interface, and describe a snapshot
+// in any CSP.
+type Snapshot interface {
+	Resource
+	Encrypted() bool
+	SizeGB() int64
 }
 
 type csp int
