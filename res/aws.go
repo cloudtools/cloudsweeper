@@ -52,103 +52,55 @@ var (
 )
 
 func (m *awsResourceManager) InstancesPerAccount() map[string][]Instance {
-	sess := session.Must(session.NewSession())
 	resultMap := make(map[string][]Instance)
-	m.forEachAccount(sess, func(account string, cred *credentials.Credentials) {
-		log.Println("Getting instances for account", account)
-		forEachAWSRegion(func(region string) {
-			client := ec2.New(sess, &aws.Config{
-				Credentials: cred,
-				Region:      aws.String(region),
-			})
-			instances, err := getAWSInstances(client)
-			if err != nil {
-				handleAWSAccessDenied(account, err)
-			} else if len(instances) > 0 {
-				resultMap[account] = append(resultMap[account], instances...)
-			}
-		})
+	getAllResources(m.accounts, func(client *ec2.EC2, account string) {
+		instances, err := getAWSInstances(client)
+		if err != nil {
+			handleAWSAccessDenied(account, err)
+		} else if len(instances) > 0 {
+			resultMap[account] = append(resultMap[account], instances...)
+		}
 	})
 	return resultMap
 }
 
 func (m *awsResourceManager) ImagesPerAccount() map[string][]Image {
-	sess := session.Must(session.NewSession())
 	resultMap := make(map[string][]Image)
-	m.forEachAccount(sess, func(account string, cred *credentials.Credentials) {
-		log.Println("Getting images for account", account)
-		forEachAWSRegion(func(region string) {
-			client := ec2.New(sess, &aws.Config{
-				Credentials: cred,
-				Region:      aws.String(region),
-			})
-			images, err := getAWSImages(client)
-			if err != nil {
-				handleAWSAccessDenied(account, err)
-			} else if len(images) > 0 {
-				resultMap[account] = append(resultMap[account], images...)
-			}
-		})
+	getAllResources(m.accounts, func(client *ec2.EC2, account string) {
+		images, err := getAWSImages(client)
+		if err != nil {
+			handleAWSAccessDenied(account, err)
+		} else if len(images) > 0 {
+			resultMap[account] = append(resultMap[account], images...)
+		}
 	})
 	return resultMap
 }
 
 func (m *awsResourceManager) VolumesPerAccount() map[string][]Volume {
-	sess := session.Must(session.NewSession())
 	resultMap := make(map[string][]Volume)
-	m.forEachAccount(sess, func(account string, cred *credentials.Credentials) {
-		log.Println("Getting volumes for account", account)
-		forEachAWSRegion(func(region string) {
-			client := ec2.New(sess, &aws.Config{
-				Credentials: cred,
-				Region:      aws.String(region),
-			})
-			volumes, err := getAWSVolumes(client)
-			if err != nil {
-				handleAWSAccessDenied(account, err)
-			} else if len(volumes) > 0 {
-				resultMap[account] = append(resultMap[account], volumes...)
-			}
-		})
+	getAllResources(m.accounts, func(client *ec2.EC2, account string) {
+		volumes, err := getAWSVolumes(client)
+		if err != nil {
+			handleAWSAccessDenied(account, err)
+		} else if len(volumes) > 0 {
+			resultMap[account] = append(resultMap[account], volumes...)
+		}
 	})
 	return resultMap
 }
 
 func (m *awsResourceManager) SnapshotsPerAccount() map[string][]Snapshot {
-	sess := session.Must(session.NewSession())
 	resultMap := make(map[string][]Snapshot)
-	m.forEachAccount(sess, func(account string, cred *credentials.Credentials) {
-		log.Println("Getting snapshots for account", account)
-		forEachAWSRegion(func(region string) {
-			client := ec2.New(sess, &aws.Config{
-				Credentials: cred,
-				Region:      aws.String(region),
-			})
-			snapshots, err := getAWSSnapshots(client)
-			if err != nil {
-				handleAWSAccessDenied(account, err)
-			} else if len(snapshots) > 0 {
-				resultMap[account] = append(resultMap[account], snapshots...)
-			}
-		})
+	getAllResources(m.accounts, func(client *ec2.EC2, account string) {
+		snapshots, err := getAWSSnapshots(client)
+		if err != nil {
+			handleAWSAccessDenied(account, err)
+		} else if len(snapshots) > 0 {
+			resultMap[account] = append(resultMap[account], snapshots...)
+		}
 	})
 	return resultMap
-}
-
-// forEachAccount is a higher order function that will, for
-// every account, create credentials and call the specified
-// function with those creds
-func (m *awsResourceManager) forEachAccount(sess *session.Session, funcToRun func(account string, cred *credentials.Credentials)) {
-	var wg sync.WaitGroup
-	for i := range m.accounts {
-		wg.Add(1)
-		go func(x int) {
-			creds := stscreds.NewCredentials(sess, fmt.Sprintf(assumeRoleARNTemplate, m.accounts[x]))
-			funcToRun(m.accounts[x], creds)
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()
 }
 
 // getAWSInstances will get all running instances using an already
@@ -259,6 +211,36 @@ func getAWSSnapshots(client *ec2.EC2) ([]Snapshot, error) {
 		result = append(result, &snap)
 	}
 	return result, nil
+}
+
+func getAllResources(accounts []string, funcToRun func(client *ec2.EC2, account string)) {
+	sess := session.Must(session.NewSession())
+	forEachAccount(accounts, sess, func(account string, cred *credentials.Credentials) {
+		log.Println("Accessing account", account)
+		forEachAWSRegion(func(region string) {
+			client := ec2.New(sess, &aws.Config{
+				Credentials: cred,
+				Region:      aws.String(region),
+			})
+			funcToRun(client, account)
+		})
+	})
+}
+
+// forEachAccount is a higher order function that will, for
+// every account, create credentials and call the specified
+// function with those creds
+func forEachAccount(accounts []string, sess *session.Session, funcToRun func(account string, cred *credentials.Credentials)) {
+	var wg sync.WaitGroup
+	for i := range accounts {
+		wg.Add(1)
+		go func(x int) {
+			creds := stscreds.NewCredentials(sess, fmt.Sprintf(assumeRoleARNTemplate, accounts[x]))
+			funcToRun(accounts[x], creds)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
 }
 
 // forEachAWSRegion is a higher order function that will, for
