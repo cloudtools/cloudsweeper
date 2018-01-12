@@ -29,6 +29,7 @@ type ResourceManager interface {
 // Resource represents a generic resource in any CSP. It should be
 // concretizised further.
 type Resource interface {
+	Owner() string
 	ID() string
 	Tags() map[string]string
 	Location() string
@@ -70,6 +71,7 @@ type Snapshot interface {
 
 // ResourceCollection encapsulates collections of multiple resources
 type ResourceCollection struct {
+	Owner     string
 	Instances []Instance
 	Images    []Image
 	Volumes   []Volume

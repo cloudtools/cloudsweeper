@@ -54,7 +54,7 @@ var (
 func (m *awsResourceManager) InstancesPerAccount() map[string][]Instance {
 	resultMap := make(map[string][]Instance)
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
-		instances, err := getAWSInstances(client)
+		instances, err := getAWSInstances(account, client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
 		} else if len(instances) > 0 {
@@ -67,7 +67,7 @@ func (m *awsResourceManager) InstancesPerAccount() map[string][]Instance {
 func (m *awsResourceManager) ImagesPerAccount() map[string][]Image {
 	resultMap := make(map[string][]Image)
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
-		images, err := getAWSImages(client)
+		images, err := getAWSImages(account, client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
 		} else if len(images) > 0 {
@@ -80,7 +80,7 @@ func (m *awsResourceManager) ImagesPerAccount() map[string][]Image {
 func (m *awsResourceManager) VolumesPerAccount() map[string][]Volume {
 	resultMap := make(map[string][]Volume)
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
-		volumes, err := getAWSVolumes(client)
+		volumes, err := getAWSVolumes(account, client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
 		} else if len(volumes) > 0 {
@@ -93,7 +93,7 @@ func (m *awsResourceManager) VolumesPerAccount() map[string][]Volume {
 func (m *awsResourceManager) SnapshotsPerAccount() map[string][]Snapshot {
 	resultMap := make(map[string][]Snapshot)
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
-		snapshots, err := getAWSSnapshots(client)
+		snapshots, err := getAWSSnapshots(account, client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
 		} else if len(snapshots) > 0 {
@@ -112,10 +112,11 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 	// well abort. The rest are going to fail too.
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		result := resultMap[account]
+		result.Owner = account
 		var wg sync.WaitGroup
 		wg.Add(4)
 		go func() {
-			snapshots, err := getAWSSnapshots(client)
+			snapshots, err := getAWSSnapshots(account, client)
 			if err != nil {
 				handleAWSAccessDenied(account, err)
 			}
@@ -123,7 +124,7 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 			wg.Done()
 		}()
 		go func() {
-			instances, err := getAWSInstances(client)
+			instances, err := getAWSInstances(account, client)
 			if err != nil {
 				handleAWSAccessDenied(account, err)
 			}
@@ -131,7 +132,7 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 			wg.Done()
 		}()
 		go func() {
-			images, err := getAWSImages(client)
+			images, err := getAWSImages(account, client)
 			if err != nil {
 				handleAWSAccessDenied(account, err)
 			}
@@ -139,7 +140,7 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 			wg.Done()
 		}()
 		go func() {
-			volumes, err := getAWSVolumes(client)
+			volumes, err := getAWSVolumes(account, client)
 			if err != nil {
 				handleAWSAccessDenied(account, err)
 			}
@@ -154,7 +155,7 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 
 // getAWSInstances will get all running instances using an already
 // set-up client for a specific credential and region.
-func getAWSInstances(client *ec2.EC2) ([]Instance, error) {
+func getAWSInstances(account string, client *ec2.EC2) ([]Instance, error) {
 	// We're only interested in running instances
 	input := &ec2.DescribeInstancesInput{
 		Filters: []*ec2.Filter{&ec2.Filter{
@@ -169,11 +170,13 @@ func getAWSInstances(client *ec2.EC2) ([]Instance, error) {
 	for _, reservation := range awsReservations.Reservations {
 		for _, instance := range reservation.Instances {
 			inst := awsInstance{baseInstance{
-				id:           *instance.InstanceId,
-				location:     *client.Config.Region,
-				launchTime:   *instance.LaunchTime,
-				public:       instance.PublicIpAddress != nil,
-				tags:         convertAWSTags(instance.Tags),
+				baseResource: baseResource{
+					owner:        account,
+					id:           *instance.InstanceId,
+					location:     *client.Config.Region,
+					creationTime: *instance.LaunchTime,
+					public:       instance.PublicIpAddress != nil,
+					tags:         convertAWSTags(instance.Tags)},
 				instanceType: *instance.InstanceType,
 			}}
 			result = append(result, &inst)
@@ -183,7 +186,7 @@ func getAWSInstances(client *ec2.EC2) ([]Instance, error) {
 }
 
 // getAWSImages will get all AMIs owned by the current account
-func getAWSImages(client *ec2.EC2) ([]Image, error) {
+func getAWSImages(account string, client *ec2.EC2) ([]Image, error) {
 	input := &ec2.DescribeImagesInput{
 		Owners: aws.StringSlice([]string{awsOwnerIDSelfValue}),
 	}
@@ -198,12 +201,15 @@ func getAWSImages(client *ec2.EC2) ([]Image, error) {
 			return nil, err
 		}
 		img := awsImage{baseImage{
-			id:           *ami.ImageId,
-			location:     *client.Config.Region,
-			creationTime: ti,
-			public:       *ami.Public,
-			tags:         convertAWSTags(ami.Tags),
-			name:         *ami.Name,
+			baseResource: baseResource{
+				owner:        account,
+				id:           *ami.ImageId,
+				location:     *client.Config.Region,
+				creationTime: ti,
+				public:       *ami.Public,
+				tags:         convertAWSTags(ami.Tags),
+			},
+			name: *ami.Name,
 		}}
 		result = append(result, &img)
 	}
@@ -212,7 +218,7 @@ func getAWSImages(client *ec2.EC2) ([]Image, error) {
 
 // getAWSVolumes will get all volumes (both attached and un-attached)
 // in the current account
-func getAWSVolumes(client *ec2.EC2) ([]Volume, error) {
+func getAWSVolumes(account string, client *ec2.EC2) ([]Volume, error) {
 	input := new(ec2.DescribeVolumesInput)
 	awsVolumes, err := client.DescribeVolumes(input)
 	if err != nil {
@@ -221,15 +227,18 @@ func getAWSVolumes(client *ec2.EC2) ([]Volume, error) {
 	result := []Volume{}
 	for _, volume := range awsVolumes.Volumes {
 		vol := awsVolume{baseVolume{
-			id:           *volume.VolumeId,
-			location:     *client.Config.Region,
-			creationTime: *volume.CreateTime,
-			public:       false,
-			tags:         convertAWSTags(volume.Tags),
-			sizeGB:       *volume.Size,
-			attached:     len(volume.Attachments) > 0,
-			encrypted:    *volume.Encrypted,
-			volumeType:   *volume.VolumeType,
+			baseResource: baseResource{
+				owner:        account,
+				id:           *volume.VolumeId,
+				location:     *client.Config.Region,
+				creationTime: *volume.CreateTime,
+				public:       false,
+				tags:         convertAWSTags(volume.Tags),
+			},
+			sizeGB:     *volume.Size,
+			attached:   len(volume.Attachments) > 0,
+			encrypted:  *volume.Encrypted,
+			volumeType: *volume.VolumeType,
 		}}
 		result = append(result, &vol)
 	}
@@ -238,7 +247,7 @@ func getAWSVolumes(client *ec2.EC2) ([]Volume, error) {
 
 // getAWSSnapshots will get all snapshots in AWS owned
 // by the current account
-func getAWSSnapshots(client *ec2.EC2) ([]Snapshot, error) {
+func getAWSSnapshots(account string, client *ec2.EC2) ([]Snapshot, error) {
 	input := &ec2.DescribeSnapshotsInput{
 		OwnerIds: aws.StringSlice([]string{awsOwnerIDSelfValue}),
 	}
@@ -249,13 +258,16 @@ func getAWSSnapshots(client *ec2.EC2) ([]Snapshot, error) {
 	result := []Snapshot{}
 	for _, snapshot := range awsSnapshots.Snapshots {
 		snap := awsSnapshot{baseSnapshot{
-			id:           *snapshot.SnapshotId,
-			location:     *client.Config.Region,
-			creationTime: *snapshot.StartTime,
-			public:       false,
-			tags:         convertAWSTags(snapshot.Tags),
-			sizeGB:       *snapshot.VolumeSize,
-			encrypted:    *snapshot.Encrypted,
+			baseResource: baseResource{
+				owner:        account,
+				id:           *snapshot.SnapshotId,
+				location:     *client.Config.Region,
+				creationTime: *snapshot.StartTime,
+				public:       false,
+				tags:         convertAWSTags(snapshot.Tags),
+			},
+			sizeGB:    *snapshot.VolumeSize,
+			encrypted: *snapshot.Encrypted,
 		}}
 		result = append(result, &snap)
 	}

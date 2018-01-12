@@ -31,7 +31,7 @@ func main() {
 
 		snaps := fil.FilterSnapshots(val)
 		for i := range snaps {
-			fmt.Println(snaps[i].Tags()["Name"])
+			fmt.Println(snaps[i].Tags()["Name"], "\t", snaps[i].Owner())
 		}
 	}
 }
