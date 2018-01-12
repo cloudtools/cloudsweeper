@@ -6,13 +6,14 @@ import (
 	hk "brkt/housekeeper/housekeeper"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 )
 
 const (
 	defaultAccountsFile = "aws_accounts.json"
+
+	sharedQAAccount = "475063612724"
 )
 
 var (
@@ -21,17 +22,18 @@ var (
 
 func main() {
 	flag.Parse()
-	owners := parseAWSAccounts(*accountsFile)
+	//owners := parseAWSAccounts(*accountsFile)
 
-	mngr := cloud.NewManager(cloud.AWS, owners.AllIDs()...)
+	mngr := cloud.NewManager(cloud.AWS, []string{sharedQAAccount}...)
 	instances := mngr.InstancesPerAccount()
 	for _, val := range instances {
 		fil := filter.New()
-		//fil.AddGeneralRule(filter.NameContains("NatGateway"))
-		fil.AddGeneralRule(filter.OlderThanXYears(1))
+		fil.AddGeneralRule(filter.NameContains("alexander"))
+		//fil.AddGeneralRule(filter.OlderThanXYears(1))
 		newInstances := fil.FilterInstances(val)
-		for i := range newInstances {
-			fmt.Println(newInstances[i].Tags()["Name"])
+		err := mngr.CleanupInstances(newInstances)
+		if err != nil {
+			panic(err)
 		}
 	}
 }

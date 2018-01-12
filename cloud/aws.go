@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -26,16 +27,57 @@ type awsInstance struct {
 	baseInstance
 }
 
+// Cleanup will termiante this instance
+func (i *awsInstance) Cleanup() error {
+	log.Println("Cleaning up instance", i.ID())
+	client := clientForAWSResource(i)
+	input := &ec2.TerminateInstancesInput{
+		InstanceIds: aws.StringSlice([]string{i.id}),
+	}
+	_, err := client.TerminateInstances(input)
+	return err
+}
+
 type awsImage struct {
 	baseImage
+}
+
+func (i *awsImage) Cleanup() error {
+	log.Println("Cleaning up image", i.ID())
+	client := clientForAWSResource(i)
+	input := &ec2.DeregisterImageInput{
+		ImageId: aws.String(i.ID()),
+	}
+	_, err := client.DeregisterImage(input)
+	return err
 }
 
 type awsVolume struct {
 	baseVolume
 }
 
+func (v *awsVolume) Cleanup() error {
+	log.Println("Cleaning up volume", v.ID())
+	client := clientForAWSResource(v)
+	input := &ec2.DeleteVolumeInput{
+		VolumeId: aws.String(v.ID()),
+	}
+	_, err := client.DeleteVolume(input)
+	return err
+}
+
 type awsSnapshot struct {
 	baseSnapshot
+}
+
+func (s *awsSnapshot) Cleanup() error {
+	log.Println("Cleaning up snapshot", s.ID())
+	client := clientForAWSResource(s)
+	input := &ec2.DeleteSnapshotInput{
+		SnapshotId: aws.String(s.ID()),
+	}
+	_, err := client.DeleteSnapshot(input)
+	return err
 }
 
 const (
@@ -151,6 +193,75 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 		resultMap[account] = result
 	})
 	return resultMap
+}
+
+func (m *awsResourceManager) CleanupInstances(instances []Instance) error {
+	resList := []Resource{}
+	for i := range instances {
+		v, ok := instances[i].(Resource)
+		if !ok {
+			return errors.New("Could not convert Instance to Resource")
+		}
+		resList = append(resList, v)
+	}
+	return cleanupResources(resList)
+}
+
+func (m *awsResourceManager) CleanupImages(images []Image) error {
+	resList := []Resource{}
+	for i := range images {
+		v, ok := images[i].(Resource)
+		if !ok {
+			return errors.New("Could not convert Image to Resource")
+		}
+		resList = append(resList, v)
+	}
+	return cleanupResources(resList)
+}
+
+func (m *awsResourceManager) CleanupVolumes(volumes []Volume) error {
+	resList := []Resource{}
+	for i := range volumes {
+		v, ok := volumes[i].(Resource)
+		if !ok {
+			return errors.New("Could not convert Image to Resource")
+		}
+		resList = append(resList, v)
+	}
+	return cleanupResources(resList)
+}
+
+func (m *awsResourceManager) CleanupSnapshots(snapshots []Snapshot) error {
+	resList := []Resource{}
+	for i := range snapshots {
+		v, ok := snapshots[i].(Resource)
+		if !ok {
+			return errors.New("Could not convert Image to Resource")
+		}
+		resList = append(resList, v)
+	}
+	return cleanupResources(resList)
+}
+
+func cleanupResources(resources []Resource) error {
+	failed := false
+	var wg sync.WaitGroup
+	wg.Add(len(resources))
+	for i := range resources {
+		go func(index int) {
+			err := resources[index].Cleanup()
+			if err != nil {
+				log.Printf("Cleaning up %s for owner %s failed\n", resources[index].ID(), resources[index].Owner())
+				failed = true
+			}
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	if failed {
+		return errors.New("One or more resource cleanups failed")
+	}
+	return nil
 }
 
 // getAWSInstances will get all running instances using an already
@@ -343,4 +454,13 @@ func convertAWSTags(tags []*ec2.Tag) map[string]string {
 		result[*tag.Key] = *tag.Value
 	}
 	return result
+}
+
+func clientForAWSResource(res Resource) *ec2.EC2 {
+	sess := session.Must(session.NewSession())
+	creds := stscreds.NewCredentials(sess, fmt.Sprintf(assumeRoleARNTemplate, res.Owner()))
+	return ec2.New(sess, &aws.Config{
+		Credentials: creds,
+		Region:      aws.String(res.Location()),
+	})
 }

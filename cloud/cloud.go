@@ -24,6 +24,15 @@ type ResourceManager interface {
 	// AllResourcesPerAccount will return a mapping from account/project
 	// to all of the resources associated with that account/project
 	AllResourcesPerAccount() map[string]*ResourceCollection
+	// CleanupInstances termiantes a list of instances, which is faster
+	// than calling Cleanup() on every individual instance
+	CleanupInstances([]Instance) error
+	// CleanupImages de-registers a list of images
+	CleanupImages([]Image) error
+	// CleanupVolumes deletes a list of volumes
+	CleanupVolumes([]Volume) error
+	// CleanupSnapshots delete a list of snapshots
+	CleanupSnapshots([]Snapshot) error
 }
 
 // Resource represents a generic resource in any CSP. It should be
@@ -35,6 +44,8 @@ type Resource interface {
 	Location() string
 	Public() bool
 	CreationTime() time.Time
+
+	Cleanup() error
 }
 
 // Instance composes the Resource interface, and descibes an instance
