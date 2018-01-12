@@ -1,10 +1,4 @@
-package main
-
-import (
-	"encoding/json"
-	"io/ioutil"
-	"log"
-)
+package housekeeper
 
 // Owner contains an AWS account ID and the name of the owner.
 // This name is typically the chosen brkt username, and can be
@@ -45,17 +39,4 @@ func (o *Owners) IDToName() map[string]string {
 		result[(*o)[i].ID] = (*o)[i].Name
 	}
 	return result
-}
-
-func parseAWSAccounts(inputFile string) Owners {
-	raw, err := ioutil.ReadFile(inputFile)
-	if err != nil {
-		log.Fatalln("Could not read accounts file:", err)
-	}
-	owners := Owners{}
-	err = json.Unmarshal(raw, &owners)
-	if err != nil {
-		log.Fatalln("Could not parse JSON:", err)
-	}
-	return owners
 }

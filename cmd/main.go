@@ -3,8 +3,12 @@ package main
 import (
 	"brkt/housekeeper/cloud"
 	"brkt/housekeeper/cloud/filter"
+	hk "brkt/housekeeper/housekeeper"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"log"
 )
 
 const (
@@ -30,4 +34,17 @@ func main() {
 			fmt.Println(newInstances[i].Tags()["Name"])
 		}
 	}
+}
+
+func parseAWSAccounts(inputFile string) hk.Owners {
+	raw, err := ioutil.ReadFile(inputFile)
+	if err != nil {
+		log.Fatalln("Could not read accounts file:", err)
+	}
+	owners := hk.Owners{}
+	err = json.Unmarshal(raw, &owners)
+	if err != nil {
+		log.Fatalln("Could not parse JSON:", err)
+	}
+	return owners
 }
