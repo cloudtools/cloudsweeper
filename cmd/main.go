@@ -2,6 +2,7 @@ package main
 
 import (
 	"brkt/housekeeper/cloud"
+	"brkt/housekeeper/cloud/filter"
 	"fmt"
 )
 
@@ -14,12 +15,23 @@ func main() {
 	mngr := cloud.NewManager(cloud.AWS, asd...)
 	instances := mngr.InstancesPerAccount()
 	for _, val := range instances {
-		fmt.Println(val[0].ID())
+		fil := filter.New()
+		fil.AddGeneralRule(filter.NameContains("NatGateway"))
+		fil.AddGeneralRule(filter.OlderThanXYears(1))
+		newInstances := fil.FilterInstances(val)
+		for i := range newInstances {
+			fmt.Println(newInstances[i].Tags()["Name"])
+		}
 	}
-	resources := mngr.AllResourcesPerAccount()
-	for account, resource := range resources {
-		fmt.Println("Account:", account)
-		fmt.Println("Instances:", len(resource.Instances))
-		fmt.Println("Images:", len(resource.Images))
+
+	snapshots := mngr.SnapshotsPerAccount()
+	for _, val := range snapshots {
+		fil := filter.New()
+		fil.AddGeneralRule(filter.OlderThanXDays(60))
+
+		snaps := fil.FilterSnapshots(val)
+		for i := range snaps {
+			fmt.Println(snaps[i].Tags()["Name"])
+		}
 	}
 }
