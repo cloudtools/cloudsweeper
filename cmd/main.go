@@ -2,12 +2,15 @@ package main
 
 import (
 	"brkt/housekeeper/cloud"
+	"brkt/housekeeper/cloud/billing"
 	"brkt/housekeeper/cloud/filter"
 	hk "brkt/housekeeper/housekeeper"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
+	"time"
 )
 
 const (
@@ -21,8 +24,18 @@ var (
 )
 
 func main() {
+	rep := billing.NewReporter(cloud.AWS)
+	start, _ := time.Parse("2006-1-2", "2017-12-01")
+	then, _ := time.Parse("2006-1-2", "2017-12-31")
+	report := rep.GenerateReport(start, then)
 	flag.Parse()
-	//owners := parseAWSAccounts(*accountsFile)
+	owners := parseAWSAccounts(*accountsFile)
+	asd := owners.IDToName()
+	for key, val := range report.TotalPerOwner() {
+		fmt.Printf("%s:%s:\t\t$%.3f\n", key, asd[key], val)
+	}
+	fmt.Println("Total:", report.TotalCost())
+	return
 
 	mngr := cloud.NewManager(cloud.AWS, []string{sharedQAAccount}...)
 	instances := mngr.InstancesPerAccount()

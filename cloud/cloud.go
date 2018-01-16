@@ -89,17 +89,18 @@ type ResourceCollection struct {
 	Snapshots []Snapshot
 }
 
-type csp int
+// CSP represent a cloud service provider, such as AWS
+type CSP int
 
 const (
 	// AWS is AWS
-	AWS csp = iota
+	AWS CSP = iota
 	// GCP is Google Cloud Platform
 	GCP
 )
 
 // NewManager will build a new resource manager for the specified CSP
-func NewManager(c csp, accounts ...string) ResourceManager {
+func NewManager(c CSP, accounts ...string) ResourceManager {
 	switch c {
 	case AWS:
 		log.Println("Initializing AWS Resource Manager")
