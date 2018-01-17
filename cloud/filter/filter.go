@@ -58,7 +58,7 @@ func (f *filter) AddSnapshotRule(rule func(cloud.Snapshot) bool) {
 func (f *filter) FilterInstances(instances []cloud.Instance) []cloud.Instance {
 	resultList := []cloud.Instance{}
 	for _, instance := range instances {
-		if f.shouldIncludeInstance(&instance) {
+		if f.shouldIncludeInstance(instance) {
 			resultList = append(resultList, instance)
 		}
 	}
@@ -68,7 +68,7 @@ func (f *filter) FilterInstances(instances []cloud.Instance) []cloud.Instance {
 func (f *filter) FilterImages(images []cloud.Image) []cloud.Image {
 	resultList := []cloud.Image{}
 	for _, image := range images {
-		if f.shouldIncludeImage(&image) {
+		if f.shouldIncludeImage(image) {
 			resultList = append(resultList, image)
 		}
 	}
@@ -78,7 +78,7 @@ func (f *filter) FilterImages(images []cloud.Image) []cloud.Image {
 func (f *filter) FilterVolumes(volumes []cloud.Volume) []cloud.Volume {
 	resultList := []cloud.Volume{}
 	for _, volume := range volumes {
-		if f.shouldIncludeVolume(&volume) {
+		if f.shouldIncludeVolume(volume) {
 			resultList = append(resultList, volume)
 		}
 	}
@@ -88,7 +88,7 @@ func (f *filter) FilterVolumes(volumes []cloud.Volume) []cloud.Volume {
 func (f *filter) FilterSnapshots(snapshots []cloud.Snapshot) []cloud.Snapshot {
 	resultList := []cloud.Snapshot{}
 	for _, snapshot := range snapshots {
-		if f.shouldIncludeSnapshot(&snapshot) {
+		if f.shouldIncludeSnapshot(snapshot) {
 			resultList = append(resultList, snapshot)
 		}
 	}

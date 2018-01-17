@@ -23,6 +23,10 @@ type awsResourceManager struct {
 	accounts []string
 }
 
+func (m *awsResourceManager) Owners() []string {
+	return m.accounts
+}
+
 type awsInstance struct {
 	baseInstance
 }
@@ -36,6 +40,10 @@ func (i *awsInstance) Cleanup() error {
 	}
 	_, err := client.TerminateInstances(input)
 	return err
+}
+
+func (i *awsInstance) SetTag(key, value string, overwrite bool) error {
+	return addAWSTag(i, key, value, overwrite)
 }
 
 type awsImage struct {
@@ -52,6 +60,33 @@ func (i *awsImage) Cleanup() error {
 	return err
 }
 
+func (i *awsImage) SetTag(key, value string, overwrite bool) error {
+	return addAWSTag(i, key, value, overwrite)
+}
+
+func (i *awsImage) MakePrivate() error {
+	log.Println("Making image private:", i.ID())
+	if !i.Public() {
+		// Image is already private
+		return nil
+	}
+	client := clientForAWSResource(i)
+	input := &ec2.ModifyImageAttributeInput{
+		ImageId: aws.String(i.ID()),
+		LaunchPermission: &ec2.LaunchPermissionModifications{
+			Remove: []*ec2.LaunchPermission{&ec2.LaunchPermission{
+				Group: aws.String("all"),
+			}},
+		},
+	}
+	_, err := client.ModifyImageAttribute(input)
+	if err != nil {
+		return err
+	}
+	i.public = false
+	return nil
+}
+
 type awsVolume struct {
 	baseVolume
 }
@@ -66,6 +101,10 @@ func (v *awsVolume) Cleanup() error {
 	return err
 }
 
+func (v *awsVolume) SetTag(key, value string, overwrite bool) error {
+	return addAWSTag(v, key, value, overwrite)
+}
+
 type awsSnapshot struct {
 	baseSnapshot
 }
@@ -78,6 +117,10 @@ func (s *awsSnapshot) Cleanup() error {
 	}
 	_, err := client.DeleteSnapshot(input)
 	return err
+}
+
+func (s *awsSnapshot) SetTag(key, value string, overwrite bool) error {
+	return addAWSTag(s, key, value, overwrite)
 }
 
 const (
@@ -463,4 +506,21 @@ func clientForAWSResource(res Resource) *ec2.EC2 {
 		Credentials: creds,
 		Region:      aws.String(res.Location()),
 	})
+}
+
+func addAWSTag(r Resource, key, value string, overwrite bool) error {
+	_, exist := r.Tags()[key]
+	if exist && !overwrite {
+		return fmt.Errorf("Key %s already exist on %s", key, r.ID())
+	}
+	client := clientForAWSResource(r)
+	input := &ec2.CreateTagsInput{
+		Resources: aws.StringSlice([]string{r.ID()}),
+		Tags: []*ec2.Tag{&ec2.Tag{
+			Key:   aws.String(key),
+			Value: aws.String(value),
+		}},
+	}
+	_, err := client.CreateTags(input)
+	return err
 }

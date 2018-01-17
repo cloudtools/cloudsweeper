@@ -9,6 +9,8 @@ import (
 // a CSP. It can be used to get e.g. all instances for all accounts
 // in AWS.
 type ResourceManager interface {
+	// Owners return a list of all owners the manager handle
+	Owners() []string
 	// InstancesPerAccount returns a mapping from account/project
 	// to its associated instances
 	InstancesPerAccount() map[string][]Instance
@@ -45,6 +47,7 @@ type Resource interface {
 	Public() bool
 	CreationTime() time.Time
 
+	SetTag(key, value string, overwrite bool) error
 	Cleanup() error
 }
 
@@ -60,6 +63,8 @@ type Instance interface {
 type Image interface {
 	Resource
 	Name() string
+
+	MakePrivate() error
 }
 
 // Volume composes the Resource interface, and describe a volume in
