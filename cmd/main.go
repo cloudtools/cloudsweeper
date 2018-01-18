@@ -36,7 +36,7 @@ func main() {
 
 	if *performNotify {
 		log.Println("Notifying")
-		notify.OlderThanXMonths(3, cloud.AWS, []hk.Owner{hk.Owner{Name: "qa", ID: sharedDevAWSAccount}})
+		notify.OlderThanXMonths(3, cloud.AWS, []hk.Owner{hk.Owner{Name: "qa", ID: sharedQAAccount}})
 	}
 }
 

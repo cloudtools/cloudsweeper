@@ -3,12 +3,17 @@ package cloud
 import "time"
 
 type baseResource struct {
+	csp          CSP
 	owner        string
 	id           string
 	tags         map[string]string
 	location     string
 	public       bool
 	creationTime time.Time
+}
+
+func (r *baseResource) CSP() CSP {
+	return r.csp
 }
 
 func (r *baseResource) Owner() string {

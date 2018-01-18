@@ -325,6 +325,7 @@ func getAWSInstances(account string, client *ec2.EC2) ([]Instance, error) {
 		for _, instance := range reservation.Instances {
 			inst := awsInstance{baseInstance{
 				baseResource: baseResource{
+					csp:          AWS,
 					owner:        account,
 					id:           *instance.InstanceId,
 					location:     *client.Config.Region,
@@ -356,6 +357,7 @@ func getAWSImages(account string, client *ec2.EC2) ([]Image, error) {
 		}
 		img := awsImage{baseImage{
 			baseResource: baseResource{
+				csp:          AWS,
 				owner:        account,
 				id:           *ami.ImageId,
 				location:     *client.Config.Region,
@@ -365,6 +367,11 @@ func getAWSImages(account string, client *ec2.EC2) ([]Image, error) {
 			},
 			name: *ami.Name,
 		}}
+		for _, mapping := range ami.BlockDeviceMappings {
+			if mapping.Ebs != nil {
+				img.baseImage.sizeGB += *mapping.Ebs.VolumeSize
+			}
+		}
 		result = append(result, &img)
 	}
 	return result, nil
@@ -382,6 +389,7 @@ func getAWSVolumes(account string, client *ec2.EC2) ([]Volume, error) {
 	for _, volume := range awsVolumes.Volumes {
 		vol := awsVolume{baseVolume{
 			baseResource: baseResource{
+				csp:          AWS,
 				owner:        account,
 				id:           *volume.VolumeId,
 				location:     *client.Config.Region,
@@ -413,6 +421,7 @@ func getAWSSnapshots(account string, client *ec2.EC2) ([]Snapshot, error) {
 	for _, snapshot := range awsSnapshots.Snapshots {
 		snap := awsSnapshot{baseSnapshot{
 			baseResource: baseResource{
+				csp:          AWS,
 				owner:        account,
 				id:           *snapshot.SnapshotId,
 				location:     *client.Config.Region,

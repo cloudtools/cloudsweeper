@@ -2,6 +2,7 @@ package notify
 
 import (
 	"brkt/housekeeper/cloud"
+	"brkt/housekeeper/cloud/billing"
 	"brkt/housekeeper/cloud/filter"
 	"brkt/housekeeper/housekeeper"
 	"brkt/housekeeper/mailer"
@@ -101,6 +102,25 @@ func extraTemplateFunctions() template.FuncMap {
 				return "Yes"
 			}
 			return "No"
+		},
+		"accucost": func(res cloud.Resource) string {
+			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
+			costPerDay := billing.ResourceCostPerDay(res)
+			return fmt.Sprintf("$%.2f", days*costPerDay)
+		},
+		"instname": func(inst cloud.Instance) string {
+			if inst.CSP() == cloud.AWS {
+				name, exist := inst.Tags()["Name"]
+				if exist {
+					return name
+				}
+				return ""
+
+			} else if inst.CSP() == cloud.GCP {
+				return inst.ID()
+			} else {
+				return ""
+			}
 		},
 	}
 }

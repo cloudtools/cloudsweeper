@@ -29,16 +29,20 @@ one of the following two types of tags (key: value) to your resource:
 			<th><strong>Account</strong></th>
 			<th><strong>Location</strong></th>
 			<th><strong>ID</strong></th>
-			<th><strong>Created</strong></th>
+			<th><strong>Name</strong></th>
 			<th><strong>Instance type</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $instance := .Instances }}
 		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
 			<td>{{ $instance.Owner }}</td>
 			<td>{{ $instance.Location }}</td>
 			<td>{{ $instance.ID }}</td>
-			<td>{{ fdate $instance.CreationTime "2006-01-02" }} ({{ daysrunning $instance.CreationTime }} days old)</td>
+			<td>{{ instname $instance }}</td>
 			<td>{{ $instance.InstanceType }}</td>
+			<td>{{ fdate $instance.CreationTime "2006-01-02" }} ({{ daysrunning $instance.CreationTime }} days old)</td>
+			<td>{{ accucost $instance }}</td>
 		</tr>
 	{{ end }}
 	</table>
@@ -53,6 +57,7 @@ one of the following two types of tags (key: value) to your resource:
 			<th><strong>ID</strong></th>
 			<th><strong>Name</strong></th>
 			<th><strong>Created</strong></th>
+			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $image := .Images }}
 		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
@@ -61,6 +66,7 @@ one of the following two types of tags (key: value) to your resource:
 			<td>{{ $image.ID }}</td>
 			<td>{{ $image.Name }}</td>
 			<td>{{ fdate $image.CreationTime "2006-01-02" }} ({{ daysrunning $image.CreationTime }} days old)</td>
+			<td>{{ accucost $image }}</td>
 		</tr>
 	{{ end }}
 	</table>
@@ -77,6 +83,7 @@ one of the following two types of tags (key: value) to your resource:
 			<th><strong>Attached to instance</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Volume type</strong></th>
+			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $volume := .Volumes }}
 		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
@@ -87,6 +94,7 @@ one of the following two types of tags (key: value) to your resource:
 			<td>{{ yesno $volume.Attached }}</td>
 			<td>{{ fdate $volume.CreationTime "2006-01-02" }} ({{ daysrunning $volume.CreationTime }} days old)</td>
 			<td>{{ $volume.VolumeType }}</td>
+			<td>{{ accucost $volume }}</td>
 		</tr>
 	{{ end }}
 	</table>
@@ -101,6 +109,7 @@ one of the following two types of tags (key: value) to your resource:
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
 			<th><strong>Created</strong></th>
+			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $snapshot := .Snapshots }}
 		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
@@ -109,6 +118,7 @@ one of the following two types of tags (key: value) to your resource:
 			<td>{{ $snapshot.ID }}</td>
 			<td>{{ $snapshot.SizeGB }} GBs</td>
 			<td>{{ fdate $snapshot.CreationTime "2006-01-02" }} ({{ daysrunning $snapshot.CreationTime }} days old)</td>
+			<td>{{ accucost $snapshot }}</td>
 		</tr>
 	{{ end }}
 	</table>

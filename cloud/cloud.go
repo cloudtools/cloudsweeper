@@ -40,6 +40,7 @@ type ResourceManager interface {
 // Resource represents a generic resource in any CSP. It should be
 // concretizised further.
 type Resource interface {
+	CSP() CSP
 	Owner() string
 	ID() string
 	Tags() map[string]string
@@ -63,6 +64,7 @@ type Instance interface {
 type Image interface {
 	Resource
 	Name() string
+	SizeGB() int64
 
 	MakePrivate() error
 }
