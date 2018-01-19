@@ -5,8 +5,10 @@ import (
 	hk "brkt/housekeeper/housekeeper"
 	"brkt/housekeeper/housekeeper/cleanup"
 	"brkt/housekeeper/housekeeper/notify"
+	"brkt/housekeeper/housekeeper/setup"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 )
@@ -23,9 +25,19 @@ var (
 	performCleanup = flag.Bool("cleanup", false, "Specify if cleanup should be performed")
 	performNotify  = flag.Bool("notify", false, "Specify if notifications should be sent out")
 	performBuckets = flag.Bool("buckets", false, "Include buckets, this can take some time")
+	performSetup   = flag.Bool("setup", false, "Setup AWS account to allow housekeeping")
 )
 
+const banner = `                                                           
+  /\  /\___  _   _ ___  ___  /\ /\___  ___ _ __   ___ _ __ 
+ / /_/ / _ \| | | / __|/ _ \/ //_/ _ \/ _ \ '_ \ / _ \ '__|
+/ __  / (_) | |_| \__ \  __/ __ \  __/  __/ |_) |  __/ |   
+\/ /_/ \___/ \__,_|___/\___\/  \/\___|\___| .__/ \___|_|   
+                                          |_|              
+										`
+
 func main() {
+	fmt.Println(banner)
 	/*
 		reporter := billing.NewReporter(cloud.AWS)
 		t1, _ := time.Parse("2006-01-02", "2017-12-01")
@@ -65,10 +77,15 @@ func main() {
 	*/
 
 	flag.Parse()
-	owners := parseAWSAccounts(*accountsFile)
-	// The shared dev account is not in the imported accounts file
-	owners = append(owners, hk.Owner{Name: "cloud-dev", ID: sharedDevAWSAccount})
+	if *performSetup {
+		setup.PerformSetup()
+		return
+	}
+
 	if *performCleanup {
+		owners := parseAWSAccounts(*accountsFile)
+		// The shared dev account is not in the imported accounts file
+		owners = append(owners, hk.Owner{Name: "cloud-dev", ID: sharedDevAWSAccount})
 		log.Println("Running cleanup")
 		cleanup.PerformCleanup(cloud.AWS, owners)
 	}
@@ -77,6 +94,9 @@ func main() {
 		log.Println("Notifying")
 		notify.OlderThanXMonths(3, cloud.AWS, []hk.Owner{hk.Owner{Name: "qa", ID: sharedQAAccount}})
 	}
+
+	// Perform default action (no flags specified)
+	setup.PerformSetup()
 }
 
 func parseAWSAccounts(inputFile string) hk.Owners {

@@ -22,5 +22,10 @@ notify: build
 		-e SMTP_PASS \
 		--rm housekeeper --notify
 
+setup: build
+	docker run \
+		-e AWS_ACCESS_KEY_ID \
+		-e AWS_SECRET_ACCESS_KEY \
+		--rm -it housekeeper --setup
 
 build-and-run: build run

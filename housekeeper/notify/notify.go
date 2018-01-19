@@ -60,7 +60,7 @@ func OlderThanXMonths(months int, csp cloud.CSP, owners housekeeper.Owners) {
 			}
 			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
 			log.Printf("Notifying %s about old resources\n", ownerMail)
-			title := fmt.Sprintf("You have %d old resources (%s)", oldResourceCount, time.Now().Format("2006-01-02"))
+			title := fmt.Sprintf("You have %d old resource(s) (%s)", oldResourceCount, time.Now().Format("2006-01-02"))
 			mailClient.SendEmail("hsson@brkt.com", title, mailContent) // TODO: Use actual email
 		}
 	}
