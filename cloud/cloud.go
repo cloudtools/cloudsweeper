@@ -35,6 +35,9 @@ type ResourceManager interface {
 	CleanupVolumes([]Volume) error
 	// CleanupSnapshots delete a list of snapshots
 	CleanupSnapshots([]Snapshot) error
+	// BucketsPerAccount returns a mapping from account/project to
+	// its associated buckets
+	BucketsPerAccount() map[string][]Bucket
 }
 
 // Resource represents a generic resource in any CSP. It should be
@@ -87,7 +90,16 @@ type Snapshot interface {
 	SizeGB() int64
 }
 
-// ResourceCollection encapsulates collections of multiple resources
+// Bucket represents a bucket in a CSP, such as an S3 bucket in AWS
+type Bucket interface {
+	Resource
+	LastModified() time.Time
+	ObjectCount() int64
+	TotalSizeGB() float64
+}
+
+// ResourceCollection encapsulates collections of multiple resources. Does not
+// include buckets.
 type ResourceCollection struct {
 	Owner     string
 	Instances []Instance

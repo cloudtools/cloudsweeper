@@ -16,7 +16,7 @@ func (f *filter) shouldIncludeInstance(instance cloud.Instance) bool {
 		}
 	}
 	_, isWhitelisted := instance.Tags()[WhitelistTagKey]
-	return !isWhitelisted
+	return !isWhitelisted || f.overrideWhitelist
 }
 
 func (f *filter) shouldIncludeVolume(volume cloud.Volume) bool {
@@ -31,7 +31,7 @@ func (f *filter) shouldIncludeVolume(volume cloud.Volume) bool {
 		}
 	}
 	_, isWhitelisted := volume.Tags()[WhitelistTagKey]
-	return !isWhitelisted
+	return !isWhitelisted || f.overrideWhitelist
 }
 
 func (f *filter) shouldIncludeImage(image cloud.Image) bool {
@@ -46,7 +46,7 @@ func (f *filter) shouldIncludeImage(image cloud.Image) bool {
 		}
 	}
 	_, isWhitelisted := image.Tags()[WhitelistTagKey]
-	return !isWhitelisted
+	return !isWhitelisted || f.overrideWhitelist
 }
 
 func (f *filter) shouldIncludeSnapshot(snapshot cloud.Snapshot) bool {
@@ -61,5 +61,20 @@ func (f *filter) shouldIncludeSnapshot(snapshot cloud.Snapshot) bool {
 		}
 	}
 	_, isWhitelisted := snapshot.Tags()[WhitelistTagKey]
-	return !isWhitelisted
+	return !isWhitelisted || f.overrideWhitelist
+}
+
+func (f *filter) shouldIncludeBucket(bucket cloud.Bucket) bool {
+	for i := range f.generalRules {
+		if !f.generalRules[i](bucket) {
+			return false
+		}
+	}
+	for i := range f.bucketRules {
+		if !f.bucketRules[i](bucket) {
+			return false
+		}
+	}
+	_, isWhitelisted := bucket.Tags()[WhitelistTagKey]
+	return !isWhitelisted || f.overrideWhitelist
 }

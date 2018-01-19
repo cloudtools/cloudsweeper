@@ -1,6 +1,7 @@
 package cloud
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -15,6 +16,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+)
+
+const (
+	defaultAWSRegion = "us-west-2"
+	gbDivider        = 1024.0 * 1024.0 * 1024.0
 )
 
 // awsResourceManager uses the AWS Go SDK. Docs can be found at:
@@ -121,6 +129,90 @@ func (s *awsSnapshot) Cleanup() error {
 
 func (s *awsSnapshot) SetTag(key, value string, overwrite bool) error {
 	return addAWSTag(s, key, value, overwrite)
+}
+
+type awsBucket struct {
+	baseBucket
+}
+
+func (b *awsBucket) Cleanup() error {
+	log.Println("Cleaning up bucket", b.ID())
+	sess := session.Must(session.NewSession())
+	creds := stscreds.NewCredentials(sess, fmt.Sprintf(assumeRoleARNTemplate, b.Owner()))
+	s3Client := s3.New(sess, &aws.Config{
+		Credentials: creds,
+		Region:      aws.String(b.Location()),
+	})
+
+	var internalErr error
+	err := s3Client.ListObjectsV2Pages(&s3.ListObjectsV2Input{
+		Bucket: aws.String(b.ID()),
+	}, func(output *s3.ListObjectsV2Output, lastPage bool) bool {
+		input := &s3.DeleteObjectsInput{
+			Bucket: aws.String(b.ID()),
+		}
+		delete := &s3.Delete{
+			Objects: []*s3.ObjectIdentifier{},
+		}
+		for i := range output.Contents {
+			delete.Objects = append(delete.Objects, &s3.ObjectIdentifier{Key: output.Contents[i].Key})
+		}
+		input.Delete = delete
+		if len(delete.Objects) == 0 {
+			// A request with an empty list of objects is not allowed
+			return true
+		}
+		out, e := s3Client.DeleteObjects(input)
+		if e != nil {
+			internalErr = e
+			return false
+		}
+		if len(out.Errors) > 0 {
+			for i := range out.Errors {
+				log.Printf("ERROR: Could not delete '%s': %s\n", *out.Errors[i].Key, *out.Errors[i].Message)
+			}
+			internalErr = errors.New("Failed to delete one or more objects")
+			return false
+		}
+		return !lastPage
+	})
+	if err != nil {
+		return err
+	}
+	if internalErr != nil {
+		return internalErr
+	}
+
+	input := &s3.DeleteBucketInput{
+		Bucket: aws.String(b.ID()),
+	}
+	_, err = s3Client.DeleteBucket(input)
+	return err
+}
+
+func (b *awsBucket) SetTag(key, value string, overwrite bool) error {
+	_, exist := b.Tags()[key]
+	if exist && !overwrite {
+		return fmt.Errorf("Key %s already exist on %s", key, b.ID())
+	}
+	sess := session.Must(session.NewSession())
+	creds := stscreds.NewCredentials(sess, fmt.Sprintf(assumeRoleARNTemplate, b.Owner()))
+	s3Client := s3.New(sess, &aws.Config{
+		Credentials: creds,
+		Region:      aws.String(b.Location()),
+	})
+	tagging := &s3.Tagging{
+		TagSet: []*s3.Tag{&s3.Tag{
+			Key:   aws.String(key),
+			Value: aws.String(value),
+		}},
+	}
+	input := &s3.PutBucketTaggingInput{
+		Bucket:  aws.String(b.ID()),
+		Tagging: tagging,
+	}
+	_, err := s3Client.PutBucketTagging(input)
+	return err
 }
 
 const (
@@ -234,6 +326,90 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 		}()
 		wg.Wait()
 		resultMap[account] = result
+	})
+	return resultMap
+}
+
+func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
+	sess := session.Must(session.NewSession())
+	resultMap := make(map[string][]Bucket)
+	forEachAccount(m.accounts, sess, func(account string, cred *credentials.Credentials) {
+		s3Client := s3.New(sess, &aws.Config{
+			Credentials: cred,
+			Region:      aws.String(defaultAWSRegion),
+		})
+		awsBuckets, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
+		if err != nil {
+			handleAWSAccessDenied(account, err)
+		} else if len(awsBuckets.Buckets) > 0 {
+			bucketCount := len(awsBuckets.Buckets)
+			buckChan := make(chan *awsBucket)
+			for _, bu := range awsBuckets.Buckets {
+				go func(bu *s3.Bucket, resChan chan *awsBucket) {
+					region, err := s3manager.GetBucketRegion(context.Background(), sess, *bu.Name, defaultAWSRegion)
+					if err != nil {
+						bucketCount--
+						handleAWSAccessDenied(account, err)
+						buckChan <- nil
+						return
+					}
+					bucketClient := s3.New(sess, &aws.Config{
+						Credentials: cred,
+						Region:      aws.String(region),
+					})
+					buTags, err := bucketClient.GetBucketTagging(&s3.GetBucketTaggingInput{
+						Bucket: bu.Name,
+					})
+					tags := make(map[string]string)
+					if err == nil {
+						tags = convertAWSS3Tags(buTags.TagSet)
+					}
+
+					var count, size int64
+					var lastMod time.Time
+
+					err = bucketClient.ListObjectsV2Pages(&s3.ListObjectsV2Input{
+						Bucket: bu.Name,
+					}, func(output *s3.ListObjectsV2Output, lastPage bool) bool {
+						for _, obj := range output.Contents {
+							count++
+							size += *obj.Size
+							if (*obj.LastModified).After(lastMod) {
+								lastMod = *obj.LastModified
+							}
+						}
+						return !lastPage
+					})
+					if err != nil {
+						bucketCount--
+						handleAWSAccessDenied(account, err)
+						buckChan <- nil
+						return
+					}
+
+					buck := awsBucket{baseBucket{
+						baseResource: baseResource{
+							csp:          AWS,
+							owner:        account,
+							location:     region,
+							id:           *bu.Name,
+							creationTime: *bu.CreationDate,
+							tags:         tags,
+						},
+						lastModified: lastMod,
+						objectCount:  count,
+						totalSizeGB:  float64(size) / gbDivider,
+					}}
+					buckChan <- &buck
+				}(bu, buckChan)
+			}
+			for i := 0; i < bucketCount; i++ {
+				buck := <-buckChan
+				if buck != nil {
+					resultMap[account] = append(resultMap[account], buck)
+				}
+			}
+		}
 	})
 	return resultMap
 }
@@ -501,6 +677,14 @@ func handleAWSAccessDenied(account string, err error) {
 }
 
 func convertAWSTags(tags []*ec2.Tag) map[string]string {
+	result := make(map[string]string)
+	for _, tag := range tags {
+		result[*tag.Key] = *tag.Value
+	}
+	return result
+}
+
+func convertAWSS3Tags(tags []*s3.Tag) map[string]string {
 	result := make(map[string]string)
 	for _, tag := range tags {
 		result[*tag.Key] = *tag.Value

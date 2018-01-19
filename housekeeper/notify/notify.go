@@ -25,27 +25,40 @@ const (
 func OlderThanXMonths(months int, csp cloud.CSP, owners housekeeper.Owners) {
 	mngr := cloud.NewManager(csp, owners.AllIDs()...)
 	all := mngr.AllResourcesPerAccount()
+	allBuckets := mngr.BucketsPerAccount()
 	ownerNames := owners.IDToName()
 	for owner, resources := range all {
-		oldResources := cloud.ResourceCollection{}
 		ownerName := convertEmailExceptions(ownerNames[owner])
-		oldResources.Owner = ownerName
 		fil := filter.New()
 		fil.AddGeneralRule(filter.OlderThanXMonths(months))
-		oldResources.Instances = fil.FilterInstances(resources.Instances)
-		oldResources.Images = fil.FilterImages(resources.Images)
-		oldResources.Snapshots = fil.FilterSnapshots(resources.Snapshots)
-		oldResources.Volumes = fil.FilterVolumes(resources.Volumes)
+		mailHolder := struct {
+			Owner     string
+			Instances []cloud.Instance
+			Images    []cloud.Image
+			Snapshots []cloud.Snapshot
+			Volumes   []cloud.Volume
+			Buckets   []cloud.Bucket
+		}{
+			ownerName,
+			fil.FilterInstances(resources.Instances),
+			fil.FilterImages(resources.Images),
+			fil.FilterSnapshots(resources.Snapshots),
+			fil.FilterVolumes(resources.Volumes),
+			[]cloud.Bucket{},
+		}
+		if bucks, ok := allBuckets[owner]; ok {
+			mailHolder.Buckets = fil.FilterBuckets(bucks)
+		}
 
-		oldResourceCount := len(oldResources.Images) + len(oldResources.Instances) + len(oldResources.Snapshots) + len(oldResources.Volumes)
+		oldResourceCount := len(mailHolder.Images) + len(mailHolder.Instances) + len(mailHolder.Snapshots) + len(mailHolder.Volumes)
 		if oldResourceCount > 0 {
 			// Now send email
 			mailClient := getMailClient()
-			mailContent, err := generateMail(oldResources)
+			mailContent, err := generateMail(mailHolder)
 			if err != nil {
 				log.Fatalln("Could not generate email:", err)
 			}
-			ownerMail := fmt.Sprintf("%s@brkt.com", oldResources.Owner)
+			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
 			log.Printf("Notifying %s about old resources\n", ownerMail)
 			title := fmt.Sprintf("You have %d old resources (%s)", oldResourceCount, time.Now().Format("2006-01-02"))
 			mailClient.SendEmail("hsson@brkt.com", title, mailContent) // TODO: Use actual email
@@ -53,14 +66,14 @@ func OlderThanXMonths(months int, csp cloud.CSP, owners housekeeper.Owners) {
 	}
 }
 
-func generateMail(resources cloud.ResourceCollection) (string, error) {
+func generateMail(data interface{}) (string, error) {
 	t := template.New("emailTemplate").Funcs(extraTemplateFunctions())
 	t, err := t.Parse(oldResourcesTemplate)
 	if err != nil {
 		return "", err
 	}
 	var result bytes.Buffer
-	err = t.Execute(&result, resources)
+	err = t.Execute(&result, data)
 	if err != nil {
 		return "", err
 	}
@@ -94,7 +107,18 @@ func extraTemplateFunctions() template.FuncMap {
 	return template.FuncMap{
 		"fdate": func(t time.Time, format string) string { return t.Format(format) },
 		"daysrunning": func(t time.Time) string {
-			return fmt.Sprintf("%.0f", time.Now().Sub(t).Hours()/24.0)
+			if (t == time.Time{}) {
+				return "never"
+			}
+			days := int(time.Now().Sub(t).Hours() / 24.0)
+			switch days {
+			case 0:
+				return "today"
+			case 1:
+				return "yesterday"
+			default:
+				return fmt.Sprintf("%d days ago", days)
+			}
 		},
 		"even": func(num int) bool { return num%2 == 0 },
 		"yesno": func(b bool) string {
@@ -107,6 +131,9 @@ func extraTemplateFunctions() template.FuncMap {
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
 			return fmt.Sprintf("$%.2f", days*costPerDay)
+		},
+		"bucketcost": func(res cloud.Bucket) float64 {
+			return billing.BucketPricePerMonth(res)
 		},
 		"instname": func(inst cloud.Instance) string {
 			if inst.CSP() == cloud.AWS {

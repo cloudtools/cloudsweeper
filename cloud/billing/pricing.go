@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	awsPricingURL = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json"
+	awsPricingURL      = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json"
+	s3BucketPerGBMonth = 0.023
 )
 
 var (
@@ -103,6 +104,18 @@ func InstancePricePerHour(instance cloud.Instance) float64 {
 		return awsInstancePricePerHour(instance.Location(), instance.InstanceType())
 	}
 	log.Panicln("Unsupported CSP:", instance.CSP())
+	return 0.0
+}
+
+// BucketPricePerMonth will return the monthly price in USD for a
+// specified bucket. It will not take any account wide discounts
+// that might have been collected for using a certain amount of
+// storage every month.
+func BucketPricePerMonth(bucket cloud.Bucket) float64 {
+	if bucket.CSP() == cloud.AWS {
+		return s3BucketPerGBMonth * bucket.TotalSizeGB()
+	}
+	log.Panicln("Unsupported CSP:", bucket.CSP())
 	return 0.0
 }
 
