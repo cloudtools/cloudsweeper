@@ -44,8 +44,8 @@ const banner = `
 
 func main() {
 	fmt.Println(banner)
-	notify.DeletionWarning(4, cloud.AWS, []hk.Owner{hk.Owner{Name: "qa", ID: sharedQAAccount}})
-	return
+	//notify.DeletionWarning(4, cloud.AWS, []hk.Owner{hk.Owner{Name: "qa", ID: sharedQAAccount}})
+	//return
 	/*
 		reporter := billing.NewReporter(cloud.AWS)
 		t1, _ := time.Parse("2006-01-02", "2017-12-01")

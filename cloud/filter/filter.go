@@ -2,32 +2,11 @@ package filter
 
 import (
 	"brkt/housekeeper/cloud"
-	"log"
 )
 
-// ResourceFilter is a dynamic filter that can have any amount
-// of rules. The rules are used to determine which resources
-// are kept when performing the filtering
-type ResourceFilter interface {
-	AddGeneralRule(func(cloud.Resource) bool)
-	AddInstanceRule(func(cloud.Instance) bool)
-	AddImageRule(func(cloud.Image) bool)
-	AddVolumeRule(func(cloud.Volume) bool)
-	AddSnapshotRule(func(cloud.Snapshot) bool)
-	AddBucketRule(func(cloud.Bucket) bool)
-
-	FilterInstances([]cloud.Instance) []cloud.Instance
-	FilterVolumes([]cloud.Volume) []cloud.Volume
-	FilterImages([]cloud.Image) []cloud.Image
-	FilterSnapshots([]cloud.Snapshot) []cloud.Snapshot
-	FilterBuckets([]cloud.Bucket) []cloud.Bucket
-
-	SetOverrideWhitelist(bool)
-}
-
 // New will create a new resource filter ready to use
-func New() ResourceFilter {
-	return &filter{
+func New() *ResourceFilter {
+	return &ResourceFilter{
 		generalRules:  []func(cloud.Resource) bool{},
 		instanceRules: []func(cloud.Instance) bool{},
 		volumeRules:   []func(cloud.Volume) bool{},
@@ -35,11 +14,14 @@ func New() ResourceFilter {
 		snapshotRules: []func(cloud.Snapshot) bool{},
 		bucketRules:   []func(cloud.Bucket) bool{},
 
-		overrideWhitelist: false,
+		OverrideWhitelist: false,
 	}
 }
 
-type filter struct {
+// ResourceFilter is a dynamic filter that can have any amount
+// of rules. The rules are used to determine which resources
+// are kept when performing the filtering
+type ResourceFilter struct {
 	generalRules  []func(cloud.Resource) bool
 	instanceRules []func(cloud.Instance) bool
 	imageRules    []func(cloud.Image) bool
@@ -47,86 +29,101 @@ type filter struct {
 	snapshotRules []func(cloud.Snapshot) bool
 	bucketRules   []func(cloud.Bucket) bool
 
-	overrideWhitelist bool
+	OverrideWhitelist bool
 }
 
-func (f *filter) AddGeneralRule(rule func(cloud.Resource) bool) {
+// AddGeneralRule adds a generic resource rule, which is not specific to
+// any particular type of resource.
+func (f *ResourceFilter) AddGeneralRule(rule func(cloud.Resource) bool) {
 	f.generalRules = append(f.generalRules, rule)
 }
 
-func (f *filter) AddInstanceRule(rule func(cloud.Instance) bool) {
+// AddInstanceRule adds an instance specific rule to the filter chain
+func (f *ResourceFilter) AddInstanceRule(rule func(cloud.Instance) bool) {
 	f.instanceRules = append(f.instanceRules, rule)
 }
 
-func (f *filter) AddImageRule(rule func(cloud.Image) bool) {
+// AddImageRule adds an image specific rule to the filter chain
+func (f *ResourceFilter) AddImageRule(rule func(cloud.Image) bool) {
 	f.imageRules = append(f.imageRules, rule)
 }
 
-func (f *filter) AddVolumeRule(rule func(cloud.Volume) bool) {
+// AddVolumeRule adds a volume specific rule to the filter chain
+func (f *ResourceFilter) AddVolumeRule(rule func(cloud.Volume) bool) {
 	f.volumeRules = append(f.volumeRules, rule)
 }
 
-func (f *filter) AddSnapshotRule(rule func(cloud.Snapshot) bool) {
+// AddSnapshotRule adds a snapshot specific rule to the filter chain
+func (f *ResourceFilter) AddSnapshotRule(rule func(cloud.Snapshot) bool) {
 	f.snapshotRules = append(f.snapshotRules, rule)
 }
 
-func (f *filter) AddBucketRule(rule func(cloud.Bucket) bool) {
+// AddBucketRule adds a bucket specific rule to the filter chain
+func (f *ResourceFilter) AddBucketRule(rule func(cloud.Bucket) bool) {
 	f.bucketRules = append(f.bucketRules, rule)
 }
 
-func (f *filter) FilterInstances(instances []cloud.Instance) []cloud.Instance {
+// Instances will filter the specified instances using the specified filters and
+// return the instances which match. A boolean OR is performed between every specified
+// filter.
+func Instances(instances []cloud.Instance, filters ...*ResourceFilter) []cloud.Instance {
 	resultList := []cloud.Instance{}
-	for _, instance := range instances {
-		if f.shouldIncludeInstance(instance) {
-			resultList = append(resultList, instance)
+	for i := range instances {
+		if or(instances[i], filters) {
+			resultList = append(resultList, instances[i])
 		}
 	}
 	return resultList
 }
 
-func (f *filter) FilterImages(images []cloud.Image) []cloud.Image {
+// Images will filter the specified images using the specified filters and
+// return the images which match. A boolean OR is performed between every specified
+// filter.
+func Images(images []cloud.Image, filters ...*ResourceFilter) []cloud.Image {
 	resultList := []cloud.Image{}
-	for _, image := range images {
-		if f.shouldIncludeImage(image) {
-			resultList = append(resultList, image)
+	for i := range images {
+		if or(images[i], filters) {
+			resultList = append(resultList, images[i])
 		}
 	}
 	return resultList
 }
 
-func (f *filter) FilterVolumes(volumes []cloud.Volume) []cloud.Volume {
+// Volumes will filter the specified volumes using the specified filters and
+// return the volumes which match. A boolean OR is performed between every specified
+// filter.
+func Volumes(volumes []cloud.Volume, filters ...*ResourceFilter) []cloud.Volume {
 	resultList := []cloud.Volume{}
-	for _, volume := range volumes {
-		if f.shouldIncludeVolume(volume) {
-			resultList = append(resultList, volume)
+	for i := range volumes {
+		if or(volumes[i], filters) {
+			resultList = append(resultList, volumes[i])
 		}
 	}
 	return resultList
 }
 
-func (f *filter) FilterSnapshots(snapshots []cloud.Snapshot) []cloud.Snapshot {
+// Snapshots will filter the specified snapshots using the specified filters and
+// return the snapshots which match. A boolean OR is performed between every specified
+// filter.
+func Snapshots(snapshots []cloud.Snapshot, filters ...*ResourceFilter) []cloud.Snapshot {
 	resultList := []cloud.Snapshot{}
-	for _, snapshot := range snapshots {
-		if f.shouldIncludeSnapshot(snapshot) {
-			resultList = append(resultList, snapshot)
+	for i := range snapshots {
+		if or(snapshots[i], filters) {
+			resultList = append(resultList, snapshots[i])
 		}
 	}
 	return resultList
 }
 
-func (f *filter) FilterBuckets(buckets []cloud.Bucket) []cloud.Bucket {
+// Buckets will filter the specified buckets using the specified filters and
+// return the buckets which match. A boolean OR is performed between every specified
+// filter.
+func Buckets(buckets []cloud.Bucket, filters ...*ResourceFilter) []cloud.Bucket {
 	resultList := []cloud.Bucket{}
 	for i := range buckets {
-		if f.shouldIncludeBucket(buckets[i]) {
+		if or(buckets[i], filters) {
 			resultList = append(resultList, buckets[i])
 		}
 	}
 	return resultList
-}
-
-func (f *filter) SetOverrideWhitelist(override bool) {
-	if override {
-		log.Println("Overriding whitelist, be careful")
-	}
-	f.overrideWhitelist = override
 }

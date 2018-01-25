@@ -52,16 +52,16 @@ func DeletionWarning(hoursInAdvance int, csp cloud.CSP, owners housekeeper.Owner
 		}{
 			resourceMailData{
 				ownerName,
-				fil.FilterInstances(resources.Instances),
-				fil.FilterImages(resources.Images),
-				fil.FilterSnapshots(resources.Snapshots),
-				fil.FilterVolumes(resources.Volumes),
+				filter.Instances(resources.Instances, fil),
+				filter.Images(resources.Images, fil),
+				filter.Snapshots(resources.Snapshots, fil),
+				filter.Volumes(resources.Volumes, fil),
 				[]cloud.Bucket{},
 			},
 			hoursInAdvance,
 		}
 		if bucks, ok := allBuckets[owner]; ok {
-			mailHolder.Buckets = fil.FilterBuckets(bucks)
+			mailHolder.Buckets = filter.Buckets(bucks, fil)
 		}
 
 		if mailHolder.ResourceCount() > 0 {
@@ -93,14 +93,14 @@ func OlderThanXMonths(months int, csp cloud.CSP, owners housekeeper.Owners) {
 
 		mailHolder := resourceMailData{
 			ownerName,
-			fil.FilterInstances(resources.Instances),
-			fil.FilterImages(resources.Images),
-			fil.FilterSnapshots(resources.Snapshots),
-			fil.FilterVolumes(resources.Volumes),
+			filter.Instances(resources.Instances, fil),
+			filter.Images(resources.Images, fil),
+			filter.Snapshots(resources.Snapshots, fil),
+			filter.Volumes(resources.Volumes, fil),
 			[]cloud.Bucket{},
 		}
 		if bucks, ok := allBuckets[owner]; ok {
-			mailHolder.Buckets = fil.FilterBuckets(bucks)
+			mailHolder.Buckets = filter.Buckets(bucks, fil)
 		}
 
 		if mailHolder.ResourceCount() > 0 {

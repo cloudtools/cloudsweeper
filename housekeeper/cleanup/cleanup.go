@@ -31,22 +31,22 @@ func cleanupLifetimePassed(mngr cloud.ResourceManager) {
 		log.Println("Performing lifetime check in", owner)
 		fil := filter.New()
 		fil.AddGeneralRule(filter.LifetimeExceeded())
-		err := mngr.CleanupInstances(fil.FilterInstances(resources.Instances))
+		err := mngr.CleanupInstances(filter.Instances(resources.Instances, fil))
 		if err != nil {
 			log.Printf("Could not cleanup instances in %s, err:\n%s", owner, err)
 			continue
 		}
-		err = mngr.CleanupImages(fil.FilterImages(resources.Images))
+		err = mngr.CleanupImages(filter.Images(resources.Images, fil))
 		if err != nil {
 			log.Printf("Could not cleanup images in %s, err:\n%s", owner, err)
 			continue
 		}
-		err = mngr.CleanupVolumes(fil.FilterVolumes(resources.Volumes))
+		err = mngr.CleanupVolumes(filter.Volumes(resources.Volumes, fil))
 		if err != nil {
 			log.Printf("Could not cleanup volumes in %s, err:\n%s", owner, err)
 			continue
 		}
-		err = mngr.CleanupSnapshots(fil.FilterSnapshots(resources.Snapshots))
+		err = mngr.CleanupSnapshots(filter.Snapshots(resources.Snapshots, fil))
 		if err != nil {
 			log.Printf("Could not cleanup snapshots in %s, err:\n%s", owner, err)
 			continue
@@ -79,7 +79,7 @@ func cleanCleanupReleaseImagesHelper(mngr cloud.ResourceManager, images []cloud.
 	filPub.AddGeneralRule(filter.OlderThanXMonths(6))
 	// Images shoudln't have an expiry tag already
 	filPub.AddGeneralRule(filter.Negate(filter.HasTag(filter.ExpiryTagKey)))
-	imagesToMakePrivate := filPub.FilterImages(images)
+	imagesToMakePrivate := filter.Images(images, filPub)
 	// Make images private and add expiry tag
 	for i := range imagesToMakePrivate {
 		err := imagesToMakePrivate[i].MakePrivate()
@@ -101,7 +101,7 @@ func cleanCleanupReleaseImagesHelper(mngr cloud.ResourceManager, images []cloud.
 	filPriv.AddGeneralRule(filter.HasTag(releaseTag))
 	filPriv.AddGeneralRule(filter.Negate(filter.IsPublic()))
 	filPriv.AddGeneralRule(filter.ExpiryDatePassed())
-	imagesToCleanup := filPriv.FilterImages(images)
+	imagesToCleanup := filter.Images(images, filPriv)
 	// Cleanup expired images
 	err := mngr.CleanupImages(imagesToCleanup)
 	if err != nil {
