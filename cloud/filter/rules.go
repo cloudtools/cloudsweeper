@@ -15,6 +15,10 @@ const (
 	LifetimeTagKey = "housekeeper-lifetime"
 	// ExpiryTagKey marks a resource to be cleaned up at the specified date (YYYY-MM-DD)
 	ExpiryTagKey = "housekeeper-expiry"
+	// DeleteTagKey marks a resource for deletion. This is used internally by houskeeper
+	// to keep track of resources that should be cleaned up, but was not explicitly tagged
+	// by the resource owner.
+	DeleteTagKey = "housekeeper-delete-at"
 	// ExpiryTagValueFormat is the format to use when setting expiry date
 	ExpiryTagValueFormat = "2006-01-02" // Used to parse string
 )
@@ -25,6 +29,14 @@ const (
 func Negate(funcToNegate func(r cloud.Resource) bool) func(cloud.Resource) bool {
 	return func(r cloud.Resource) bool {
 		return !funcToNegate(r)
+	}
+}
+
+// OlderThanXHours returns a resource that is older than the
+// specified amount of hours.
+func OlderThanXHours(hours int) func(cloud.Resource) bool {
+	return func(r cloud.Resource) bool {
+		return time.Now().After(r.CreationTime().Add(time.Duration(hours) * time.Hour))
 	}
 }
 
@@ -135,5 +147,24 @@ func ExpiryDatePassed() func(cloud.Resource) bool {
 			return false
 		}
 		return time.Now().After(expiryDate)
+	}
+}
+
+// DeleteWithinXHours checks if a resources is marked for deletion and if
+// it's about to be deleted within the specified amount of hours. This also
+// includes resources which deletion time is passed.
+func DeleteWithinXHours(hours int) func(cloud.Resource) bool {
+	return func(r cloud.Resource) bool {
+		deleteTimeString, hasDeletion := r.Tags()[DeleteTagKey]
+		if !hasDeletion {
+			return false
+		}
+		deleteTime, err := time.Parse(time.RFC3339, deleteTimeString)
+		if err != nil {
+			log.Printf("%s has malformed deletion tag: %s\n", r.ID(), deleteTimeString)
+			return false
+		}
+		within := deleteTime.Add(-(time.Duration(hours) * time.Hour))
+		return time.Now().After(within)
 	}
 }

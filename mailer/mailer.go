@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/smtp"
+	"strings"
 	"text/template"
 )
 
@@ -22,7 +23,7 @@ Content-Type: text/html; charset="UTF-8";
 // Client is used to send emails using standard settings
 type Client interface {
 	// SendEmail will send a mail to the specified email address
-	SendEmail(email, subject, content string) error
+	SendEmail(subject, content string, recipients ...string) error
 }
 
 type mailer struct {
@@ -44,13 +45,13 @@ func NewClient(username, password, displayName string) Client {
 
 // SendEmail will send a mail to the specified address. Please note that
 // the content is not HTML escaped. That would be up to whoever uses the method
-func (m *mailer) SendEmail(address, subject, content string) error {
+func (m *mailer) SendEmail(subject, content string, recipients ...string) error {
 	server := fmt.Sprintf("%s:%d", smtpServer, smtpPort)
 	var msg bytes.Buffer
 
 	context := &mailContext{
 		From:        m.user,
-		To:          address,
+		To:          strings.Join(recipients, ", "),
 		Subject:     subject,
 		Body:        content,
 		DisplayName: m.displayName,
@@ -67,7 +68,7 @@ func (m *mailer) SendEmail(address, subject, content string) error {
 		return err
 	}
 
-	err = smtp.SendMail(server, m.auth, m.user, []string{address}, msg.Bytes())
+	err = smtp.SendMail(server, m.auth, m.user, recipients, msg.Bytes())
 	return err
 }
 

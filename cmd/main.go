@@ -18,6 +18,8 @@ const (
 
 	sharedQAAccount     = "475063612724"
 	sharedDevAWSAccount = "164337164081"
+
+	warningHoursInAdvance = 48
 )
 
 var (
@@ -26,6 +28,10 @@ var (
 	performNotify  = flag.Bool("notify", false, "Specify if notifications should be sent out")
 	performBuckets = flag.Bool("buckets", false, "Include buckets, this can take some time")
 	performSetup   = flag.Bool("setup", false, "Setup AWS account to allow housekeeping")
+	performWarning = flag.Bool("warning", false, "Send out warning about resource cleanup")
+	warningHours   = flag.Int("warning-hours", warningHoursInAdvance, "The number of hours in advance to warn about resource deletion")
+
+	didAction = false
 )
 
 const banner = `                                                           
@@ -38,6 +44,8 @@ const banner = `
 
 func main() {
 	fmt.Println(banner)
+	notify.DeletionWarning(4, cloud.AWS, []hk.Owner{hk.Owner{Name: "qa", ID: sharedQAAccount}})
+	return
 	/*
 		reporter := billing.NewReporter(cloud.AWS)
 		t1, _ := time.Parse("2006-01-02", "2017-12-01")
@@ -77,9 +85,16 @@ func main() {
 	*/
 
 	flag.Parse()
+
 	if *performSetup {
 		setup.PerformSetup()
 		return
+	}
+
+	if *performWarning {
+		log.Println("Warning about cleanup")
+		notify.DeletionWarning(*warningHours, cloud.AWS, []hk.Owner{hk.Owner{Name: "qa", ID: sharedQAAccount}})
+		didAction = true
 	}
 
 	if *performCleanup {
@@ -88,15 +103,19 @@ func main() {
 		owners = append(owners, hk.Owner{Name: "cloud-dev", ID: sharedDevAWSAccount})
 		log.Println("Running cleanup")
 		cleanup.PerformCleanup(cloud.AWS, owners)
+		didAction = true
 	}
 
 	if *performNotify {
 		log.Println("Notifying")
 		notify.OlderThanXMonths(3, cloud.AWS, []hk.Owner{hk.Owner{Name: "qa", ID: sharedQAAccount}})
+		didAction = true
 	}
 
 	// Perform default action (no flags specified)
-	setup.PerformSetup()
+	if !didAction {
+		setup.PerformSetup()
+	}
 }
 
 func parseAWSAccounts(inputFile string) hk.Owners {

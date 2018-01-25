@@ -20,6 +20,65 @@ const (
 	mailDisplayName = "HouseKeeper"
 )
 
+type resourceMailData struct {
+	Owner     string
+	Instances []cloud.Instance
+	Images    []cloud.Image
+	Snapshots []cloud.Snapshot
+	Volumes   []cloud.Volume
+	Buckets   []cloud.Bucket
+}
+
+func (d *resourceMailData) ResourceCount() int {
+	return len(d.Images) + len(d.Instances) + len(d.Snapshots) + len(d.Volumes) + len(d.Buckets)
+}
+
+// DeletionWarning will find resources which are about to be deleted within
+// `hoursInAdvance` hours, and send an email to the owner of those resources
+// with a warning. Resources explicitly tagged to be deleted are not included
+// in this warning.
+func DeletionWarning(hoursInAdvance int, csp cloud.CSP, owners housekeeper.Owners) {
+	mngr := cloud.NewManager(csp, owners.AllIDs()...)
+	allCompute := mngr.AllResourcesPerAccount()
+	allBuckets := mngr.BucketsPerAccount()
+	ownerNames := owners.IDToName()
+	for owner, resources := range allCompute {
+		ownerName := convertEmailExceptions(ownerNames[owner])
+		fil := filter.New()
+		fil.AddGeneralRule(filter.DeleteWithinXHours(hoursInAdvance))
+		mailHolder := struct {
+			resourceMailData
+			Hours int
+		}{
+			resourceMailData{
+				ownerName,
+				fil.FilterInstances(resources.Instances),
+				fil.FilterImages(resources.Images),
+				fil.FilterSnapshots(resources.Snapshots),
+				fil.FilterVolumes(resources.Volumes),
+				[]cloud.Bucket{},
+			},
+			hoursInAdvance,
+		}
+		if bucks, ok := allBuckets[owner]; ok {
+			mailHolder.Buckets = fil.FilterBuckets(bucks)
+		}
+
+		if mailHolder.ResourceCount() > 0 {
+			// Now send email
+			mailClient := getMailClient()
+			mailContent, err := generateMail(mailHolder, deletionWarningTemplate)
+			if err != nil {
+				log.Fatalln("Could not generate email:", err)
+			}
+			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
+			log.Printf("Warning %s about resource deletion\n", ownerMail)
+			title := fmt.Sprintf("Deletion warning, %d resources are cleaned up within %d hours", mailHolder.ResourceCount(), hoursInAdvance)
+			mailClient.SendEmail("hsson@brkt.com", title, mailContent) // TODO: Use correct email
+		}
+	}
+}
+
 // OlderThanXMonths sends out an email notification to all specified owners
 // about all of their resources older than the specified amount of months.
 func OlderThanXMonths(months int, csp cloud.CSP, owners housekeeper.Owners) {
@@ -31,14 +90,8 @@ func OlderThanXMonths(months int, csp cloud.CSP, owners housekeeper.Owners) {
 		ownerName := convertEmailExceptions(ownerNames[owner])
 		fil := filter.New()
 		fil.AddGeneralRule(filter.OlderThanXMonths(months))
-		mailHolder := struct {
-			Owner     string
-			Instances []cloud.Instance
-			Images    []cloud.Image
-			Snapshots []cloud.Snapshot
-			Volumes   []cloud.Volume
-			Buckets   []cloud.Bucket
-		}{
+
+		mailHolder := resourceMailData{
 			ownerName,
 			fil.FilterInstances(resources.Instances),
 			fil.FilterImages(resources.Images),
@@ -50,25 +103,24 @@ func OlderThanXMonths(months int, csp cloud.CSP, owners housekeeper.Owners) {
 			mailHolder.Buckets = fil.FilterBuckets(bucks)
 		}
 
-		oldResourceCount := len(mailHolder.Images) + len(mailHolder.Instances) + len(mailHolder.Snapshots) + len(mailHolder.Volumes)
-		if oldResourceCount > 0 {
+		if mailHolder.ResourceCount() > 0 {
 			// Now send email
 			mailClient := getMailClient()
-			mailContent, err := generateMail(mailHolder)
+			mailContent, err := generateMail(mailHolder, oldResourcesTemplate)
 			if err != nil {
 				log.Fatalln("Could not generate email:", err)
 			}
 			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
 			log.Printf("Notifying %s about old resources\n", ownerMail)
-			title := fmt.Sprintf("You have %d old resource(s) (%s)", oldResourceCount, time.Now().Format("2006-01-02"))
+			title := fmt.Sprintf("You have %d old resource(s) (%s)", mailHolder.ResourceCount(), time.Now().Format("2006-01-02"))
 			mailClient.SendEmail("hsson@brkt.com", title, mailContent) // TODO: Use actual email
 		}
 	}
 }
 
-func generateMail(data interface{}) (string, error) {
+func generateMail(data interface{}, templateString string) (string, error) {
 	t := template.New("emailTemplate").Funcs(extraTemplateFunctions())
-	t, err := t.Parse(oldResourcesTemplate)
+	t, err := t.Parse(templateString)
 	if err != nil {
 		return "", err
 	}
