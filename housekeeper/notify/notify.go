@@ -84,7 +84,7 @@ func OldResourceReview(csp cloud.CSP, owners housekeeper.Owners) {
 			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
 			log.Printf("Sending out old resource review to %s\n", ownerMail)
 			title := fmt.Sprintf("You have %d old resources to review (%s)", mailHolder.ResourceCount(), time.Now().Format("2006-01-02"))
-			err = mailClient.SendEmail(title, mailContent, "hsson@brkt.com") // TODO: Use correct email
+			err = mailClient.SendEmail(title, mailContent, ownerMail)
 			if err != nil {
 				log.Printf("Failed to email %s: %s\n", ownerMail, err)
 			}
@@ -133,7 +133,7 @@ func DeletionWarning(hoursInAdvance int, csp cloud.CSP, owners housekeeper.Owner
 			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
 			log.Printf("Warning %s about resource deletion\n", ownerMail)
 			title := fmt.Sprintf("Deletion warning, %d resources are cleaned up within %d hours", mailHolder.ResourceCount(), hoursInAdvance)
-			err = mailClient.SendEmail(title, mailContent, "hsson@brkt.com") // TODO: Use correct email
+			err = mailClient.SendEmail(title, mailContent, ownerMail, "hsson@brkt.com", "ben@brkt.com") // TODO: Remove tmp emails to hsson and ben
 			if err != nil {
 				log.Printf("Failed to email %s: %s\n", ownerMail, err)
 			}

@@ -23,7 +23,7 @@ one of the following two types of tags (key: value) to your resource:
 
 <p>
 Read more about how HouseKeeper works and how to better tag your resources at
-<a href="#">this Wiki page</a>.
+<a href="https://wiki.int.brkt.com/display/eng/HouseKeeper+-+Automated+Cleanup+of+cloud+resources">this Wiki page</a>.
 </p>
 
 <h2>Old resources:</h2>
@@ -176,7 +176,7 @@ If you want to save any of these resources, add a tag with the key <b>whiteliste
 
 <p>
 Read more about how HouseKeeper works and how to better tag your resources at
-<a href="#">this Wiki page</a>.
+<a href="https://wiki.int.brkt.com/display/eng/HouseKeeper+-+Automated+Cleanup+of+cloud+resources">this Wiki page</a>.
 </p>
 
 <h2>Old resources:</h2>

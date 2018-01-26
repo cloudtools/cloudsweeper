@@ -1,4 +1,6 @@
-ACCOUNTS_FILE 		:= aws_accounts.json
+ACCOUNTS_FROM_MV 	:= aws_accounts.json
+FRIENDLIES 			:= friendly_accounts.json
+ACCOUNTS_FILE 		:= $(FRIENDLIES)
 WARNING_HOURS		:= 48
 
 build:
