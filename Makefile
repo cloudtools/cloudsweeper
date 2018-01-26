@@ -14,13 +14,13 @@ cleanup: build
 		-e AWS_SECRET_ACCESS_KEY \
 		--rm housekeeper --cleanup
 
-notify: build
+review: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper --notify
+		--rm housekeeper --review
 
 setup: build
 	docker run \

@@ -1,6 +1,6 @@
 package notify
 
-const oldResourcesTemplate = `<h1>Hello {{ .Owner -}},</h1>
+const reviewMailTemplate = `<h1>Hello {{ .Owner -}},</h1>
 
 <p>
 HouseKeeper has detected that you have some old resources still around. Please
@@ -16,9 +16,14 @@ take a look at them and clean them up if not needed.
 There is also an automated cleanup feature in HouseKeeper. To use this, please add
 one of the following two types of tags (key: value) to your resource:
 <br />
-"housekeeper-lifetime: days-x", where x is the amount of days to keep the resource
+"<b>housekeeper-lifetime</b>: days-x", where x is the amount of days to keep the resource
 <br />
-"housekeeper-expiry: YYYY-MM-DD", to clean a resource up after the specified date, e.g. 2018-01-30
+"<b>housekeeper-expiry</b>: YYYY-MM-DD", to clean a resource up after the specified date, e.g. 2018-01-30
+</p>
+
+<p>
+Read more about how HouseKeeper works and how to better tag your resources at
+<a href="#">this Wiki page</a>.
 </p>
 
 <h2>Old resources:</h2>

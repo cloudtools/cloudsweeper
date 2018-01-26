@@ -25,7 +25,7 @@ const (
 var (
 	accountsFile   = flag.String("accounts-file", defaultAccountsFile, "Specify where to find the JSON with all accounts")
 	performCleanup = flag.Bool("cleanup", false, "Specify if cleanup should be performed")
-	performNotify  = flag.Bool("notify", false, "Specify if notifications should be sent out")
+	performReview  = flag.Bool("review", false, "Specify if review of old resources should be sent out")
 	performBuckets = flag.Bool("buckets", false, "Include buckets, this can take some time")
 	performSetup   = flag.Bool("setup", false, "Setup AWS account to allow housekeeping")
 	performWarning = flag.Bool("warning", false, "Send out warning about resource cleanup")
@@ -106,9 +106,9 @@ func main() {
 		didAction = true
 	}
 
-	if *performNotify {
-		log.Println("Notifying")
-		notify.OlderThanXMonths(3, cloud.AWS, []hk.Owner{hk.Owner{Name: "qa", ID: sharedQAAccount}})
+	if *performReview {
+		log.Println("Reviewing old resources")
+		notify.OldResourceReview(cloud.AWS, []hk.Owner{hk.Owner{Name: "qa", ID: sharedQAAccount}})
 		didAction = true
 	}
 

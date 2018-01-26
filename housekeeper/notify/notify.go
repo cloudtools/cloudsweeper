@@ -2,15 +2,10 @@ package notify
 
 import (
 	"brkt/housekeeper/cloud"
-	"brkt/housekeeper/cloud/billing"
 	"brkt/housekeeper/cloud/filter"
 	"brkt/housekeeper/housekeeper"
-	"brkt/housekeeper/mailer"
-	"bytes"
 	"fmt"
-	"html/template"
 	"log"
-	"os"
 	"time"
 )
 
@@ -31,6 +26,69 @@ type resourceMailData struct {
 
 func (d *resourceMailData) ResourceCount() int {
 	return len(d.Images) + len(d.Instances) + len(d.Snapshots) + len(d.Volumes) + len(d.Buckets)
+}
+
+// OldResourceReview will review (but not do any cleanup action) old resources
+// that an owner might want to consider doing something about. The owner is then
+// sent an email with a list of these resources. Resources are sent for review
+// if they fulfil any of the following rules:
+//		- Resource is older than 30 days
+//		- A whitelisted resource is older than 6 months
+//		- An instance marked with do-not-delete is older than a week
+func OldResourceReview(csp cloud.CSP, owners housekeeper.Owners) {
+	mngr := cloud.NewManager(csp, owners.AllIDs()...)
+	allCompute := mngr.AllResourcesPerAccount()
+	allBuckets := mngr.BucketsPerAccount()
+	ownerNames := owners.IDToName()
+	for owner, resources := range allCompute {
+		ownerName := convertEmailExceptions(ownerNames[owner])
+
+		// Create filters
+		generalFilter := filter.New()
+		generalFilter.AddGeneralRule(filter.OlderThanXDays(30))
+
+		whitelistFilter := filter.New()
+		whitelistFilter.OverrideWhitelist = true
+		whitelistFilter.AddGeneralRule(filter.OlderThanXMonths(6))
+
+		// These only apply to instances
+		dndFilter := filter.New()
+		dndFilter.AddGeneralRule(filter.HasTag("no-not-delete"))
+		dndFilter.AddGeneralRule(filter.OlderThanXDays(7))
+
+		dndFilter2 := filter.New()
+		dndFilter2.AddGeneralRule(filter.NameContains("do-not-delete"))
+		dndFilter2.AddGeneralRule(filter.OlderThanXDays(7))
+
+		// Apply filters
+		mailHolder := resourceMailData{
+			Owner:     ownerName,
+			Instances: filter.Instances(resources.Instances, generalFilter, whitelistFilter, dndFilter, dndFilter2),
+			Images:    filter.Images(resources.Images, generalFilter, whitelistFilter),
+			Volumes:   filter.Volumes(resources.Volumes, generalFilter, whitelistFilter),
+			Snapshots: filter.Snapshots(resources.Snapshots, generalFilter, whitelistFilter),
+			Buckets:   []cloud.Bucket{},
+		}
+		if bucks, ok := allBuckets[owner]; ok {
+			mailHolder.Buckets = filter.Buckets(bucks, generalFilter, whitelistFilter)
+		}
+
+		if mailHolder.ResourceCount() > 0 {
+			// Now send email
+			mailClient := getMailClient()
+			mailContent, err := generateMail(mailHolder, reviewMailTemplate)
+			if err != nil {
+				log.Fatalln("Could not generate email:", err)
+			}
+			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
+			log.Printf("Sending out old resource review to %s\n", ownerMail)
+			title := fmt.Sprintf("You have %d old resources to review (%s)", mailHolder.ResourceCount(), time.Now().Format("2006-01-02"))
+			err = mailClient.SendEmail(title, mailContent, "hsson@brkt.com") // TODO: Use correct email
+			if err != nil {
+				log.Printf("Failed to email %s: %s\n", ownerMail, err)
+			}
+		}
+	}
 }
 
 // DeletionWarning will find resources which are about to be deleted within
@@ -74,132 +132,10 @@ func DeletionWarning(hoursInAdvance int, csp cloud.CSP, owners housekeeper.Owner
 			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
 			log.Printf("Warning %s about resource deletion\n", ownerMail)
 			title := fmt.Sprintf("Deletion warning, %d resources are cleaned up within %d hours", mailHolder.ResourceCount(), hoursInAdvance)
-			mailClient.SendEmail("hsson@brkt.com", title, mailContent) // TODO: Use correct email
-		}
-	}
-}
-
-// OlderThanXMonths sends out an email notification to all specified owners
-// about all of their resources older than the specified amount of months.
-func OlderThanXMonths(months int, csp cloud.CSP, owners housekeeper.Owners) {
-	mngr := cloud.NewManager(csp, owners.AllIDs()...)
-	all := mngr.AllResourcesPerAccount()
-	allBuckets := mngr.BucketsPerAccount()
-	ownerNames := owners.IDToName()
-	for owner, resources := range all {
-		ownerName := convertEmailExceptions(ownerNames[owner])
-		fil := filter.New()
-		fil.AddGeneralRule(filter.OlderThanXMonths(months))
-
-		mailHolder := resourceMailData{
-			ownerName,
-			filter.Instances(resources.Instances, fil),
-			filter.Images(resources.Images, fil),
-			filter.Snapshots(resources.Snapshots, fil),
-			filter.Volumes(resources.Volumes, fil),
-			[]cloud.Bucket{},
-		}
-		if bucks, ok := allBuckets[owner]; ok {
-			mailHolder.Buckets = filter.Buckets(bucks, fil)
-		}
-
-		if mailHolder.ResourceCount() > 0 {
-			// Now send email
-			mailClient := getMailClient()
-			mailContent, err := generateMail(mailHolder, oldResourcesTemplate)
+			err = mailClient.SendEmail(title, mailContent, "hsson@brkt.com") // TODO: Use correct email
 			if err != nil {
-				log.Fatalln("Could not generate email:", err)
+				log.Printf("Failed to email %s: %s\n", ownerMail, err)
 			}
-			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
-			log.Printf("Notifying %s about old resources\n", ownerMail)
-			title := fmt.Sprintf("You have %d old resource(s) (%s)", mailHolder.ResourceCount(), time.Now().Format("2006-01-02"))
-			mailClient.SendEmail("hsson@brkt.com", title, mailContent) // TODO: Use actual email
 		}
-	}
-}
-
-func generateMail(data interface{}, templateString string) (string, error) {
-	t := template.New("emailTemplate").Funcs(extraTemplateFunctions())
-	t, err := t.Parse(templateString)
-	if err != nil {
-		return "", err
-	}
-	var result bytes.Buffer
-	err = t.Execute(&result, data)
-	if err != nil {
-		return "", err
-	}
-	return result.String(), nil
-}
-
-// This function will convert some edge case names to their proper
-// email alias
-func convertEmailExceptions(oldName string) (newName string) {
-	switch oldName {
-	case "qa-solo":
-		return "qa"
-	default:
-		return oldName
-	}
-}
-
-func getMailClient() mailer.Client {
-	username, exists := os.LookupEnv(smtpUserKey)
-	if !exists {
-		log.Fatalf("%s is required\n", smtpUserKey)
-	}
-	password, exists := os.LookupEnv(smtpPassKey)
-	if !exists {
-		log.Fatalf("%s is required\n", smtpPassKey)
-	}
-	return mailer.NewClient(username, password, mailDisplayName)
-}
-
-func extraTemplateFunctions() template.FuncMap {
-	return template.FuncMap{
-		"fdate": func(t time.Time, format string) string { return t.Format(format) },
-		"daysrunning": func(t time.Time) string {
-			if (t == time.Time{}) {
-				return "never"
-			}
-			days := int(time.Now().Sub(t).Hours() / 24.0)
-			switch days {
-			case 0:
-				return "today"
-			case 1:
-				return "yesterday"
-			default:
-				return fmt.Sprintf("%d days ago", days)
-			}
-		},
-		"even": func(num int) bool { return num%2 == 0 },
-		"yesno": func(b bool) string {
-			if b {
-				return "Yes"
-			}
-			return "No"
-		},
-		"accucost": func(res cloud.Resource) string {
-			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
-			costPerDay := billing.ResourceCostPerDay(res)
-			return fmt.Sprintf("$%.2f", days*costPerDay)
-		},
-		"bucketcost": func(res cloud.Bucket) float64 {
-			return billing.BucketPricePerMonth(res)
-		},
-		"instname": func(inst cloud.Instance) string {
-			if inst.CSP() == cloud.AWS {
-				name, exist := inst.Tags()["Name"]
-				if exist {
-					return name
-				}
-				return ""
-
-			} else if inst.CSP() == cloud.GCP {
-				return inst.ID()
-			} else {
-				return ""
-			}
-		},
 	}
 }
