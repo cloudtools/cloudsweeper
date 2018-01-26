@@ -41,6 +41,7 @@ func OldResourceReview(csp cloud.CSP, owners housekeeper.Owners) {
 	allBuckets := mngr.BucketsPerAccount()
 	ownerNames := owners.IDToName()
 	for owner, resources := range allCompute {
+		log.Println("Performing old resource review in", owner)
 		ownerName := convertEmailExceptions(ownerNames[owner])
 
 		// Create filters

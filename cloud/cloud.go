@@ -11,6 +11,9 @@ import (
 type ResourceManager interface {
 	// Owners return a list of all owners the manager handle
 	Owners() []string
+	// BucketsPerAccount returns a mapping from account/project to
+	// its associated buckets
+	BucketsPerAccount() map[string][]Bucket
 	// InstancesPerAccount returns a mapping from account/project
 	// to its associated instances
 	InstancesPerAccount() map[string][]Instance
@@ -35,9 +38,8 @@ type ResourceManager interface {
 	CleanupVolumes([]Volume) error
 	// CleanupSnapshots delete a list of snapshots
 	CleanupSnapshots([]Snapshot) error
-	// BucketsPerAccount returns a mapping from account/project to
-	// its associated buckets
-	BucketsPerAccount() map[string][]Bucket
+	// CleanupBuckets deletes the specified buckets
+	CleanupBuckets([]Bucket) error
 }
 
 // Resource represents a generic resource in any CSP. It should be

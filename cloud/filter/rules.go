@@ -168,3 +168,39 @@ func DeleteWithinXHours(hours int) func(cloud.Resource) bool {
 		return time.Now().After(within)
 	}
 }
+
+// DeleteAtPassed checks is the delete-at time for a resource has passed. The
+// delete tag has the format "housekeeper-delete-at: 2018-01-25T16:51:39-08:00".
+func DeleteAtPassed() func(cloud.Resource) bool {
+	return func(r cloud.Resource) bool {
+		deleteAt, exist := r.Tags()[DeleteTagKey]
+		if !exist {
+			return false
+		}
+		deleteAtTime, err := time.Parse(time.RFC3339, deleteAt)
+		if err != nil {
+			log.Printf("%s has malformed deletion tag: %s\n", r.ID(), deleteAt)
+			return false
+		}
+		return time.Now().After(deleteAtTime)
+	}
+}
+
+// Below are volume rules
+
+// IsUnattached checks if volume is not attached to an instance
+func IsUnattached() func(cloud.Volume) bool {
+	return func(v cloud.Volume) bool {
+		return !v.Attached()
+	}
+}
+
+// Below are bucket rules
+
+// NotModifiedInXDays returns bucket which have not had any modification
+// to them within X days.
+func NotModifiedInXDays(days int) func(cloud.Bucket) bool {
+	return func(b cloud.Bucket) bool {
+		return time.Now().After(b.LastModified().AddDate(0, 0, days))
+	}
+}

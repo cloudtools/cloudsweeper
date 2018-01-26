@@ -35,186 +35,6 @@ func (m *awsResourceManager) Owners() []string {
 	return m.accounts
 }
 
-type awsInstance struct {
-	baseInstance
-}
-
-// Cleanup will termiante this instance
-func (i *awsInstance) Cleanup() error {
-	log.Println("Cleaning up instance", i.ID())
-	client := clientForAWSResource(i)
-	input := &ec2.TerminateInstancesInput{
-		InstanceIds: aws.StringSlice([]string{i.id}),
-	}
-	_, err := client.TerminateInstances(input)
-	return err
-}
-
-func (i *awsInstance) SetTag(key, value string, overwrite bool) error {
-	return addAWSTag(i, key, value, overwrite)
-}
-
-type awsImage struct {
-	baseImage
-}
-
-func (i *awsImage) Cleanup() error {
-	log.Println("Cleaning up image", i.ID())
-	client := clientForAWSResource(i)
-	input := &ec2.DeregisterImageInput{
-		ImageId: aws.String(i.ID()),
-	}
-	_, err := client.DeregisterImage(input)
-	return err
-}
-
-func (i *awsImage) SetTag(key, value string, overwrite bool) error {
-	return addAWSTag(i, key, value, overwrite)
-}
-
-func (i *awsImage) MakePrivate() error {
-	log.Println("Making image private:", i.ID())
-	if !i.Public() {
-		// Image is already private
-		return nil
-	}
-	client := clientForAWSResource(i)
-	input := &ec2.ModifyImageAttributeInput{
-		ImageId: aws.String(i.ID()),
-		LaunchPermission: &ec2.LaunchPermissionModifications{
-			Remove: []*ec2.LaunchPermission{&ec2.LaunchPermission{
-				Group: aws.String("all"),
-			}},
-		},
-	}
-	_, err := client.ModifyImageAttribute(input)
-	if err != nil {
-		return err
-	}
-	i.public = false
-	return nil
-}
-
-type awsVolume struct {
-	baseVolume
-}
-
-func (v *awsVolume) Cleanup() error {
-	log.Println("Cleaning up volume", v.ID())
-	client := clientForAWSResource(v)
-	input := &ec2.DeleteVolumeInput{
-		VolumeId: aws.String(v.ID()),
-	}
-	_, err := client.DeleteVolume(input)
-	return err
-}
-
-func (v *awsVolume) SetTag(key, value string, overwrite bool) error {
-	return addAWSTag(v, key, value, overwrite)
-}
-
-type awsSnapshot struct {
-	baseSnapshot
-}
-
-func (s *awsSnapshot) Cleanup() error {
-	log.Println("Cleaning up snapshot", s.ID())
-	client := clientForAWSResource(s)
-	input := &ec2.DeleteSnapshotInput{
-		SnapshotId: aws.String(s.ID()),
-	}
-	_, err := client.DeleteSnapshot(input)
-	return err
-}
-
-func (s *awsSnapshot) SetTag(key, value string, overwrite bool) error {
-	return addAWSTag(s, key, value, overwrite)
-}
-
-type awsBucket struct {
-	baseBucket
-}
-
-func (b *awsBucket) Cleanup() error {
-	log.Println("Cleaning up bucket", b.ID())
-	sess := session.Must(session.NewSession())
-	creds := stscreds.NewCredentials(sess, fmt.Sprintf(assumeRoleARNTemplate, b.Owner()))
-	s3Client := s3.New(sess, &aws.Config{
-		Credentials: creds,
-		Region:      aws.String(b.Location()),
-	})
-
-	var internalErr error
-	err := s3Client.ListObjectsV2Pages(&s3.ListObjectsV2Input{
-		Bucket: aws.String(b.ID()),
-	}, func(output *s3.ListObjectsV2Output, lastPage bool) bool {
-		input := &s3.DeleteObjectsInput{
-			Bucket: aws.String(b.ID()),
-		}
-		delete := &s3.Delete{
-			Objects: []*s3.ObjectIdentifier{},
-		}
-		for i := range output.Contents {
-			delete.Objects = append(delete.Objects, &s3.ObjectIdentifier{Key: output.Contents[i].Key})
-		}
-		input.Delete = delete
-		if len(delete.Objects) == 0 {
-			// A request with an empty list of objects is not allowed
-			return true
-		}
-		out, e := s3Client.DeleteObjects(input)
-		if e != nil {
-			internalErr = e
-			return false
-		}
-		if len(out.Errors) > 0 {
-			for i := range out.Errors {
-				log.Printf("ERROR: Could not delete '%s': %s\n", *out.Errors[i].Key, *out.Errors[i].Message)
-			}
-			internalErr = errors.New("Failed to delete one or more objects")
-			return false
-		}
-		return !lastPage
-	})
-	if err != nil {
-		return err
-	}
-	if internalErr != nil {
-		return internalErr
-	}
-
-	input := &s3.DeleteBucketInput{
-		Bucket: aws.String(b.ID()),
-	}
-	_, err = s3Client.DeleteBucket(input)
-	return err
-}
-
-func (b *awsBucket) SetTag(key, value string, overwrite bool) error {
-	_, exist := b.Tags()[key]
-	if exist && !overwrite {
-		return fmt.Errorf("Key %s already exist on %s", key, b.ID())
-	}
-	sess := session.Must(session.NewSession())
-	creds := stscreds.NewCredentials(sess, fmt.Sprintf(assumeRoleARNTemplate, b.Owner()))
-	s3Client := s3.New(sess, &aws.Config{
-		Credentials: creds,
-		Region:      aws.String(b.Location()),
-	})
-	tagging := &s3.Tagging{
-		TagSet: []*s3.Tag{&s3.Tag{
-			Key:   aws.String(key),
-			Value: aws.String(value),
-		}},
-	}
-	input := &s3.PutBucketTaggingInput{
-		Bucket:  aws.String(b.ID()),
-		Tagging: tagging,
-	}
-	_, err := s3Client.PutBucketTagging(input)
-	return err
-}
-
 const (
 	assumeRoleARNTemplate = "arn:aws:iam::%s:role/brkt-HouseKeeper"
 
@@ -462,6 +282,18 @@ func (m *awsResourceManager) CleanupSnapshots(snapshots []Snapshot) error {
 	return cleanupResources(resList)
 }
 
+func (m *awsResourceManager) CleanupBuckets(buckets []Bucket) error {
+	resList := []Resource{}
+	for i := range buckets {
+		v, ok := buckets[i].(Resource)
+		if !ok {
+			return errors.New("Could not convert Bucket to Resource")
+		}
+		resList = append(resList, v)
+	}
+	return cleanupResources(resList)
+}
+
 func cleanupResources(resources []Resource) error {
 	failed := false
 	var wg sync.WaitGroup
@@ -544,7 +376,7 @@ func getAWSImages(account string, client *ec2.EC2) ([]Image, error) {
 			name: *ami.Name,
 		}}
 		for _, mapping := range ami.BlockDeviceMappings {
-			if mapping.Ebs != nil {
+			if mapping != nil && (*mapping).Ebs != nil && (*(*mapping).Ebs).VolumeSize != nil {
 				img.baseImage.sizeGB += *mapping.Ebs.VolumeSize
 			}
 		}
