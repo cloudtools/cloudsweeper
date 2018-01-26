@@ -1,9 +1,9 @@
 package notify
 
 import (
-	"brkt/housekeeper/cloud"
-	"brkt/housekeeper/cloud/filter"
-	"brkt/housekeeper/housekeeper"
+	"brkt/olga/cloud"
+	"brkt/olga/cloud/filter"
+	"brkt/olga/housekeeper"
 	"fmt"
 	"log"
 	"time"

@@ -1,9 +1,9 @@
 package cleanup
 
 import (
-	"brkt/housekeeper/cloud"
-	"brkt/housekeeper/cloud/filter"
-	"brkt/housekeeper/housekeeper"
+	"brkt/olga/cloud"
+	"brkt/olga/cloud/filter"
+	"brkt/olga/housekeeper"
 	"log"
 	"time"
 )

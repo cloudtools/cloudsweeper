@@ -1,7 +1,7 @@
 package filter
 
 import (
-	"brkt/housekeeper/cloud"
+	"brkt/olga/cloud"
 )
 
 func (f *ResourceFilter) includeResource(resource cloud.Resource) bool {

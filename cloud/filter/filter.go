@@ -1,7 +1,7 @@
 package filter
 
 import (
-	"brkt/housekeeper/cloud"
+	"brkt/olga/cloud"
 )
 
 // New will create a new resource filter ready to use

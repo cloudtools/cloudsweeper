@@ -1,11 +1,11 @@
 package main
 
 import (
-	"brkt/housekeeper/cloud"
-	hk "brkt/housekeeper/housekeeper"
-	"brkt/housekeeper/housekeeper/cleanup"
-	"brkt/housekeeper/housekeeper/notify"
-	"brkt/housekeeper/housekeeper/setup"
+	"brkt/olga/cloud"
+	hk "brkt/olga/housekeeper"
+	"brkt/olga/housekeeper/cleanup"
+	"brkt/olga/housekeeper/notify"
+	"brkt/olga/housekeeper/setup"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -104,7 +104,9 @@ func parseAWSAccounts(inputFile string) hk.Owners {
 	if err != nil {
 		log.Fatalln("Could not parse JSON:", err)
 	}
-	// The shared dev account is not in the imported accounts file
-	owners = append(owners, hk.Owner{Name: "cloud-dev", ID: sharedDevAWSAccount})
+	if *accountsFile == defaultAccountsFile {
+		// The shared dev account is not in the imported accounts file
+		owners = append(owners, hk.Owner{Name: "cloud-dev", ID: sharedDevAWSAccount})
+	}
 	return owners
 }
