@@ -42,8 +42,8 @@ const awsAssumeRoleDoc = `{
   }`
 
 const (
-	roleName   = "brkt-HouseKeeper-debug"
-	policyName = "HouseKeeperPolicy-debug"
+	roleName   = "brkt-HouseKeeper"
+	policyName = "HouseKeeperPolicy"
 	policyDesc = "Allow HouseKeeper to access your resources"
 
 	awsPolicyOrRoleExist = "EntityAlreadyExists"
