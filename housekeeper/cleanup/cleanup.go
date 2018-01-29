@@ -38,6 +38,8 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 
 		oldFilter := filter.New()
 		oldFilter.AddGeneralRule(filter.OlderThanXMonths(6))
+		// Don't cleanup resources tagged for release
+		oldFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 
 		unattachedFilter := filter.New()
 		unattachedFilter.AddVolumeRule(filter.IsUnattached())
@@ -109,7 +111,7 @@ func PerformCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 	cleanupLifetimePassed(mngr)
 
 	// This will cleanup old released AMIs if they're older than a year
-	cleanupReleaseImages(csp)
+	// cleanupReleaseImages(csp) // TODO: Enable after "beta" is over
 }
 
 func cleanupLifetimePassed(mngr cloud.ResourceManager) {
