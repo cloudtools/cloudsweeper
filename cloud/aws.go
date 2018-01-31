@@ -23,6 +23,7 @@ import (
 const (
 	defaultAWSRegion = "us-west-2"
 	gbDivider        = 1024.0 * 1024.0 * 1024.0
+	awsStateInUse    = "in-use"
 )
 
 // awsResourceManager uses the AWS Go SDK. Docs can be found at:
@@ -395,6 +396,7 @@ func getAWSVolumes(account string, client *ec2.EC2) ([]Volume, error) {
 	}
 	result := []Volume{}
 	for _, volume := range awsVolumes.Volumes {
+		inUse := len(volume.Attachments) > 0 || *volume.State == awsStateInUse
 		vol := awsVolume{baseVolume{
 			baseResource: baseResource{
 				csp:          AWS,
@@ -406,7 +408,7 @@ func getAWSVolumes(account string, client *ec2.EC2) ([]Volume, error) {
 				tags:         convertAWSTags(volume.Tags),
 			},
 			sizeGB:     *volume.Size,
-			attached:   len(volume.Attachments) > 0,
+			attached:   inUse,
 			encrypted:  *volume.Encrypted,
 			volumeType: *volume.VolumeType,
 		}}

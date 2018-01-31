@@ -43,6 +43,7 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 
 		unattachedFilter := filter.New()
 		unattachedFilter.AddVolumeRule(filter.IsUnattached())
+		unattachedFilter.AddGeneralRule(filter.OlderThanXMonths(1))
 
 		bucketFilter := filter.New()
 		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(120))

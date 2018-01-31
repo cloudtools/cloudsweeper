@@ -97,18 +97,18 @@ func or(resource cloud.Resource, filters []*ResourceFilter) bool {
 		return false
 	}
 
-	if snap, ok := resource.(cloud.Snapshot); ok {
+	if vol, ok := resource.(cloud.Volume); ok {
 		for _, filter := range filters {
-			if filter.includeSnapshot(snap) {
+			if filter.includeVolume(vol) {
 				return true
 			}
 		}
 		return false
 	}
 
-	if vol, ok := resource.(cloud.Volume); ok {
+	if snap, ok := resource.(cloud.Snapshot); ok {
 		for _, filter := range filters {
-			if filter.includeVolume(vol) {
+			if filter.includeSnapshot(snap) {
 				return true
 			}
 		}
