@@ -35,6 +35,7 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 		untaggedFilter.AddGeneralRule(func(r cloud.Resource) bool {
 			return len(r.Tags()) == 0
 		})
+		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(30))
 
 		oldFilter := filter.New()
 		oldFilter.AddGeneralRule(filter.OlderThanXMonths(6))
@@ -43,10 +44,11 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 
 		unattachedFilter := filter.New()
 		unattachedFilter.AddVolumeRule(filter.IsUnattached())
-		unattachedFilter.AddGeneralRule(filter.OlderThanXMonths(1))
+		unattachedFilter.AddGeneralRule(filter.OlderThanXDays(30))
 
 		bucketFilter := filter.New()
 		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(120))
+		bucketFilter.AddGeneralRule(filter.OlderThanXDays(7))
 
 		timeToDelete := time.Now().AddDate(0, 0, 4)
 
@@ -61,7 +63,7 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 		}
 
 		// Tag volumes
-		for _, res := range filter.Volumes(res.Volumes, oldFilter, unattachedFilter) {
+		for _, res := range filter.Volumes(res.Volumes, oldFilter, unattachedFilter, untaggedFilter) {
 			err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
 			if err != nil {
 				log.Printf("Failed to tag %s for deletion: %s\n", res.ID(), err)
@@ -71,7 +73,7 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 		}
 
 		// Tag snapshots
-		for _, res := range filter.Snapshots(res.Snapshots, oldFilter, unattachedFilter) {
+		for _, res := range filter.Snapshots(res.Snapshots, oldFilter, untaggedFilter) {
 			err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
 			if err != nil {
 				log.Printf("Failed to tag %s for deletion: %s\n", res.ID(), err)
@@ -81,7 +83,7 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 		}
 
 		// Tag images
-		for _, res := range filter.Images(res.Images, oldFilter, unattachedFilter) {
+		for _, res := range filter.Images(res.Images, oldFilter, untaggedFilter) {
 			err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
 			if err != nil {
 				log.Printf("Failed to tag %s for deletion: %s\n", res.ID(), err)
@@ -91,7 +93,7 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 		}
 
 		if buck, ok := allBuckets[owner]; ok {
-			for _, res := range filter.Buckets(buck, oldFilter, unattachedFilter) {
+			for _, res := range filter.Buckets(buck, oldFilter, bucketFilter) {
 				err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
 				if err != nil {
 					log.Printf("Failed to tag %s for deletion: %s\n", res.ID(), err)
