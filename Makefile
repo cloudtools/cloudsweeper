@@ -46,4 +46,7 @@ setup: build
 		-e AWS_SECRET_ACCESS_KEY \
 		--rm -it housekeeper --setup
 
+test:
+	go test ./...
+
 build-and-run: build run
