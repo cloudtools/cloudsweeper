@@ -46,7 +46,7 @@ setup: build
 		-e AWS_SECRET_ACCESS_KEY \
 		--rm -it housekeeper --setup
 
-test:
-	go test ./...
+test: build
+	docker run --rm --entrypoint go housekeeper test ./...
 
 build-and-run: build run
