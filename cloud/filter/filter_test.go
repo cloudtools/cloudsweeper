@@ -183,7 +183,7 @@ func TestCleanupRulesFilter(t *testing.T) {
 	// No
 	img5 := &testImg{}
 	img5.creationTime = time.Now().AddDate(-3, 0, -5)
-	img5.tags = map[string]string{"Release": ""}
+	img5.tags = map[string]string{"release": ""}
 
 	// Yes
 	img6 := &testImg{}
@@ -268,8 +268,8 @@ func TestCleanupRulesFilter(t *testing.T) {
 	buck3.creationTime = time.Now().AddDate(0, 0, -45)
 	buck3.lastModified = time.Now()
 
-	filBucks := Buckets([]cloud.Bucket{buck1, buck2, buck3}, oldFilter, bucketFilter)
-	if len(filBucks) != 2 {
+	filBucks := Buckets([]cloud.Bucket{buck1, buck2, buck3}, bucketFilter)
+	if len(filBucks) != 1 {
 		t.Error("Failed to filter buckets")
 	}
 }

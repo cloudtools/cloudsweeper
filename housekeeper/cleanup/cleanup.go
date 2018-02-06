@@ -63,7 +63,7 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 		}
 
 		// Tag volumes
-		for _, res := range filter.Volumes(res.Volumes, oldFilter, unattachedFilter, untaggedFilter) {
+		for _, res := range filter.Volumes(res.Volumes, oldFilter, unattachedFilter) {
 			err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
 			if err != nil {
 				log.Printf("Failed to tag %s for deletion: %s\n", res.ID(), err)
@@ -93,7 +93,7 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 		}
 
 		if buck, ok := allBuckets[owner]; ok {
-			for _, res := range filter.Buckets(buck, oldFilter, bucketFilter) {
+			for _, res := range filter.Buckets(buck, bucketFilter) {
 				err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
 				if err != nil {
 					log.Printf("Failed to tag %s for deletion: %s\n", res.ID(), err)

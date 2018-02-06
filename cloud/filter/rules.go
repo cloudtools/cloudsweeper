@@ -72,7 +72,7 @@ func NameContains(contains string) func(cloud.Resource) bool {
 		if n, ok := r.Tags()["Name"]; ok {
 			name = n
 		}
-		return strings.Contains(name, contains)
+		return strings.Contains(strings.ToLower(name), strings.ToLower(contains))
 	}
 }
 
@@ -92,8 +92,12 @@ func IDMatches(ids ...string) func(cloud.Resource) bool {
 // HasTag checks if a resource have a specified tag or not
 func HasTag(tagKey string) func(cloud.Resource) bool {
 	return func(r cloud.Resource) bool {
-		_, ok := r.Tags()[tagKey]
-		return ok
+		for key := range r.Tags() {
+			if strings.ToLower(key) == strings.ToLower(tagKey) {
+				return true
+			}
+		}
+		return false
 	}
 }
 
