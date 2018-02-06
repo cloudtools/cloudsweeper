@@ -47,6 +47,6 @@ setup: build
 		--rm -it housekeeper --setup
 
 test: build
-	docker run --rm --entrypoint go housekeeper test ./...
+	docker run --rm --entrypoint go housekeeper test -cover ./...
 
 build-and-run: build run

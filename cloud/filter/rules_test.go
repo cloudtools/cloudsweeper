@@ -23,41 +23,15 @@ type testResource struct {
 	tags         map[string]string
 }
 
-func (r *testResource) CSP() cloud.CSP {
-	return testCSP
-}
-
-func (r *testResource) Owner() string {
-	return testOwner
-}
-
-func (r *testResource) ID() string {
-	return testID
-}
-
-func (r *testResource) Tags() map[string]string {
-	return r.tags
-}
-
-func (r *testResource) Location() string {
-	return testLocation
-}
-
-func (r *testResource) Public() bool {
-	return testPublic
-}
-
-func (r *testResource) CreationTime() time.Time {
-	return r.creationTime
-}
-
-func (r *testResource) SetTag(key, value string, overwrite bool) error {
-	return nil
-}
-
-func (r *testResource) Cleanup() error {
-	return nil
-}
+func (r *testResource) CSP() cloud.CSP                                 { return testCSP }
+func (r *testResource) Owner() string                                  { return testOwner }
+func (r *testResource) ID() string                                     { return testID }
+func (r *testResource) Tags() map[string]string                        { return r.tags }
+func (r *testResource) Location() string                               { return testLocation }
+func (r *testResource) Public() bool                                   { return testPublic }
+func (r *testResource) CreationTime() time.Time                        { return r.creationTime }
+func (r *testResource) SetTag(key, value string, overwrite bool) error { return nil }
+func (r *testResource) Cleanup() error                                 { return nil }
 
 func TestNegate(t *testing.T) {
 	foo := &testResource{time.Now(), map[string]string{}}
@@ -309,21 +283,10 @@ type testVolume struct {
 	attached bool
 }
 
-func (v *testVolume) SizeGB() int64 {
-	return testSize
-}
-
-func (v *testVolume) Attached() bool {
-	return v.attached
-}
-
-func (v *testVolume) Encrypted() bool {
-	return testEncrypted
-}
-
-func (v *testVolume) VolumeType() string {
-	return testVolumeType
-}
+func (v *testVolume) SizeGB() int64      { return testSize }
+func (v *testVolume) Attached() bool     { return v.attached }
+func (v *testVolume) Encrypted() bool    { return testEncrypted }
+func (v *testVolume) VolumeType() string { return testVolumeType }
 
 func TestAttached(t *testing.T) {
 	foo := &testVolume{
@@ -349,17 +312,9 @@ type testBucket struct {
 	lastModified time.Time
 }
 
-func (b *testBucket) LastModified() time.Time {
-	return b.lastModified
-}
-
-func (b *testBucket) ObjectCount() int64 {
-	return 10
-}
-
-func (b *testBucket) TotalSizeGB() float64 {
-	return 5.13
-}
+func (b *testBucket) LastModified() time.Time { return b.lastModified }
+func (b *testBucket) ObjectCount() int64      { return 10 }
+func (b *testBucket) TotalSizeGB() float64    { return 5.13 }
 
 func TestNotModified(t *testing.T) {
 	foo := &testBucket{
