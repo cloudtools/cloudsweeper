@@ -303,7 +303,7 @@ func cleanupResources(resources []Resource) error {
 		go func(index int) {
 			err := resources[index].Cleanup()
 			if err != nil {
-				log.Printf("Cleaning up %s for owner %s failed\n", resources[index].ID(), resources[index].Owner())
+				log.Printf("Cleaning up %s for owner %s failed\n%s\n", resources[index].ID(), resources[index].Owner(), err)
 				failed = true
 			}
 			wg.Done()
