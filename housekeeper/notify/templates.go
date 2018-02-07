@@ -137,7 +137,6 @@ Read more about how HouseKeeper works and how to better tag your resources at
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
 			<th><strong>Files</strong></th>
-			<th><strong>Created</strong></th>
 			<th><strong>Last modified</strong></th>
 			<th><strong>Monthly cost</strong></th>
 		</tr>
@@ -147,7 +146,6 @@ Read more about how HouseKeeper works and how to better tag your resources at
 			<td>{{ $bucket.ID }}</td>
 			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
 			<td>{{ $bucket.ObjectCount }}</td>
-			<td>{{ fdate $bucket.CreationTime "2006-01-02" }} ({{ daysrunning $bucket.CreationTime }})</td>
 			<td>{{ fdate $bucket.LastModified "2006-01-02" }} ({{ daysrunning $bucket.LastModified }})</td>
 			<td>{{ printf "$%.3f" (bucketcost $bucket) }}</td>
 		</tr>
@@ -290,7 +288,6 @@ Read more about how HouseKeeper works and how to better tag your resources at
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
 			<th><strong>Files</strong></th>
-			<th><strong>Created</strong></th>
 			<th><strong>Last modified</strong></th>
 			<th><strong>Monthly cost</strong></th>
 		</tr>
@@ -300,7 +297,6 @@ Read more about how HouseKeeper works and how to better tag your resources at
 			<td>{{ $bucket.ID }}</td>
 			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
 			<td>{{ $bucket.ObjectCount }}</td>
-			<td>{{ fdate $bucket.CreationTime "2006-01-02" }} ({{ daysrunning $bucket.CreationTime }})</td>
 			<td>{{ fdate $bucket.LastModified "2006-01-02" }} ({{ daysrunning $bucket.LastModified }})</td>
 			<td>{{ printf "$%.3f" (bucketcost $bucket) }}</td>
 		</tr>
