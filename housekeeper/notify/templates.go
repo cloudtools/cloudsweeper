@@ -8,8 +8,10 @@ take a look at them and clean them up if not needed.
 </p>
 
 <p>
-<b>If you want to keep a resource and stop getting these reminders about it, add a tag with the key 
-"whitelisted" to it.</b>
+These are resources that look suspiciously old. The resources marked <span style="background-color: #c9fc99;">in green</span> 
+are whitelisted. Whitelisted resources will never be deleted by HouseKeeper. If you see a resource
+here that you know that you want to keep for a longer time, then please whitelist it: add a tag with 
+the key "whitelisted" to it.
 </p>
 
 <p>
@@ -40,7 +42,7 @@ Read more about how HouseKeeper works and how to better tag your resources at
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $instance := .Instances }}
-		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
+		<tr {{ if and (even $i) (not (whitelisted $instance)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $instance }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $instance.Owner }}</td>
 			<td>{{ $instance.Location }}</td>
 			<td>{{ $instance.ID }}</td>
@@ -65,7 +67,7 @@ Read more about how HouseKeeper works and how to better tag your resources at
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $image := .Images }}
-		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
+	<tr {{ if and (even $i) (not (whitelisted $image)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $image }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $image.Owner }}</td>
 			<td>{{ $image.Location }}</td>
 			<td>{{ $image.ID }}</td>
@@ -91,7 +93,7 @@ Read more about how HouseKeeper works and how to better tag your resources at
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $volume := .Volumes }}
-		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
+	<tr {{ if and (even $i) (not (whitelisted $volume)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $volume }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $volume.Owner }}</td>
 			<td>{{ $volume.Location }}</td>
 			<td>{{ $volume.ID }}</td>
@@ -117,7 +119,7 @@ Read more about how HouseKeeper works and how to better tag your resources at
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $snapshot := .Snapshots }}
-		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
+	<tr {{ if and (even $i) (not (whitelisted $snapshot)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $snapshot }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $snapshot.Owner }}</td>
 			<td>{{ $snapshot.Location }}</td>
 			<td>{{ $snapshot.ID }}</td>
@@ -141,7 +143,7 @@ Read more about how HouseKeeper works and how to better tag your resources at
 			<th><strong>Monthly cost</strong></th>
 		</tr>
 	{{ range $i, $bucket := .Buckets }}
-		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
+	<tr {{ if and (even $i) (not (whitelisted $bucket)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $bucket }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $bucket.Owner }}</td>
 			<td>{{ $bucket.ID }}</td>
 			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
