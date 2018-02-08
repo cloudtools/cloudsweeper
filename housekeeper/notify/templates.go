@@ -3,20 +3,32 @@ package notify
 const reviewMailTemplate = `<h1>Hello {{ .Owner -}},</h1>
 
 <p>
-HouseKeeper has detected that you have some old resources still around. Please
-take a look at them and clean them up if not needed.
+In a weekly review, HouseKeeper has detected resources that may be out of use, based upon their age
+</p>
+
+<p><b>Please review and choose from one of two options:</b></p>
+
+<ol>
+	<li>Manually delete old resources no longer in use</li>
+	<li>Wait for housekeeper to delete these items for you (if you signed up for housekeeping services)</li>
+</ol>
+
+<p>
+Whitelisting and cleanup info:
 </p>
 
 <p>
-These are resources that look suspiciously old. The resources marked <span style="background-color: #c9fc99;">in green</span> 
-are whitelisted. Whitelisted resources will never be deleted by HouseKeeper. If you see a resource
-here that you know that you want to keep for a longer time, then please whitelist it: add a tag with 
-the key "whitelisted" to it.
+If you are signed up for housekeeper and whitelisted some items, they are marked in green and will not
+be deleted. <b>Please review them in case they no longer should be whitelisted</b>.
 </p>
 
 <p>
-There is also an automated cleanup feature in HouseKeeper. To use this, please add
-one of the following two types of tags (key: value) to your resource:
+Conversely, if you see a resource here that you know that you want to keep for a longer time, then please
+whitelist it: add a tag with the key "whitelisted" to it.
+</p>
+
+<p>
+To schedule automated clean up, please add one of the following two types of tags (key: value) to your resource: 
 <br />
 "<b>housekeeper-lifetime</b>: days-x", where x is the amount of days to keep the resource
 <br />
@@ -29,6 +41,9 @@ Read more about how HouseKeeper works and how to better tag your resources at
 </p>
 
 <h2>Old resources:</h2>
+<p>
+Resources marked <span style="background-color: #c9fc99;">in green</span> are whitelisted.
+</p>
 {{ if gt (len .Instances) 0 }}
 	<h3>Instances</h3>
 	<table style="width: 100%;">
