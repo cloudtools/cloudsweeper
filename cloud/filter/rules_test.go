@@ -332,3 +332,29 @@ func TestNotModified(t *testing.T) {
 		t.Error("Not modified within 5 days")
 	}
 }
+
+type testSnap struct {
+	testResource
+	inUse bool
+}
+
+func (s *testSnap) Encrypted() bool { return false }
+func (s *testSnap) SizeGB() int64   { return 5 }
+func (s *testSnap) InUse() bool     { return s.inUse }
+
+func TestInUse(t *testing.T) {
+	foo := &testSnap{
+		testResource{time.Now(), map[string]string{}},
+		false,
+	}
+
+	if IsInUse()(foo) {
+		t.Error("Snapshot is not in use")
+	}
+
+	foo.inUse = true
+
+	if IsNotInUse()(foo) {
+		t.Error("Snapshot is in use")
+	}
+}

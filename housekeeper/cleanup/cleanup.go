@@ -36,11 +36,13 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 			return len(r.Tags()) == 0
 		})
 		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(30))
+		untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
 
 		oldFilter := filter.New()
 		oldFilter.AddGeneralRule(filter.OlderThanXMonths(6))
 		// Don't cleanup resources tagged for release
 		oldFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
+		oldFilter.AddSnapshotRule(filter.IsNotInUse())
 
 		unattachedFilter := filter.New()
 		unattachedFilter.AddVolumeRule(filter.IsUnattached())
