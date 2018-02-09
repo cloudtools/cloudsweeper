@@ -40,6 +40,8 @@ const (
 	assumeRoleARNTemplate = "arn:aws:iam::%s:role/brkt-HouseKeeper"
 
 	accessDeniedErrorCode = "AccessDenied"
+
+	snapshotIDFilterName = "block-device-mapping.snapshot-id"
 )
 
 var (
@@ -428,7 +430,9 @@ func getAWSSnapshots(account string, client *ec2.EC2) ([]Snapshot, error) {
 		return nil, err
 	}
 	result := []Snapshot{}
+	snapshotsInUse := getSnapshotsInUse(client)
 	for _, snapshot := range awsSnapshots.Snapshots {
+		_, inUse := snapshotsInUse[*snapshot.SnapshotId]
 		snap := awsSnapshot{baseSnapshot{
 			baseResource: baseResource{
 				csp:          AWS,
@@ -441,10 +445,31 @@ func getAWSSnapshots(account string, client *ec2.EC2) ([]Snapshot, error) {
 			},
 			sizeGB:    *snapshot.VolumeSize,
 			encrypted: *snapshot.Encrypted,
+			inUse:     inUse,
 		}}
 		result = append(result, &snap)
 	}
 	return result, nil
+}
+
+func getSnapshotsInUse(client *ec2.EC2) map[string]struct{} {
+	result := make(map[string]struct{})
+	input := &ec2.DescribeImagesInput{
+		Owners: aws.StringSlice([]string{awsOwnerIDSelfValue}),
+	}
+	images, err := client.DescribeImages(input)
+	if err != nil {
+		log.Printf("Could not determine snapshots in use:\n%s\n", err)
+		return result
+	}
+	for _, imgs := range images.Images {
+		for _, mapping := range imgs.BlockDeviceMappings {
+			if mapping != nil && mapping.Ebs != nil && mapping.Ebs.SnapshotId != nil {
+				result[*mapping.Ebs.SnapshotId] = struct{}{}
+			}
+		}
+	}
+	return result
 }
 
 func getAllEC2Resources(accounts []string, funcToRun func(client *ec2.EC2, account string)) {

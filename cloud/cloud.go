@@ -89,6 +89,7 @@ type Volume interface {
 type Snapshot interface {
 	Resource
 	Encrypted() bool
+	InUse() bool
 	SizeGB() int64
 }
 

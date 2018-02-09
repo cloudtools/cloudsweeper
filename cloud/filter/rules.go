@@ -199,6 +199,22 @@ func IsUnattached() func(cloud.Volume) bool {
 	}
 }
 
+// Below are snapshot rules
+
+// IsInUse checks if the snapshot is currently being used by an AMI
+func IsInUse() func(cloud.Snapshot) bool {
+	return func(s cloud.Snapshot) bool {
+		return s.InUse()
+	}
+}
+
+// IsNotInUse is the opposite of IsInUse
+func IsNotInUse() func(cloud.Snapshot) bool {
+	return func(s cloud.Snapshot) bool {
+		return !(IsInUse())(s)
+	}
+}
+
 // Below are bucket rules
 
 // NotModifiedInXDays returns bucket which have not had any modification

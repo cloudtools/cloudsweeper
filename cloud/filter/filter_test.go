@@ -96,13 +96,6 @@ func (i *testImg) Name() string       { return "test-img" }
 func (i *testImg) SizeGB() int64      { return 10 }
 func (i *testImg) MakePrivate() error { return nil }
 
-type testSnap struct {
-	testResource
-}
-
-func (s *testSnap) Encrypted() bool { return false }
-func (s *testSnap) SizeGB() int64   { return 5 }
-
 // This will test the filters being used when marking resources for
 // cleanup. These are:
 // 		- unattached volumes > 30 days old
