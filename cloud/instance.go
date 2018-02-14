@@ -34,3 +34,7 @@ func (i *awsInstance) Cleanup() error {
 func (i *awsInstance) SetTag(key, value string, overwrite bool) error {
 	return addAWSTag(i, key, value, overwrite)
 }
+
+func (i *awsInstance) RemoveTag(key string) error {
+	return removeAWSTag(i, key)
+}

@@ -39,6 +39,10 @@ func (i *awsImage) SetTag(key, value string, overwrite bool) error {
 	return addAWSTag(i, key, value, overwrite)
 }
 
+func (i *awsImage) RemoveTag(key string) error {
+	return removeAWSTag(i, key)
+}
+
 func (i *awsImage) MakePrivate() error {
 	log.Println("Making image private:", i.ID())
 	if !i.Public() {

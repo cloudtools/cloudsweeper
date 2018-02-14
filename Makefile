@@ -18,6 +18,12 @@ cleanup: build
 		-e AWS_SECRET_ACCESS_KEY \
 		--rm housekeeper --cleanup --accounts-file=$(ACCOUNTS_FILE)
 
+reset: build
+	docker run \
+		-e AWS_ACCESS_KEY_ID \
+		-e AWS_SECRET_ACCESS_KEY \
+		--rm housekeeper --reset --accounts-file=$(ACCOUNTS_FILE)
+
 review: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \

@@ -221,3 +221,54 @@ func cleanCleanupReleaseImagesHelper(mngr cloud.ResourceManager, images []cloud.
 	}
 	return nil
 }
+
+func ResetHousekeeper(csp cloud.CSP, owners housekeeper.Owners) {
+	mngr := cloud.NewManager(csp, owners.AllIDs()...)
+	allResources := mngr.AllResourcesPerAccount()
+
+	for owner, res := range allResources {
+		log.Println("Resetting housekeeper tags in", owner)
+		taggedFilter := filter.New()
+		taggedFilter.AddGeneralRule(filter.HasTag(filter.DeleteTagKey))
+
+		// Un-Tag instances
+		for _, res := range filter.Instances(res.Instances, taggedFilter) {
+			err := res.RemoveTag(filter.DeleteTagKey)
+			if err != nil {
+				log.Printf("Failed to remove tag on %s: %s\n", res.ID(), err)
+			} else {
+				log.Printf("Removed cleanup tag on %s\n", res.ID())
+			}
+		}
+
+		// Un-Tag volumes
+		for _, res := range filter.Volumes(res.Volumes, taggedFilter) {
+			err := res.RemoveTag(filter.DeleteTagKey)
+			if err != nil {
+				log.Printf("Failed to remove tag on %s: %s\n", res.ID(), err)
+			} else {
+				log.Printf("Removed cleanup tag on %s\n", res.ID())
+			}
+		}
+
+		// Un-Tag snapshots
+		for _, res := range filter.Snapshots(res.Snapshots, taggedFilter) {
+			err := res.RemoveTag(filter.DeleteTagKey)
+			if err != nil {
+				log.Printf("Failed to remove tag on %s: %s\n", res.ID(), err)
+			} else {
+				log.Printf("Removed cleanup tag on %s\n", res.ID())
+			}
+		}
+
+		// Un-Tag images
+		for _, res := range filter.Images(res.Images, taggedFilter) {
+			err := res.RemoveTag(filter.DeleteTagKey)
+			if err != nil {
+				log.Printf("Failed to remove tag on %s: %s\n", res.ID(), err)
+			} else {
+				log.Printf("Removed cleanup tag on %s\n", res.ID())
+			}
+		}
+	}
+}

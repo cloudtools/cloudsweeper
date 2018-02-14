@@ -54,6 +54,7 @@ type Resource interface {
 	CreationTime() time.Time
 
 	SetTag(key, value string, overwrite bool) error
+	RemoveTag(key string) error
 	Cleanup() error
 }
 

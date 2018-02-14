@@ -576,3 +576,20 @@ func addAWSTag(r Resource, key, value string, overwrite bool) error {
 	_, err := client.CreateTags(input)
 	return err
 }
+
+func removeAWSTag(r Resource, key string) error {
+	val, exist := r.Tags()[key]
+	if !exist {
+		return nil
+	}
+	client := clientForAWSResource(r)
+	input := &ec2.DeleteTagsInput{
+		Resources: aws.StringSlice([]string{r.ID()}),
+		Tags: []*ec2.Tag{&ec2.Tag{
+			Key:   aws.String(key),
+			Value: aws.String(val),
+		}},
+	}
+	_, err := client.DeleteTags(input)
+	return err
+}
