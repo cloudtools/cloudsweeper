@@ -48,3 +48,7 @@ func (v *awsVolume) Cleanup() error {
 func (v *awsVolume) SetTag(key, value string, overwrite bool) error {
 	return addAWSTag(v, key, value, overwrite)
 }
+
+func (v *awsVolume) RemoveTag(key string) error {
+	return removeAWSTag(v, key)
+}

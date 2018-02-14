@@ -31,6 +31,7 @@ func (r *testResource) Location() string                               { return 
 func (r *testResource) Public() bool                                   { return testPublic }
 func (r *testResource) CreationTime() time.Time                        { return r.creationTime }
 func (r *testResource) SetTag(key, value string, overwrite bool) error { return nil }
+func (r *testResource) RemoveTag(key string) error                     { return nil }
 func (r *testResource) Cleanup() error                                 { return nil }
 
 func TestNegate(t *testing.T) {

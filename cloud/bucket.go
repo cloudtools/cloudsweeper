@@ -114,3 +114,9 @@ func (b *awsBucket) SetTag(key, value string, overwrite bool) error {
 	_, err := s3Client.PutBucketTagging(input)
 	return err
 }
+
+func (b *awsBucket) RemoveTag(key string) error {
+	// TODO: Implement
+	log.Fatalln("Not implemented for buckets")
+	return errors.New("Not implemented for buckets")
+}

@@ -43,3 +43,7 @@ func (s *awsSnapshot) Cleanup() error {
 func (s *awsSnapshot) SetTag(key, value string, overwrite bool) error {
 	return addAWSTag(s, key, value, overwrite)
 }
+
+func (s *awsSnapshot) RemoveTag(key string) error {
+	return removeAWSTag(s, key)
+}

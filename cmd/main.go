@@ -25,6 +25,7 @@ const (
 var (
 	accountsFile   = flag.String("accounts-file", defaultAccountsFile, "Specify where to find the JSON with all accounts")
 	performCleanup = flag.Bool("cleanup", false, "Specify if cleanup should be performed")
+	performReset   = flag.Bool("reset", false, "Remove deletion tag from resources")
 	performMarking = flag.Bool("mark-for-cleanup", false, "Specify if resources should be marked")
 	performReview  = flag.Bool("review", false, "Specify if review of old resources should be sent out")
 	performSetup   = flag.Bool("setup", false, "Setup AWS account to allow housekeeping")
@@ -76,6 +77,15 @@ func main() {
 		}
 		log.Println("Running cleanup")
 		cleanup.PerformCleanup(cloud.AWS, owners)
+		didAction = true
+	}
+
+	if *performReset {
+		if owners == nil {
+			owners = parseAWSAccounts(*accountsFile)
+		}
+		log.Println("Resetting tags")
+		cleanup.ResetHousekeeper(cloud.AWS, owners)
 		didAction = true
 	}
 
