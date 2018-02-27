@@ -35,7 +35,7 @@ HOUSEKEEPER_POLICY='{
                 "s3:PutBucketTagging",
                 "s3:DeleteObject",
                 "s3:DeleteBucket"
-            ]
+            ],
             "Resource": [
                 "*"
             ]
