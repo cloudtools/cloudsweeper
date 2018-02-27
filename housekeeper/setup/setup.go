@@ -12,12 +12,10 @@ import (
 func PerformSetup() {
 	fmt.Println("Welcome to HouseKeeper, performing account setup...")
 
-	if getYes("Setup HouseKeeper in AWS?", true) {
-		err := awsSetup()
-		if err != nil {
-			fmt.Printf("AWS setup failed: %s\n", err)
-			os.Exit(1)
-		}
+	err := awsSetup()
+	if err != nil {
+		fmt.Printf("AWS setup failed: %s\n", err)
+		os.Exit(1)
 	}
 	fmt.Println(`
 SUCCESS

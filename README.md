@@ -5,6 +5,8 @@ _New and improved housekeeper, now in Go._
 ## Setup
 To setup HouseKeeper to work with your account, you must create a role in AWS to allow access. This is easily done using the `--setup` flag of housekeeper. It will handle everything for you. Then all you need to do is to make sure you're in the list of accounts that will be checked. Reach out to the QA team if you have any questions.
 
+It's also possible to run `aws_setup.sh`, if you have the `aws` CLI installed and properly setup.
+
 ## Usage
 The program relies on having a list of account to actually check. This list can either be provided manually, or the python script in `accounts_retriever.py` can be used. This script will get an up-to-date mapping from the Metavisor repository on Gerrit. 
 

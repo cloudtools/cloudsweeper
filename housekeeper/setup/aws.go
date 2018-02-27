@@ -19,12 +19,8 @@ const awsInfo = `
 HouseKeeper can be used to monitor your AWS account
 in order to keep resource usage and cost down for you.
 
-It can operate in two modes; "monitor" and "monitor &
-cleanup". If you allow HouseKeeper to cleanup resources
-for you, it will do so based on some set rules.
-
-You'll get the option to configure access to EC2 and S3
-separately.
+Running this setup will give HouseKeeper access to
+EC2 and S3 in order to perform monitoring and cleanup.
 `
 
 // This allows a role to be assumed by the houskeeper user in the shared QA AWS account
@@ -89,11 +85,7 @@ func awsSetup() error {
 	// First create a policy based on what the user configured
 	policy, err := createAWSPolicy(policyName, conf, iamClient)
 	if err == errPolicyExist {
-		// A policy already exist, either abort or create a new policy with random suffix
-		if !getYes("HouseKeeper policy already exist, create a new one anyway?", true) {
-			fmt.Println("Skipping AWS setup...")
-			return nil
-		}
+		// A policy already exist create a new policy with random suffix
 		rand.Seed(time.Now().UnixNano())
 		newPolicyName := fmt.Sprintf("%s-%d", policyName, rand.Int63())
 		policy, err = createAWSPolicy(newPolicyName, conf, iamClient)
@@ -108,11 +100,7 @@ func awsSetup() error {
 	// Now create role
 	role, err := createAWSRole(roleName, iamClient)
 	if err == errRoleExist {
-		// A role already exist, either abort or replace it
-		if !getYes("HouseKeeper role already exist, overwrite it?", true) {
-			fmt.Println("Skipping AWS setup...")
-			return nil
-		}
+		// A role already exist, replace it
 		err = deleteAWSRole(roleName, iamClient)
 		if err != nil {
 			return fmt.Errorf("Failed to delete old role: %s", err)
@@ -139,19 +127,31 @@ func awsSetup() error {
 
 func getAWSConf() *config {
 	conf := new(config)
-	conf.monitor = getYes("Setup monitoring (read) of your resources?", true)
-	if conf.monitor {
-		conf.monitorEC2 = getYes("\tMonitor EC2:", true)
-		conf.monitorS3 = getYes("\tMonitor S3", true)
-	}
-	if !conf.monitor {
+	if !getYes("Allow HouseKeeper to monitor and cleanup?", true) {
 		return conf
 	}
-	conf.cleanup = getYes("Setup cleanup (read & write) of your resources?", true)
-	if conf.cleanup {
-		conf.cleanupEC2 = getYes("\tCleanup EC2:", true)
-		conf.cleanupS3 = getYes("\tCleanup S3", true)
-	}
+	// Don't let the user choose what to allow, per request
+	conf.monitorEC2 = true
+	conf.monitorS3 = true
+	conf.cleanupEC2 = true
+	conf.cleanupS3 = true
+	conf.monitor = true
+	conf.cleanup = true
+	/*
+		conf.monitor = getYes("Setup monitoring (read) of your resources?", true)
+		if conf.monitor {
+			conf.monitorEC2 = getYes("\tMonitor EC2:", true)
+			conf.monitorS3 = getYes("\tMonitor S3", true)
+		}
+		if !conf.monitor {
+			return conf
+		}
+		conf.cleanup = getYes("Setup cleanup (read & write) of your resources?", true)
+		if conf.cleanup {
+			conf.cleanupEC2 = getYes("\tCleanup EC2:", true)
+			conf.cleanupS3 = getYes("\tCleanup S3", true)
+		}
+	*/
 	return conf
 }
 
