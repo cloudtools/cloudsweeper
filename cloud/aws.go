@@ -40,6 +40,7 @@ const (
 	assumeRoleARNTemplate = "arn:aws:iam::%s:role/brkt-HouseKeeper"
 
 	accessDeniedErrorCode = "AccessDenied"
+	unauthorizedErrorCode = "UnauthorizedOperation"
 
 	snapshotIDFilterName = "block-device-mapping.snapshot-id"
 )
@@ -526,8 +527,11 @@ func handleAWSAccessDenied(account string, err error) {
 	if ok && aerr.Code() == accessDeniedErrorCode {
 		// The account does not have the role setup correctly
 		log.Printf("The account '%s' denied access\n", account)
+	} else if ok && aerr.Code() == unauthorizedErrorCode {
+		log.Printf("Unauthorized to assume '%s'\n", account)
 	} else if ok {
 		// Some other AWS error occured
+		log.Println("Some other AWS error occured")
 		log.Fatalln(aerr)
 	} else {
 		//Some other non-AWS error occured
