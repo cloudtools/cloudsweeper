@@ -118,7 +118,7 @@ func PerformCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 	cleanupLifetimePassed(mngr)
 
 	// This will cleanup old released AMIs if they're older than a year
-	// cleanupReleaseImages(csp) // TODO: Enable after "beta" is over
+	cleanupReleaseImages(csp)
 }
 
 func cleanupLifetimePassed(mngr cloud.ResourceManager) {
