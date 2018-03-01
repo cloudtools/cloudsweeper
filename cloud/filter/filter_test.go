@@ -112,19 +112,27 @@ func TestCleanupRulesFilter(t *testing.T) {
 		return len(r.Tags()) == 0
 	})
 	untaggedFilter.AddGeneralRule(OlderThanXDays(30))
+	untaggedFilter.AddSnapshotRule(IsNotInUse())
+	untaggedFilter.AddGeneralRule(Negate(TaggedForCleanup()))
 
 	oldFilter := New()
 	oldFilter.AddGeneralRule(OlderThanXMonths(6))
 	// Don't cleanup resources tagged for release
 	oldFilter.AddGeneralRule(Negate(HasTag("Release")))
+	oldFilter.AddSnapshotRule(IsNotInUse())
+	oldFilter.AddGeneralRule(Negate(TaggedForCleanup()))
 
 	unattachedFilter := New()
 	unattachedFilter.AddVolumeRule(IsUnattached())
 	unattachedFilter.AddGeneralRule(OlderThanXDays(30))
+	unattachedFilter.AddGeneralRule(Negate(HasTag("Release")))
+	unattachedFilter.AddGeneralRule(Negate(TaggedForCleanup()))
 
 	bucketFilter := New()
 	bucketFilter.AddBucketRule(NotModifiedInXDays(120))
 	bucketFilter.AddGeneralRule(OlderThanXDays(7))
+	bucketFilter.AddGeneralRule(Negate(HasTag("Release")))
+	bucketFilter.AddGeneralRule(Negate(TaggedForCleanup()))
 
 	// Create some helper tag maps
 	someTags := map[string]string{"test-key": "test-value"}
