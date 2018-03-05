@@ -22,7 +22,7 @@ type awsInstance struct {
 
 // Cleanup will termiante this instance
 func (i *awsInstance) Cleanup() error {
-	log.Println("Cleaning up instance", i.ID())
+	log.Printf("Cleaning up instance %s in %s", i.ID(), i.Owner())
 	client := clientForAWSResource(i)
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: aws.StringSlice([]string{i.id}),

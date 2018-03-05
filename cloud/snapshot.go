@@ -31,7 +31,7 @@ type awsSnapshot struct {
 }
 
 func (s *awsSnapshot) Cleanup() error {
-	log.Println("Cleaning up snapshot", s.ID())
+	log.Printf("Cleaning up snapshot %s in %s", s.ID(), s.Owner())
 	client := clientForAWSResource(s)
 	input := &ec2.DeleteSnapshotInput{
 		SnapshotId: aws.String(s.ID()),

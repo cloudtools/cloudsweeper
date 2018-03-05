@@ -36,7 +36,7 @@ type awsBucket struct {
 }
 
 func (b *awsBucket) Cleanup() error {
-	log.Println("Cleaning up bucket", b.ID())
+	log.Printf("Cleaning up bucket %s in %s", b.ID(), b.Owner())
 	sess := session.Must(session.NewSession())
 	creds := stscreds.NewCredentials(sess, fmt.Sprintf(assumeRoleARNTemplate, b.Owner()))
 	s3Client := s3.New(sess, &aws.Config{

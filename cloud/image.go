@@ -26,7 +26,7 @@ type awsImage struct {
 }
 
 func (i *awsImage) Cleanup() error {
-	log.Println("Cleaning up image", i.ID())
+	log.Printf("Cleaning up image %s in %s", i.ID(), i.Owner())
 	client := clientForAWSResource(i)
 	input := &ec2.DeregisterImageInput{
 		ImageId: aws.String(i.ID()),
@@ -44,7 +44,7 @@ func (i *awsImage) RemoveTag(key string) error {
 }
 
 func (i *awsImage) MakePrivate() error {
-	log.Println("Making image private:", i.ID())
+	log.Printf("Making image %s private in %s", i.ID(), i.Owner())
 	if !i.Public() {
 		// Image is already private
 		return nil

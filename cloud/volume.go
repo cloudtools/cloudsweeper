@@ -36,7 +36,7 @@ type awsVolume struct {
 }
 
 func (v *awsVolume) Cleanup() error {
-	log.Println("Cleaning up volume", v.ID())
+	log.Printf("Cleaning up volume %s in %s", v.ID(), v.Owner())
 	client := clientForAWSResource(v)
 	input := &ec2.DeleteVolumeInput{
 		VolumeId: aws.String(v.ID()),
