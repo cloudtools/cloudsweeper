@@ -41,6 +41,7 @@ const (
 
 	accessDeniedErrorCode = "AccessDenied"
 	unauthorizedErrorCode = "UnauthorizedOperation"
+	notFoundErrorOcde     = "NotFound"
 
 	snapshotIDFilterName = "block-device-mapping.snapshot-id"
 )
@@ -542,6 +543,8 @@ func handleAWSAccessDenied(account string, err error) {
 		log.Printf("The account '%s' denied access\n", account)
 	} else if ok && aerr.Code() == unauthorizedErrorCode {
 		log.Printf("Unauthorized to assume '%s'\n", account)
+	} else if ok && aerr.Code() == notFoundErrorOcde {
+		log.Printf("Resource was not found in account %s", account)
 	} else if ok {
 		// Some other AWS error occured
 		log.Fatalf("Got AWS error in account %s: %s", account, aerr)
