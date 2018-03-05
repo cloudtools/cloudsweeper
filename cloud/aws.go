@@ -53,6 +53,7 @@ var (
 )
 
 func (m *awsResourceManager) InstancesPerAccount() map[string][]Instance {
+	log.Println("Getting instances in all accounts")
 	resultMap := make(map[string][]Instance)
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		instances, err := getAWSInstances(account, client)
@@ -66,6 +67,7 @@ func (m *awsResourceManager) InstancesPerAccount() map[string][]Instance {
 }
 
 func (m *awsResourceManager) ImagesPerAccount() map[string][]Image {
+	log.Println("Getting images in all accounts")
 	resultMap := make(map[string][]Image)
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		images, err := getAWSImages(account, client)
@@ -79,6 +81,7 @@ func (m *awsResourceManager) ImagesPerAccount() map[string][]Image {
 }
 
 func (m *awsResourceManager) VolumesPerAccount() map[string][]Volume {
+	log.Println("Getting volumes in all accounts")
 	resultMap := make(map[string][]Volume)
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		volumes, err := getAWSVolumes(account, client)
@@ -92,6 +95,7 @@ func (m *awsResourceManager) VolumesPerAccount() map[string][]Volume {
 }
 
 func (m *awsResourceManager) SnapshotsPerAccount() map[string][]Snapshot {
+	log.Println("Getting snapshots in all accounts")
 	resultMap := make(map[string][]Snapshot)
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		snapshots, err := getAWSSnapshots(account, client)
@@ -105,6 +109,7 @@ func (m *awsResourceManager) SnapshotsPerAccount() map[string][]Snapshot {
 }
 
 func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollection {
+	log.Println("Getting all resources in all accounts")
 	resultMap := make(map[string]*ResourceCollection)
 	for i := range m.accounts {
 		resultMap[m.accounts[i]] = new(ResourceCollection)
@@ -119,6 +124,7 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 		go func() {
 			snapshots, err := getAWSSnapshots(account, client)
 			if err != nil {
+				log.Printf("Snapshot error when getting all resources in %s", account)
 				handleAWSAccessDenied(account, err)
 			}
 			result.Snapshots = append(result.Snapshots, snapshots...)
@@ -127,6 +133,7 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 		go func() {
 			instances, err := getAWSInstances(account, client)
 			if err != nil {
+				log.Printf("Instance error when getting all resources in %s", account)
 				handleAWSAccessDenied(account, err)
 			}
 			result.Instances = append(result.Instances, instances...)
@@ -135,6 +142,7 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 		go func() {
 			images, err := getAWSImages(account, client)
 			if err != nil {
+				log.Printf("Image error when getting all resources in %s", account)
 				handleAWSAccessDenied(account, err)
 			}
 			result.Images = append(result.Images, images...)
@@ -143,6 +151,7 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 		go func() {
 			volumes, err := getAWSVolumes(account, client)
 			if err != nil {
+				log.Printf("Volume error when getting all resources in %s", account)
 				handleAWSAccessDenied(account, err)
 			}
 			result.Volumes = append(result.Volumes, volumes...)
@@ -155,6 +164,7 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 }
 
 func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
+	log.Println("Getting all buckets in all accounts")
 	sess := session.Must(session.NewSession())
 	resultMap := make(map[string][]Bucket)
 	forEachAccount(m.accounts, sess, func(account string, cred *credentials.Credentials) {
@@ -164,6 +174,7 @@ func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
 		})
 		awsBuckets, err := s3Client.ListBuckets(&s3.ListBucketsInput{})
 		if err != nil {
+			log.Printf("Bucket error when getting buckets in %s", account)
 			handleAWSAccessDenied(account, err)
 		} else if len(awsBuckets.Buckets) > 0 {
 			bucketCount := len(awsBuckets.Buckets)
@@ -173,6 +184,7 @@ func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
 					region, err := s3manager.GetBucketRegion(context.Background(), sess, *bu.Name, defaultAWSRegion)
 					if err != nil {
 						bucketCount--
+						log.Printf("Couldn't determine bucket region in %s for bucket %s", account, *bu.Name)
 						handleAWSAccessDenied(account, err)
 						buckChan <- nil
 						return
@@ -206,6 +218,7 @@ func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
 					})
 					if err != nil {
 						bucketCount--
+						log.Printf("Failed to list contents in bucket %s, account %s", *bu.Name, account)
 						handleAWSAccessDenied(account, err)
 						buckChan <- nil
 						return
@@ -531,11 +544,10 @@ func handleAWSAccessDenied(account string, err error) {
 		log.Printf("Unauthorized to assume '%s'\n", account)
 	} else if ok {
 		// Some other AWS error occured
-		log.Println("Some other AWS error occured")
-		log.Fatalln(aerr)
+		log.Fatalf("Got AWS error in account %s: %s", account, aerr)
 	} else {
 		//Some other non-AWS error occured
-		log.Fatalln(err)
+		log.Fatalf("Got error in account %s: %s", account, err)
 	}
 }
 
