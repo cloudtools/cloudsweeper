@@ -32,6 +32,13 @@ func Negate(funcToNegate func(r cloud.Resource) bool) func(cloud.Resource) bool 
 	}
 }
 
+// TaggedForCleanup checks if resource is already tagged for cleanup
+func TaggedForCleanup() func(cloud.Resource) bool {
+	return func(r cloud.Resource) bool {
+		return HasTag(DeleteTagKey)(r)
+	}
+}
+
 // OlderThanXHours returns a resource that is older than the
 // specified amount of hours.
 func OlderThanXHours(hours int) func(cloud.Resource) bool {

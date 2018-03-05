@@ -45,6 +45,16 @@ func TestNegate(t *testing.T) {
 	}
 }
 
+func TestAlreadyTaggedForDelete(t *testing.T) {
+	foo := &testResource{time.Now(), map[string]string{}}
+	foo.tags = map[string]string{DeleteTagKey: time.Now().Format(time.RFC3339)}
+	fun := TaggedForCleanup()
+	res := fun(foo)
+	if !res {
+		t.Error("The resource should be tagged for cleanup")
+	}
+}
+
 func TestOlderHours(t *testing.T) {
 	oldTime := time.Now().Add(-(10 * time.Hour))
 	foo := &testResource{oldTime, map[string]string{}}
