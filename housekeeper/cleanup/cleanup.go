@@ -142,28 +142,23 @@ func cleanupLifetimePassed(mngr cloud.ResourceManager) {
 		err := mngr.CleanupInstances(filter.Instances(resources.Instances, lifetimeFilter, expiryFilter, deleteAtFilter))
 		if err != nil {
 			log.Printf("Could not cleanup instances in %s, err:\n%s", owner, err)
-			continue
 		}
 		err = mngr.CleanupImages(filter.Images(resources.Images, lifetimeFilter, expiryFilter, deleteAtFilter))
 		if err != nil {
 			log.Printf("Could not cleanup images in %s, err:\n%s", owner, err)
-			continue
 		}
 		err = mngr.CleanupVolumes(filter.Volumes(resources.Volumes, lifetimeFilter, expiryFilter, deleteAtFilter))
 		if err != nil {
 			log.Printf("Could not cleanup volumes in %s, err:\n%s", owner, err)
-			continue
 		}
 		err = mngr.CleanupSnapshots(filter.Snapshots(resources.Snapshots, lifetimeFilter, expiryFilter, deleteAtFilter))
 		if err != nil {
 			log.Printf("Could not cleanup snapshots in %s, err:\n%s", owner, err)
-			continue
 		}
 		if bucks, ok := allBuckets[owner]; ok {
 			err = mngr.CleanupBuckets(filter.Buckets(bucks, lifetimeFilter, expiryFilter, deleteAtFilter))
 			if err != nil {
 				log.Printf("Could not cleanup buckets in %s, err:\n%s", owner, err)
-				continue
 			}
 		}
 	}

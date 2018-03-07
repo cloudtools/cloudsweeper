@@ -281,7 +281,7 @@ func (m *awsResourceManager) CleanupVolumes(volumes []Volume) error {
 	for i := range volumes {
 		v, ok := volumes[i].(Resource)
 		if !ok {
-			return errors.New("Could not convert Image to Resource")
+			return errors.New("Could not convert Volume to Resource")
 		}
 		resList = append(resList, v)
 	}
@@ -293,7 +293,7 @@ func (m *awsResourceManager) CleanupSnapshots(snapshots []Snapshot) error {
 	for i := range snapshots {
 		v, ok := snapshots[i].(Resource)
 		if !ok {
-			return errors.New("Could not convert Image to Resource")
+			return errors.New("Could not convert Snapshot to Resource")
 		}
 		resList = append(resList, v)
 	}
