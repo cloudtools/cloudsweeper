@@ -2,6 +2,7 @@ package main
 
 import (
 	"brkt/olga/cloud"
+	"brkt/olga/cloud/billing"
 	hk "brkt/olga/housekeeper"
 	"brkt/olga/housekeeper/cleanup"
 	"brkt/olga/housekeeper/notify"
@@ -18,6 +19,14 @@ const (
 
 	sharedQAAccount     = "475063612724"
 	sharedDevAWSAccount = "164337164081"
+	prodAWSAccount      = "992270393355"
+	secProdAWSAccount   = "108660276130"
+	secDevAWSAccount    = "120690514258"
+	secStageAWSAccount  = "605040402381"
+	soloProdAWSAccount  = "067829456282"
+	soloStageAWSAccount = "842789976943"
+	soloFriendliesAgari = "139798613772"
+	soloFriendliesMark  = "586683603820"
 
 	warningHoursInAdvance = 48
 )
@@ -31,16 +40,17 @@ var (
 	performSetup   = flag.Bool("setup", false, "Setup AWS account to allow housekeeping")
 	performWarning = flag.Bool("warning", false, "Send out warning about resource cleanup")
 	warningHours   = flag.Int("warning-hours", warningHoursInAdvance, "The number of hours in advance to warn about resource deletion")
+	performReport  = flag.Bool("billing-report", false, "Generate a Month-to-date billing report")
 
 	didAction = false
 )
 
-const banner = `                                                           
-  /\  /\___  _   _ ___  ___  /\ /\___  ___ _ __   ___ _ __ 
+const banner = `
+  /\  /\___  _   _ ___  ___  /\ /\___  ___ _ __   ___ _ __
  / /_/ / _ \| | | / __|/ _ \/ //_/ _ \/ _ \ '_ \ / _ \ '__|
-/ __  / (_) | |_| \__ \  __/ __ \  __/  __/ |_) |  __/ |   
-\/ /_/ \___/ \__,_|___/\___\/  \/\___|\___| .__/ \___|_|   
-                                          |_|              
+/ __  / (_) | |_| \__ \  __/ __ \  __/  __/ |_) |  __/ |
+\/ /_/ \___/ \__,_|___/\___\/  \/\___|\___| .__/ \___|_|
+                                          |_|
 										`
 
 func main() {
@@ -98,6 +108,17 @@ func main() {
 		didAction = true
 	}
 
+	if *performReport {
+		log.Println("Generating Month-to-date billing report")
+		if owners == nil {
+			owners = parseAWSAccounts(*accountsFile)
+		}
+		report := billing.GenerateReport(cloud.AWS, owners)
+		log.Println(report.FormatReport(owners))
+		notify.MonthToDateReport(report, owners)
+		didAction = true
+	}
+
 	// Perform default action (no flags specified)
 	if !didAction {
 		setup.PerformSetup()
@@ -115,8 +136,16 @@ func parseAWSAccounts(inputFile string) hk.Owners {
 		log.Fatalln("Could not parse JSON:", err)
 	}
 	if *accountsFile == defaultAccountsFile {
-		// The shared dev account is not in the imported accounts file
+		// Add any additional accounts that are not present in the accounts file
 		owners = append(owners, hk.Owner{Name: "cloud-dev", ID: sharedDevAWSAccount})
+		owners = append(owners, hk.Owner{Name: "prod", ID: prodAWSAccount})
+		owners = append(owners, hk.Owner{Name: "sec-prod", ID: secProdAWSAccount})
+		owners = append(owners, hk.Owner{Name: "sec-dev", ID: secDevAWSAccount})
+		owners = append(owners, hk.Owner{Name: "sec-stage", ID: secStageAWSAccount})
+		owners = append(owners, hk.Owner{Name: "solo-prod", ID: soloProdAWSAccount})
+		owners = append(owners, hk.Owner{Name: "solo-stage", ID: soloStageAWSAccount})
+		owners = append(owners, hk.Owner{Name: "solo-friendlies-agari", ID: soloFriendliesAgari})
+		owners = append(owners, hk.Owner{Name: "solo-friendlies-mark", ID: soloFriendliesMark})
 	}
 	return owners
 }

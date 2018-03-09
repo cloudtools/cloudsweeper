@@ -26,7 +26,6 @@ const (
 	awsBillingBucketRegion = "us-east-1"
 	awsCSVDateFormat       = "2006-01-02"
 	awsCSVNameFormat       = "%s-aws-billing-detailed-line-items-%d-%02d.csv.zip"
-	minimumCost            = 1.0
 )
 
 // This is really ugly... Must be some better way
@@ -86,13 +85,13 @@ func processCSV(report *Report, csvFile *csv.Reader, allowFailed bool) error {
 		}
 		if err != nil {
 			if allowFailed {
-				log.Println("Failed reading one line, continuing...", err)
+				log.Printf("Failed reading line %d, continuing...\n%s", line, err)
 			} else {
 				return err
 			}
 		}
 		if line == 0 {
-			// Skip header lint
+			// Skip header line
 			line++
 			continue
 		}
@@ -103,7 +102,7 @@ func processCSV(report *Report, csvFile *csv.Reader, allowFailed bool) error {
 		}
 
 		reportItem := ReportItem{}
-		reportItem.OwnerID = record[awsCSVHeaderMap["LinkedAccountId"]]
+		reportItem.Owner = record[awsCSVHeaderMap["LinkedAccountId"]]
 		reportItem.Description = record[awsCSVHeaderMap["ItemDescription"]]
 		cost := record[awsCSVHeaderMap["UnBlendedCost"]]
 		cost = strings.Replace(cost, ",", "", -1)
@@ -114,10 +113,6 @@ func processCSV(report *Report, csvFile *csv.Reader, allowFailed bool) error {
 			} else {
 				return err
 			}
-		}
-		if costNumber < minimumCost {
-			line++
-			continue
 		}
 		reportItem.Cost = costNumber
 		report.Items = append(report.Items, reportItem)
@@ -154,7 +149,7 @@ func getCSVFromS3(name string) (*csv.Reader, error) {
 		return nil, errors.New("Zip file was empty")
 	}
 	file := reader.File[0]
-	fmt.Println(file.Name)
+	log.Println("Using", file.Name)
 	rc, err := file.Open()
 	if err != nil {
 		log.Println("Billing CSV is corrupt:", err)

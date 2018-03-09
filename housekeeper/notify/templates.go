@@ -326,3 +326,58 @@ Thank you,<br />
 Your loyal housekeeper
 </p>
 `
+
+const monthToDateTemplate = `
+{{ $owners := .Owners }}
+<h2>Hello,</h2>
+
+<p>
+The following is a summary of this month's expenditures in {{ .CSP }}. <br /><br />
+In the summary, only accounts with a total cost over ${{ .MinimumTotalCost }} are listed. <br /><br />
+In the detailed breakdown, only costs over ${{ .MinimumCost }} are listed (but every cost is still counted towards the total!)<br /><br />
+</p>
+
+
+<h3>Summary:</h3>
+{{ if gt (len .SortedUsers) 0 }}
+	<table>
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>Cost</strong></th>
+		</tr>
+	{{ range $i, $user := .SortedUsers }}
+		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
+			<td>{{ $user.Name }}</td>
+			<td>{{ printf "$%.2f" $user.TotalCost }}</td>
+		</tr>
+	{{ end }}
+		<td colspan="2"><strong>Total cost: {{ printf "$%.2f" .TotalCost }}<strong></td>
+	</table>
+{{ end }}
+
+<h3>Details:</h3>
+{{ if gt (len .SortedUsers) 0 }}
+	{{ range $index, $user := .SortedUsers }}
+		<h3>{{- $user.Name -}}'s costs: {{ with $account_id := (maybeNameToID $user.Name $owners) -}} (Account ID: {{ $account_id -}}){{- end -}}</h3>
+		<table>
+		<tr style="text-align:left;">
+			<th><strong>Cost</strong></th>
+			<th><strong>Description</strong></th>
+		</tr>
+		{{ range $i, $detailedCost := $user.DetailedCosts }}
+			<tr {{ if even $i }} style="background-color: #f2f2f2;"{{ end }}>
+				<td>{{ printf "$%.2f" $detailedCost.Cost }}</td>
+				<td>{{ $detailedCost.Description }}</td>
+			</tr>
+		{{ end }}
+		<td colspan="2"><strong>Total cost: {{ printf "$%.2f" $user.TotalCost }}<strong></td>
+	</table>
+	<br />
+	{{ end }}
+{{ end }}
+
+<p>
+Thank you,<br />
+Your loyal housekeeper
+</p>
+`

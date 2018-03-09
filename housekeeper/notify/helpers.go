@@ -4,6 +4,7 @@ import (
 	"brkt/olga/cloud"
 	"brkt/olga/cloud/billing"
 	"brkt/olga/cloud/filter"
+	"brkt/olga/housekeeper"
 	"brkt/olga/mailer"
 	"bytes"
 	"fmt"
@@ -104,6 +105,13 @@ func extraTemplateFunctions() template.FuncMap {
 			} else {
 				return ""
 			}
+		},
+		"maybeNameToID": func(name string, owners housekeeper.Owners) string {
+			nameToIDMap := owners.NameToID()
+			if ID, ok := nameToIDMap[name]; ok {
+				return ID
+			}
+			return ""
 		},
 	}
 }

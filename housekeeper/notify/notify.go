@@ -2,6 +2,7 @@ package notify
 
 import (
 	"brkt/olga/cloud"
+	"brkt/olga/cloud/billing"
 	"brkt/olga/cloud/filter"
 	"brkt/olga/housekeeper"
 	"fmt"
@@ -10,9 +11,10 @@ import (
 )
 
 const (
-	smtpUserKey     = "SMTP_USER"
-	smtpPassKey     = "SMTP_PASS"
-	mailDisplayName = "HouseKeeper"
+	smtpUserKey          = "SMTP_USER"
+	smtpPassKey          = "SMTP_PASS"
+	mailDisplayName      = "HouseKeeper"
+	monthToDateAddressee = "eng@brkt.com"
 )
 
 type resourceMailData struct {
@@ -22,6 +24,15 @@ type resourceMailData struct {
 	Snapshots []cloud.Snapshot
 	Volumes   []cloud.Volume
 	Buckets   []cloud.Bucket
+}
+
+type monthToDateData struct {
+	CSP              string
+	TotalCost        float64
+	SortedUsers      billing.UserList
+	MinimumTotalCost float64
+	MinimumCost      float64
+	Owners           housekeeper.Owners
 }
 
 func (d *resourceMailData) ResourceCount() int {
@@ -138,5 +149,22 @@ func DeletionWarning(hoursInAdvance int, csp cloud.CSP, owners housekeeper.Owner
 				log.Printf("Failed to email %s: %s\n", ownerMail, err)
 			}
 		}
+	}
+}
+
+// MonthToDateReport sends an email to engineering with the
+// Month-to-Date billing report
+func MonthToDateReport(report billing.Report, owners housekeeper.Owners) {
+	mailClient := getMailClient()
+	reportData := monthToDateData{report.CSP.String(), report.TotalCost(), report.SortedUsersByTotalCost(owners), billing.MinimumTotalCost, billing.MinimumCost, owners}
+	mailContent, err := generateMail(reportData, monthToDateTemplate)
+	if err != nil {
+		log.Fatalln("Could not generate email:", err)
+	}
+	log.Printf("Sending the Month-to-date report to %s\n", monthToDateAddressee)
+	title := fmt.Sprintf("Month-to-date %s billing report", report.CSP.String())
+	err = mailClient.SendEmail(title, mailContent, monthToDateAddressee)
+	if err != nil {
+		log.Printf("Failed to email %s: %s\n", monthToDateAddressee, err)
 	}
 }

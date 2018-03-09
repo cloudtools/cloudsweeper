@@ -122,6 +122,18 @@ const (
 	GCP
 )
 
+func (c *CSP) String() string {
+	switch *c {
+	case AWS:
+		return "AWS"
+	case GCP:
+		return "GCP"
+	default:
+		log.Fatalln("Invalid CSP specified")
+	}
+	return ""
+}
+
 // NewManager will build a new resource manager for the specified CSP
 func NewManager(c CSP, accounts ...string) ResourceManager {
 	switch c {

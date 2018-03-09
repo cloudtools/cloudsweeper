@@ -465,3 +465,6 @@ __pycache__/
 # should be stored in the .pubxml.user file.
 
 # End of https://www.gitignore.io/api/macos,linux,windows,intellij,sublimetext,visualstudio,visualstudiocode
+
+# artifacts
+aws_accounts.json

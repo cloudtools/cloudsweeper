@@ -1,6 +1,5 @@
-ACCOUNTS_FROM_MV 	:= aws_accounts.json
+ALL_ACCOUNTS 		:= aws_accounts.json
 FRIENDLIES 			:= friendly_accounts.json
-ACCOUNTS_FILE 		:= $(FRIENDLIES)
 WARNING_HOURS		:= 48
 
 build:
@@ -10,19 +9,19 @@ run:
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper --accounts-file=$(ACCOUNTS_FILE)
+		--rm housekeeper --accounts-file=$(FRIENDLIES)
 
 cleanup: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper --cleanup --accounts-file=$(ACCOUNTS_FILE)
+		--rm housekeeper --cleanup --accounts-file=$(FRIENDLIES)
 
 reset: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper --reset --accounts-file=$(ACCOUNTS_FILE)
+		--rm housekeeper --reset --accounts-file=$(FRIENDLIES)
 
 review: build
 	docker run \
@@ -30,21 +29,29 @@ review: build
 		-e AWS_SECRET_ACCESS_KEY \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper --review --accounts-file=$(ACCOUNTS_FILE)
+		--rm housekeeper --review --accounts-file=$(FRIENDLIES)
 
 mark: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper --mark-for-cleanup --accounts-file=$(ACCOUNTS_FILE)
+		--rm housekeeper --mark-for-cleanup --accounts-file=$(FRIENDLIES)
 
-warn: build 
+warn: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper --warning --warning-hours=$(WARNING_HOURS) --accounts-file=$(ACCOUNTS_FILE)
+		--rm housekeeper --warning --warning-hours=$(WARNING_HOURS) --accounts-file=$(FRIENDLIES)
+
+billing-report: build
+	docker run \
+		-e AWS_ACCESS_KEY_ID \
+		-e AWS_SECRET_ACCESS_KEY \
+		-e SMTP_USER \
+		-e SMTP_PASS \
+		--rm housekeeper --billing-report --accounts-file=$(ALL_ACCOUNTS)
 
 setup: build
 	docker run \
