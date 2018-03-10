@@ -332,11 +332,14 @@ const monthToDateTemplate = `
 <h2>Hello,</h2>
 
 <p>
-The following is a summary of this month's expenditures in {{ .CSP }}. <br /><br />
-In the summary, only accounts with a total cost over ${{ .MinimumTotalCost }} are listed. <br /><br />
-In the detailed breakdown, only costs over ${{ .MinimumCost }} are listed (but every cost is still counted towards the total!)<br /><br />
+The following is a summary of this month's expenditures in {{ .CSP }}.
 </p>
-
+<p>
+In the summary, only accounts with a total cost over ${{ .MinimumTotalCost }} are listed.
+</p>
+<p>
+In the detailed breakdown, only costs over ${{ .MinimumCost }} are listed (but every cost is still counted towards the total!)
+</p>
 
 <h3>Summary:</h3>
 {{ if gt (len .SortedUsers) 0 }}

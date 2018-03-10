@@ -2,6 +2,7 @@ package billing
 
 import (
 	"archive/zip"
+	"brkt/olga/cloud"
 	"encoding/csv"
 	"errors"
 	"fmt"
@@ -53,6 +54,7 @@ var awsCSVHeaderMap = map[string]int{
 }
 
 type awsReporter struct {
+	csp cloud.CSP
 }
 
 func (r *awsReporter) GenerateReport(startDate, endDate time.Time) Report {
@@ -60,6 +62,7 @@ func (r *awsReporter) GenerateReport(startDate, endDate time.Time) Report {
 	report.CreationDate = time.Now()
 	report.StartDate = startDate
 	report.EndDate = endDate
+	report.CSP = r.csp
 
 	allMonths := MonthsBetween(startDate, endDate)
 	for _, date := range allMonths {

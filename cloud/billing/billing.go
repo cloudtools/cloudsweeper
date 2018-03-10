@@ -4,6 +4,7 @@ import (
 	"brkt/olga/cloud"
 	"brkt/olga/housekeeper"
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"sort"
@@ -59,6 +60,20 @@ func (l CostList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
 // for both AWS and GCP to generate expense reports.
 type Reporter interface {
 	GenerateReport(startDate, endDate time.Time) Report
+}
+
+// NewReporter intializes a new billing reporter for the specified CSP
+func NewReporter(csp cloud.CSP) (Reporter, error) {
+	switch csp {
+	case cloud.AWS:
+		return &awsReporter{
+			csp: cloud.AWS,
+		}, nil
+	case cloud.GCP:
+		return nil, errors.New("GCP is not supported yet")
+	default:
+		return nil, errors.New("Invalid CSP specified")
+	}
 }
 
 // Report contains a collection of items, and some metadata
@@ -123,16 +138,14 @@ func (r *Report) SortedUsersByTotalCost(owners housekeeper.Owners) UserList {
 	idToNameMap := owners.IDToName()
 	userList := make(UserList, 0, len(userMap))
 	for _, user := range userMap {
-		var name string
 		// omit users with low TotalCost
 		if user.totalCost < MinimumTotalCost {
 			continue
 		}
 		// rename users if possible
+		name := user.name
 		if realName, ok := idToNameMap[user.name]; ok {
 			name = realName
-		} else {
-			name = user.name
 		}
 		// convert detailedCosts into sorted CostLists
 		detailedCostList := convertCostMapToSortedList(user.detailedCosts)
@@ -166,28 +179,18 @@ func (r *Report) FormatReport(owners housekeeper.Owners) string {
 		}
 	}
 	return b.String()
-
 }
 
 // GenerateReport generates a Month-to-date billing report for the current month
-func GenerateReport(c cloud.CSP, owners housekeeper.Owners) (report Report) {
-	var csp string
-	var reporter Reporter
-	switch c {
-	case cloud.AWS:
-		csp = "AWS"
-		reporter = &awsReporter{}
-	case cloud.GCP:
-		log.Fatalln("Unfortunately, GCP is currently not supported")
-		csp = "GCP"
-	default:
-		log.Fatalln("Invalid CSP specified")
+func GenerateReport(c cloud.CSP, owners housekeeper.Owners) Report {
+	reporter, err := NewReporter(c)
+	if err != nil {
+		log.Fatalln(err)
 	}
-	log.Println("Generating report for", csp)
-	thisMonth := time.Now()
-	report = reporter.GenerateReport(thisMonth, thisMonth)
-	report.CSP = c
-	return
+	log.Println("Generating report for", c)
+	today := time.Now()
+	startDate := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, time.Local)
+	return reporter.GenerateReport(startDate, today)
 }
 
 func convertCostMapToSortedList(costMap map[string]float64) CostList {

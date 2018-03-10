@@ -27,7 +27,7 @@ type resourceMailData struct {
 }
 
 type monthToDateData struct {
-	CSP              string
+	CSP              cloud.CSP
 	TotalCost        float64
 	SortedUsers      billing.UserList
 	MinimumTotalCost float64
@@ -156,13 +156,13 @@ func DeletionWarning(hoursInAdvance int, csp cloud.CSP, owners housekeeper.Owner
 // Month-to-Date billing report
 func MonthToDateReport(report billing.Report, owners housekeeper.Owners) {
 	mailClient := getMailClient()
-	reportData := monthToDateData{report.CSP.String(), report.TotalCost(), report.SortedUsersByTotalCost(owners), billing.MinimumTotalCost, billing.MinimumCost, owners}
+	reportData := monthToDateData{report.CSP, report.TotalCost(), report.SortedUsersByTotalCost(owners), billing.MinimumTotalCost, billing.MinimumCost, owners}
 	mailContent, err := generateMail(reportData, monthToDateTemplate)
 	if err != nil {
 		log.Fatalln("Could not generate email:", err)
 	}
 	log.Printf("Sending the Month-to-date report to %s\n", monthToDateAddressee)
-	title := fmt.Sprintf("Month-to-date %s billing report", report.CSP.String())
+	title := fmt.Sprintf("Month-to-date %s billing report", report.CSP)
 	err = mailClient.SendEmail(title, mailContent, monthToDateAddressee)
 	if err != nil {
 		log.Printf("Failed to email %s: %s\n", monthToDateAddressee, err)

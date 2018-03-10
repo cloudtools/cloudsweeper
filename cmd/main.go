@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 )
 
 const (
@@ -32,17 +33,8 @@ const (
 )
 
 var (
-	accountsFile   = flag.String("accounts-file", defaultAccountsFile, "Specify where to find the JSON with all accounts")
-	performCleanup = flag.Bool("cleanup", false, "Specify if cleanup should be performed")
-	performReset   = flag.Bool("reset", false, "Remove deletion tag from resources")
-	performMarking = flag.Bool("mark-for-cleanup", false, "Specify if resources should be marked")
-	performReview  = flag.Bool("review", false, "Specify if review of old resources should be sent out")
-	performSetup   = flag.Bool("setup", false, "Setup AWS account to allow housekeeping")
-	performWarning = flag.Bool("warning", false, "Send out warning about resource cleanup")
-	warningHours   = flag.Int("warning-hours", warningHoursInAdvance, "The number of hours in advance to warn about resource deletion")
-	performReport  = flag.Bool("billing-report", false, "Generate a Month-to-date billing report")
-
-	didAction = false
+	accountsFile = flag.String("accounts-file", defaultAccountsFile, "Specify where to find the JSON with all accounts")
+	warningHours = flag.Int("warning-hours", warningHoursInAdvance, "The number of hours in advance to warn about resource deletion")
 )
 
 const banner = `
@@ -53,74 +45,47 @@ const banner = `
                                           |_|
 										`
 
+const (
+	cmdCleanup = "cleanup"
+	cmdReset   = "reset"
+	cmdMark    = "mark-for-cleanup"
+	cmdReview  = "review"
+	cmdSetup   = "setup"
+	cmdWarn    = "warn"
+	cmdBilling = "billing-report"
+)
+
 func main() {
 	fmt.Println(banner)
 	flag.Parse()
-	var owners hk.Owners
-
-	if *performSetup {
-		setup.PerformSetup()
-		return
-	}
-
-	if *performMarking {
+	switch getPositional() {
+	case cmdCleanup:
+		log.Println("Cleaning up old resources")
+		cleanup.PerformCleanup(cloud.AWS, parseAWSAccounts(*accountsFile))
+	case cmdReset:
+		log.Println("Resetting all tags")
+		cleanup.ResetHousekeeper(cloud.AWS, parseAWSAccounts(*accountsFile))
+	case cmdMark:
 		log.Println("Marking old resources for cleanup")
-		if owners == nil {
-			owners = parseAWSAccounts(*accountsFile)
-		}
-		cleanup.MarkForCleanup(cloud.AWS, owners)
-		didAction = true
-	}
-
-	if *performWarning {
-		log.Println("Warning about cleanup")
-		if owners == nil {
-			owners = parseAWSAccounts(*accountsFile)
-		}
-		notify.DeletionWarning(*warningHours, cloud.AWS, owners)
-		didAction = true
-	}
-
-	if *performCleanup {
-		if owners == nil {
-			owners = parseAWSAccounts(*accountsFile)
-		}
-		log.Println("Running cleanup")
-		cleanup.PerformCleanup(cloud.AWS, owners)
-		didAction = true
-	}
-
-	if *performReset {
-		if owners == nil {
-			owners = parseAWSAccounts(*accountsFile)
-		}
-		log.Println("Resetting tags")
-		cleanup.ResetHousekeeper(cloud.AWS, owners)
-		didAction = true
-	}
-
-	if *performReview {
-		log.Println("Reviewing old resources")
-		if owners == nil {
-			owners = parseAWSAccounts(*accountsFile)
-		}
-		notify.OldResourceReview(cloud.AWS, owners)
-		didAction = true
-	}
-
-	if *performReport {
-		log.Println("Generating Month-to-date billing report")
-		if owners == nil {
-			owners = parseAWSAccounts(*accountsFile)
-		}
+		cleanup.MarkForCleanup(cloud.AWS, parseAWSAccounts(*accountsFile))
+	case cmdReview:
+		log.Println("Sending out old resource review")
+		notify.OldResourceReview(cloud.AWS, parseAWSAccounts(*accountsFile))
+	case cmdWarn:
+		log.Println("Sending out cleanup warning")
+		notify.DeletionWarning(*warningHours, cloud.AWS, parseAWSAccounts(*accountsFile))
+	case cmdBilling:
+		log.Println("Generating month-to-date billing report")
+		owners := parseAWSAccounts(*accountsFile)
 		report := billing.GenerateReport(cloud.AWS, owners)
 		log.Println(report.FormatReport(owners))
 		notify.MonthToDateReport(report, owners)
-		didAction = true
-	}
-
-	// Perform default action (no flags specified)
-	if !didAction {
+	case cmdSetup:
+		log.Println("Running housekeeper setup")
+		setup.PerformSetup()
+	default:
+		// Default to setup
+		log.Println("Running housekeeper setup")
 		setup.PerformSetup()
 	}
 }
@@ -148,4 +113,12 @@ func parseAWSAccounts(inputFile string) hk.Owners {
 		owners = append(owners, hk.Owner{Name: "solo-friendlies-mark", ID: soloFriendliesMark})
 	}
 	return owners
+}
+
+func getPositional() string {
+	n := len(os.Args)
+	if n <= 1 {
+		return ""
+	}
+	return os.Args[n-1]
 }
