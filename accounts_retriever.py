@@ -10,6 +10,7 @@ from csp_utils.aws.accounts_config import (
     BRKT_EMPLOYEE_ACCOUNTS
 )
 
+
 def main(output):
     """
     This script will get the accounts constant from the MV repo.
@@ -34,9 +35,10 @@ def main(output):
     output_file.write(accounts_json)
     output_file.close()
 
+
 if __name__ == '__main__':
     PARSER = argparse.ArgumentParser()
-    PARSER.add_argument('--output', default='./accounts.json',
+    PARSER.add_argument('--output', default='./aws_accounts.json',
                         help='Where to store accounts')
     ARGS = PARSER.parse_args()
     main(ARGS.output)
