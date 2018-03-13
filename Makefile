@@ -9,19 +9,19 @@ run:
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper --accounts-file=$(FRIENDLIES)
+		--rm housekeeper  $${CSP:+--csp=${CSP}} --accounts-file=$(FRIENDLIES)
 
 cleanup: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper --accounts-file=$(FRIENDLIES) cleanup
+		--rm housekeeper $${CSP:+--csp=${CSP}} --accounts-file=$(FRIENDLIES) cleanup
 
 reset: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper --accounts-file=$(FRIENDLIES) reset
+		--rm housekeeper $${CSP:+--csp=${CSP}} --accounts-file=$(FRIENDLIES) reset
 
 review: build
 	docker run \
@@ -29,13 +29,13 @@ review: build
 		-e AWS_SECRET_ACCESS_KEY \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper --accounts-file=$(FRIENDLIES) review
+		--rm housekeeper $${CSP:+--csp=${CSP}} --accounts-file=$(FRIENDLIES) review
 
 mark: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper --accounts-file=$(FRIENDLIES) mark-for-cleanup
+		--rm housekeeper $${CSP:+--csp=${CSP}} --accounts-file=$(FRIENDLIES) mark-for-cleanup
 
 warn: build
 	docker run \
@@ -43,7 +43,7 @@ warn: build
 		-e AWS_SECRET_ACCESS_KEY \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper --warning-hours=$(WARNING_HOURS) --accounts-file=$(FRIENDLIES) warn
+		--rm housekeeper $${CSP:+--csp=${CSP}} --warning-hours=$(WARNING_HOURS) --accounts-file=$(FRIENDLIES) warn
 
 untagged: build
 	docker run \
@@ -59,7 +59,7 @@ billing-report: build
 		-e AWS_SECRET_ACCESS_KEY \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper --accounts-file=$(ALL_ACCOUNTS) billing-report
+		--rm housekeeper $${CSP:+--csp=${CSP}} --accounts-file=$(ALL_ACCOUNTS) billing-report
 
 setup: build
 	docker run \

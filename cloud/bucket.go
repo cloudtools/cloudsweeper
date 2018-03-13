@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	storage "google.golang.org/api/storage/v1"
 )
 
 type baseBucket struct {
@@ -30,6 +31,20 @@ func (b *baseBucket) ObjectCount() int64 {
 func (b *baseBucket) TotalSizeGB() float64 {
 	return b.totalSizeGB
 }
+
+func cleanupBuckets(buckets []Bucket) error {
+	resList := []Resource{}
+	for i := range buckets {
+		v, ok := buckets[i].(Resource)
+		if !ok {
+			return errors.New("Could not convert Bucket to Resource")
+		}
+		resList = append(resList, v)
+	}
+	return cleanupResources(resList)
+}
+
+// AWS
 
 type awsBucket struct {
 	baseBucket
@@ -119,4 +134,28 @@ func (b *awsBucket) RemoveTag(key string) error {
 	// TODO: Implement
 	log.Fatalln("Not implemented for buckets")
 	return errors.New("Not implemented for buckets")
+}
+
+// GCP
+
+type gcpBucket struct {
+	baseBucket
+	storage *storage.Service
+}
+
+func (b *gcpBucket) Cleanup() error {
+	log.Printf("Cleaning up bucket %s in %s", b.ID(), b.Owner())
+	// TODO: Currently only works if bucket is empty, cleanup
+	// the objects in the bucket too
+	return b.storage.Buckets.Delete(b.ID()).Do()
+}
+
+func (b *gcpBucket) SetTag(key, value string, overwrite bool) error {
+	log.Println("Bucket tagging not supported on GCP")
+	return nil
+}
+
+func (b *gcpBucket) RemoveTag(key string) error {
+	log.Println("Bucket tagging not supported on GCP")
+	return nil
 }

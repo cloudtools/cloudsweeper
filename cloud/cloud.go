@@ -1,8 +1,26 @@
 package cloud
 
 import (
+	"context"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"os"
 	"time"
+
+	oauth2 "golang.org/x/oauth2/google"
+	compute "google.golang.org/api/compute/v1"
+	storage "google.golang.org/api/storage/v1"
+)
+
+const (
+	// GcpCredentialsFileKey is the Env variable to store path
+	// to service accounts credentials JSON file
+	GcpCredentialsFileKey = "OLGA_GCP_IAM"
+
+	scopeGCPCompute = "https://www.googleapis.com/auth/compute"
+	scopeGCPStorage = "https://www.googleapis.com/auth/devstorage.read_write"
 )
 
 // ResourceManager is used to manage the different resources on
@@ -132,9 +150,44 @@ func NewManager(c CSP, accounts ...string) ResourceManager {
 		}
 		return manager
 	case GCP:
-		log.Fatalln("Unfortunately, GCP is currently not supported")
+		log.Println("Initializing GCP Resource Manager")
+		client, err := getGCPHttpClient()
+		if err != nil {
+			log.Fatalln(err)
+		}
+		computeService, err := compute.New(client)
+		if err != nil {
+			log.Fatalf("Could not initialize compute service: %s", err)
+		}
+		storageService, err := storage.New(client)
+		if err != nil {
+			log.Fatalf("Could not initialize storage service: %s", err)
+		}
+		manager := &gcpResourceManager{
+			projects: accounts,
+			compute:  computeService,
+			storage:  storageService,
+		}
+		return manager
 	default:
 		log.Fatalln("Invalid CSP specified")
 	}
 	return nil
+}
+
+func getGCPHttpClient() (*http.Client, error) {
+	credsFile, exist := os.LookupEnv(GcpCredentialsFileKey)
+	if !exist {
+		log.Println("No GCP credentials specified, using default")
+		return oauth2.DefaultClient(context.Background(), scopeGCPCompute, scopeGCPStorage)
+	}
+	creds, err := ioutil.ReadFile(credsFile)
+	if err != nil {
+		return nil, fmt.Errorf("Could not read GCP credentials JSON: %s", err)
+	}
+	conf, err := oauth2.JWTConfigFromJSON(creds, scopeGCPCompute, scopeGCPStorage)
+	if err != nil {
+		return nil, fmt.Errorf("Could not get GCP credentials: %s", err)
+	}
+	return conf.Client(context.Background()), nil
 }

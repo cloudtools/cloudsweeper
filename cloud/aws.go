@@ -2,7 +2,6 @@ package cloud
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -271,84 +270,23 @@ func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
 }
 
 func (m *awsResourceManager) CleanupInstances(instances []Instance) error {
-	resList := []Resource{}
-	for i := range instances {
-		v, ok := instances[i].(Resource)
-		if !ok {
-			return errors.New("Could not convert Instance to Resource")
-		}
-		resList = append(resList, v)
-	}
-	return cleanupResources(resList)
+	return cleanupInstances(instances)
 }
 
 func (m *awsResourceManager) CleanupImages(images []Image) error {
-	resList := []Resource{}
-	for i := range images {
-		v, ok := images[i].(Resource)
-		if !ok {
-			return errors.New("Could not convert Image to Resource")
-		}
-		resList = append(resList, v)
-	}
-	return cleanupResources(resList)
+	return cleanupImages(images)
 }
 
 func (m *awsResourceManager) CleanupVolumes(volumes []Volume) error {
-	resList := []Resource{}
-	for i := range volumes {
-		v, ok := volumes[i].(Resource)
-		if !ok {
-			return errors.New("Could not convert Volume to Resource")
-		}
-		resList = append(resList, v)
-	}
-	return cleanupResources(resList)
+	return cleanupVolumes(volumes)
 }
 
 func (m *awsResourceManager) CleanupSnapshots(snapshots []Snapshot) error {
-	resList := []Resource{}
-	for i := range snapshots {
-		v, ok := snapshots[i].(Resource)
-		if !ok {
-			return errors.New("Could not convert Snapshot to Resource")
-		}
-		resList = append(resList, v)
-	}
-	return cleanupResources(resList)
+	return cleanupSnapshots(snapshots)
 }
 
 func (m *awsResourceManager) CleanupBuckets(buckets []Bucket) error {
-	resList := []Resource{}
-	for i := range buckets {
-		v, ok := buckets[i].(Resource)
-		if !ok {
-			return errors.New("Could not convert Bucket to Resource")
-		}
-		resList = append(resList, v)
-	}
-	return cleanupResources(resList)
-}
-
-func cleanupResources(resources []Resource) error {
-	failed := false
-	var wg sync.WaitGroup
-	wg.Add(len(resources))
-	for i := range resources {
-		go func(index int) {
-			err := resources[index].Cleanup()
-			if err != nil {
-				log.Printf("Cleaning up %s for owner %s failed\n%s\n", resources[index].ID(), resources[index].Owner(), err)
-				failed = true
-			}
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()
-	if failed {
-		return errors.New("One or more resource cleanups failed")
-	}
-	return nil
+	return cleanupBuckets(buckets)
 }
 
 // getAWSInstances will get all running instances using an already

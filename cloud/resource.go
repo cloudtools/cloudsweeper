@@ -1,6 +1,11 @@
 package cloud
 
-import "time"
+import (
+	"errors"
+	"log"
+	"sync"
+	"time"
+)
 
 type baseResource struct {
 	csp          CSP
@@ -38,4 +43,25 @@ func (r *baseResource) Public() bool {
 
 func (r *baseResource) CreationTime() time.Time {
 	return r.creationTime
+}
+
+func cleanupResources(resources []Resource) error {
+	failed := false
+	var wg sync.WaitGroup
+	wg.Add(len(resources))
+	for i := range resources {
+		go func(index int) {
+			err := resources[index].Cleanup()
+			if err != nil {
+				log.Printf("Cleaning up %s for owner %s failed\n%s\n", resources[index].ID(), resources[index].Owner(), err)
+				failed = true
+			}
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+	if failed {
+		return errors.New("One or more resource cleanups failed")
+	}
+	return nil
 }

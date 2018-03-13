@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 )
 
 const (
@@ -36,6 +37,7 @@ const (
 var (
 	accountsFile = flag.String("accounts-file", defaultAccountsFile, "Specify where to find the JSON with all accounts")
 	warningHours = flag.Int("warning-hours", warningHoursInAdvance, "The number of hours in advance to warn about resource deletion")
+	cspToUse     = flag.String("csp", defaultCSPFlag, "Which CSP to run against")
 )
 
 const banner = `
@@ -55,31 +57,37 @@ const (
 	cmdWarn     = "warn"
 	cmdBilling  = "billing-report"
 	cmdUntagged = "find-untagged"
+
+	defaultCSPFlag = cspFlagAWS
+	cspFlagAWS     = "aws"
+	cspFlagGCP     = "gcp"
 )
 
 func main() {
 	fmt.Println(banner)
 	flag.Parse()
+	csp := cspFromFlag(*cspToUse)
+	fmt.Printf("Running against %s...\n", csp)
 	switch getPositional() {
 	case cmdCleanup:
 		log.Println("Cleaning up old resources")
-		cleanup.PerformCleanup(cloud.AWS, parseAWSAccounts(*accountsFile))
+		cleanup.PerformCleanup(csp, parseAWSAccounts(*accountsFile))
 	case cmdReset:
 		log.Println("Resetting all tags")
-		cleanup.ResetHousekeeper(cloud.AWS, parseAWSAccounts(*accountsFile))
+		cleanup.ResetHousekeeper(csp, parseAWSAccounts(*accountsFile))
 	case cmdMark:
 		log.Println("Marking old resources for cleanup")
-		cleanup.MarkForCleanup(cloud.AWS, parseAWSAccounts(*accountsFile))
+		cleanup.MarkForCleanup(csp, parseAWSAccounts(*accountsFile))
 	case cmdReview:
 		log.Println("Sending out old resource review")
-		notify.OldResourceReview(cloud.AWS, parseAWSAccounts(*accountsFile))
+		notify.OldResourceReview(csp, parseAWSAccounts(*accountsFile))
 	case cmdWarn:
 		log.Println("Sending out cleanup warning")
-		notify.DeletionWarning(*warningHours, cloud.AWS, parseAWSAccounts(*accountsFile))
+		notify.DeletionWarning(*warningHours, csp, parseAWSAccounts(*accountsFile))
 	case cmdBilling:
 		log.Println("Generating month-to-date billing report")
 		owners := parseAWSAccounts(*accountsFile)
-		report := billing.GenerateReport(cloud.AWS, owners)
+		report := billing.GenerateReport(csp, owners)
 		log.Println(report.FormatReport(owners))
 		notify.MonthToDateReport(report, owners)
 	case cmdUntagged:
@@ -90,7 +98,7 @@ func main() {
 			housekeeper.Owner{Name: "prod", ID: prodAWSAccount},
 			housekeeper.Owner{Name: "qa", ID: sharedQAAccount},
 		}
-		notify.UntaggedResourcesReview(cloud.AWS, owners)
+		notify.UntaggedResourcesReview(csp, owners)
 	case cmdSetup:
 		log.Println("Running housekeeper setup")
 		setup.PerformSetup()
@@ -132,4 +140,18 @@ func getPositional() string {
 		return ""
 	}
 	return os.Args[n-1]
+}
+
+func cspFromFlag(rawFlag string) cloud.CSP {
+	flagVal := strings.ToLower(rawFlag)
+	switch flagVal {
+	case cspFlagAWS:
+		return cloud.AWS
+	case cspFlagGCP:
+		return cloud.GCP
+	default:
+		fmt.Fprintf(os.Stderr, "Invalid CSP flag \"%s\" specified\n", rawFlag)
+		os.Exit(1)
+		return cloud.AWS
+	}
 }
