@@ -56,12 +56,15 @@ var (
 func (m *awsResourceManager) InstancesPerAccount() map[string][]Instance {
 	log.Println("Getting instances in all accounts")
 	resultMap := make(map[string][]Instance)
+	var resultMutext sync.Mutex
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		instances, err := getAWSInstances(account, client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
 		} else if len(instances) > 0 {
+			resultMutext.Lock()
 			resultMap[account] = append(resultMap[account], instances...)
+			resultMutext.Unlock()
 		}
 	})
 	return resultMap
@@ -70,12 +73,15 @@ func (m *awsResourceManager) InstancesPerAccount() map[string][]Instance {
 func (m *awsResourceManager) ImagesPerAccount() map[string][]Image {
 	log.Println("Getting images in all accounts")
 	resultMap := make(map[string][]Image)
+	var resultMutext sync.Mutex
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		images, err := getAWSImages(account, client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
 		} else if len(images) > 0 {
+			resultMutext.Lock()
 			resultMap[account] = append(resultMap[account], images...)
+			resultMutext.Unlock()
 		}
 	})
 	return resultMap
@@ -84,12 +90,15 @@ func (m *awsResourceManager) ImagesPerAccount() map[string][]Image {
 func (m *awsResourceManager) VolumesPerAccount() map[string][]Volume {
 	log.Println("Getting volumes in all accounts")
 	resultMap := make(map[string][]Volume)
+	var resultMutext sync.Mutex
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		volumes, err := getAWSVolumes(account, client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
 		} else if len(volumes) > 0 {
+			resultMutext.Lock()
 			resultMap[account] = append(resultMap[account], volumes...)
+			resultMutext.Unlock()
 		}
 	})
 	return resultMap
@@ -98,12 +107,15 @@ func (m *awsResourceManager) VolumesPerAccount() map[string][]Volume {
 func (m *awsResourceManager) SnapshotsPerAccount() map[string][]Snapshot {
 	log.Println("Getting snapshots in all accounts")
 	resultMap := make(map[string][]Snapshot)
+	var resultMutext sync.Mutex
 	getAllEC2Resources(m.accounts, func(client *ec2.EC2, account string) {
 		snapshots, err := getAWSSnapshots(account, client)
 		if err != nil {
 			handleAWSAccessDenied(account, err)
 		} else if len(snapshots) > 0 {
+			resultMutext.Lock()
 			resultMap[account] = append(resultMap[account], snapshots...)
+			resultMutext.Unlock()
 		}
 	})
 	return resultMap
@@ -112,6 +124,7 @@ func (m *awsResourceManager) SnapshotsPerAccount() map[string][]Snapshot {
 func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollection {
 	log.Println("Getting all resources in all accounts")
 	resultMap := make(map[string]*ResourceCollection)
+	var resultMutext sync.Mutex
 	for i := range m.accounts {
 		resultMap[m.accounts[i]] = new(ResourceCollection)
 	}
@@ -159,7 +172,9 @@ func (m *awsResourceManager) AllResourcesPerAccount() map[string]*ResourceCollec
 			wg.Done()
 		}()
 		wg.Wait()
+		resultMutext.Lock()
 		resultMap[account] = result
+		resultMutext.Unlock()
 	})
 	return resultMap
 }
@@ -168,6 +183,7 @@ func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
 	log.Println("Getting all buckets in all accounts")
 	sess := session.Must(session.NewSession())
 	resultMap := make(map[string][]Bucket)
+	var resultMutext sync.Mutex
 	forEachAccount(m.accounts, sess, func(account string, cred *credentials.Credentials) {
 		s3Client := s3.New(sess, &aws.Config{
 			Credentials: cred,
@@ -244,7 +260,9 @@ func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
 			for i := 0; i < bucketCount; i++ {
 				buck := <-buckChan
 				if buck != nil {
+					resultMutext.Lock()
 					resultMap[account] = append(resultMap[account], buck)
+					resultMutext.Unlock()
 				}
 			}
 		}
