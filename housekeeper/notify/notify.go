@@ -19,6 +19,7 @@ const (
 
 type resourceMailData struct {
 	Owner     string
+	OwnerID   string
 	Instances []cloud.Instance
 	Images    []cloud.Image
 	Snapshots []cloud.Snapshot
@@ -103,6 +104,51 @@ func OldResourceReview(csp cloud.CSP, owners housekeeper.Owners) {
 	}
 }
 
+// UntaggedResourcesReview will look for resources without any tags, and
+// send out a mail encouraging to tag tag them
+func UntaggedResourcesReview(csp cloud.CSP, owners housekeeper.Owners) {
+	mngr := cloud.NewManager(csp, owners.AllIDs()...)
+	// We only care about untagged resources in EC2
+	allCompute := mngr.AllResourcesPerAccount()
+	ownerNames := owners.IDToName()
+	for owner, resources := range allCompute {
+		log.Printf("Performing untagged resources review in %s", owner)
+		untaggedFilter := filter.New()
+		untaggedFilter.AddGeneralRule(filter.Negate(filter.HasTag("Name")))
+
+		// We care about un-tagged whitelisted resources too
+		untaggedFilter.OverrideWhitelist = true
+
+		ownerName := convertEmailExceptions(ownerNames[owner])
+		mailHolder := resourceMailData{
+			Owner:     ownerName,
+			OwnerID:   owner,
+			Instances: filter.Instances(resources.Instances, untaggedFilter),
+			// Only report on instances for now
+			//Images:    filter.Images(resources.Images, untaggedFilter),
+			//Snapshots: filter.Snapshots(resources.Snapshots, untaggedFilter),
+			//Volumes:   filter.Volumes(resources.Volumes, untaggedFilter),
+			Buckets: []cloud.Bucket{},
+		}
+
+		if mailHolder.ResourceCount() > 0 {
+			// Send mail
+			mailClient := getMailClient()
+			mailContent, err := generateMail(mailHolder, untaggedMailTemplate)
+			if err != nil {
+				log.Fatalf("Could not generate email: %s", err)
+			}
+			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
+			log.Printf("Sending out untagged resource review to %s\n", ownerMail)
+			title := fmt.Sprintf("You have %d un-tagged resources to review (%s)", mailHolder.ResourceCount(), time.Now().Format("2006-01-02"))
+			err = mailClient.SendEmail(title, mailContent, ownerMail, "hsson@brkt.com", "ben@brkt.com") // # TODO: Remove temporary mails to hsson and ben
+			if err != nil {
+				log.Printf("Failed to email %s: %s\n", ownerMail, err)
+			}
+		}
+	}
+}
+
 // DeletionWarning will find resources which are about to be deleted within
 // `hoursInAdvance` hours, and send an email to the owner of those resources
 // with a warning. Resources explicitly tagged to be deleted are not included
@@ -122,6 +168,7 @@ func DeletionWarning(hoursInAdvance int, csp cloud.CSP, owners housekeeper.Owner
 		}{
 			resourceMailData{
 				ownerName,
+				owner,
 				filter.Instances(resources.Instances, fil),
 				filter.Images(resources.Images, fil),
 				filter.Snapshots(resources.Snapshots, fil),

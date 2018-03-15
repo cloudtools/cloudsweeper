@@ -3,6 +3,7 @@ package main
 import (
 	"brkt/olga/cloud"
 	"brkt/olga/cloud/billing"
+	"brkt/olga/housekeeper"
 	hk "brkt/olga/housekeeper"
 	"brkt/olga/housekeeper/cleanup"
 	"brkt/olga/housekeeper/notify"
@@ -46,13 +47,14 @@ const banner = `
 										`
 
 const (
-	cmdCleanup = "cleanup"
-	cmdReset   = "reset"
-	cmdMark    = "mark-for-cleanup"
-	cmdReview  = "review"
-	cmdSetup   = "setup"
-	cmdWarn    = "warn"
-	cmdBilling = "billing-report"
+	cmdCleanup  = "cleanup"
+	cmdReset    = "reset"
+	cmdMark     = "mark-for-cleanup"
+	cmdReview   = "review"
+	cmdSetup    = "setup"
+	cmdWarn     = "warn"
+	cmdBilling  = "billing-report"
+	cmdUntagged = "find-untagged"
 )
 
 func main() {
@@ -80,6 +82,15 @@ func main() {
 		report := billing.GenerateReport(cloud.AWS, owners)
 		log.Println(report.FormatReport(owners))
 		notify.MonthToDateReport(report, owners)
+	case cmdUntagged:
+		log.Println("Finding untagged resources")
+		// Only care about prod, shared-dev and QA
+		owners := housekeeper.Owners{
+			housekeeper.Owner{Name: "cloud-dev", ID: sharedDevAWSAccount},
+			housekeeper.Owner{Name: "prod", ID: prodAWSAccount},
+			housekeeper.Owner{Name: "qa", ID: sharedQAAccount},
+		}
+		notify.UntaggedResourcesReview(cloud.AWS, owners)
 	case cmdSetup:
 		log.Println("Running housekeeper setup")
 		setup.PerformSetup()

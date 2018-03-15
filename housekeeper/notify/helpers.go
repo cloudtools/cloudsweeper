@@ -113,5 +113,11 @@ func extraTemplateFunctions() template.FuncMap {
 			}
 			return ""
 		},
+		"prettyTag": func(key, val string) string {
+			if val == "" {
+				return key
+			}
+			return fmt.Sprintf("%s: %s", key, val)
+		},
 	}
 }

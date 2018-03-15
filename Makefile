@@ -45,6 +45,14 @@ warn: build
 		-e SMTP_PASS \
 		--rm housekeeper --warning-hours=$(WARNING_HOURS) --accounts-file=$(FRIENDLIES) warn
 
+untagged: build
+	docker run \
+		-e AWS_ACCESS_KEY_ID \
+		-e AWS_SECRET_ACCESS_KEY \
+		-e SMTP_USER \
+		-e SMTP_PASS \
+		--rm housekeeper find-untagged
+
 billing-report: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \

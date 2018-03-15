@@ -384,3 +384,148 @@ Thank you,<br />
 Your loyal housekeeper
 </p>
 `
+
+const untaggedMailTemplate = `<h1>Hello {{ .Owner -}},</h1>
+
+<p>
+The following listed resources are missing <strong>Name</strong> tags. <strong>Name</strong>
+tags are important to help us track resource purpose and cost.  You can always add other tags to
+resources, but should always include a <strong>Name</strong> tag.
+</p>
+
+<p>
+Please tag these resources appropriately.
+</p>
+
+<p>
+Read more about how HouseKeeper works and how to better tag your resources at
+<a href="https://wiki.int.brkt.com/display/eng/HouseKeeper+-+Automated+Cleanup+of+cloud+resources">this Wiki page</a>.
+</p>
+
+<h2>Untagged resources:</h2>
+<p><strong>Account ID:</strong> {{ .OwnerID }}</p>
+<p>
+Resources marked <span style="background-color: #c9fc99;">in green</span> are whitelisted.
+</p>
+{{ if gt (len .Instances) 0 }}
+	<h3>Instances</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Tags</strong></th>
+		</tr>
+	{{ range $i, $instance := .Instances }}
+		<tr {{ if and (even $i) (not (whitelisted $instance)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $instance }}style="background-color: #c9fc99;"{{ end }}>
+			<td style="white-space: nowrap;">{{ $instance.Location }}</td>
+			<td style="white-space: nowrap;">{{ $instance.ID }}</td>
+			<td style="white-space: nowrap;">{{ daysrunning $instance.CreationTime }}</td>
+			<td>
+			{{ range $key, $val := $instance.Tags }}
+			<span style="background-color: #d6d6d6; padding-top: 0.2em; padding-bottom: 0.2em; padding-left: 0.5em; padding-right: 0.5em; border-radius: 2em; margin-left: 0.1em; margin-right: 0.1em; margin-top:0.01em; margin-bottom: 0.01em; color: #000; display: inline-block;">{{ prettyTag $key $val }}</span>
+			{{ end }}
+			</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Images) 0 }}
+	<h3>Images</h3>
+	<p>Note that an image name is not the same as a Name tag</p>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Tags</strong></th>
+		</tr>
+	{{ range $i, $image := .Images }}
+	<tr {{ if and (even $i) (not (whitelisted $image)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $image }}style="background-color: #c9fc99;"{{ end }}>
+			<td style="white-space: nowrap;">{{ $image.Location }}</td>
+			<td style="white-space: nowrap;">{{ $image.ID }}</td>
+			<td style="white-space: nowrap;">{{ daysrunning $image.CreationTime }}</td>
+			<td>
+			{{ range $key, $val := $image.Tags }}
+			<span style="background-color: #d6d6d6; padding-top: 0.2em; padding-bottom: 0.2em; padding-left: 0.5em; padding-right: 0.5em; border-radius: 2em; margin-left: 0.1em; margin-right: 0.1em; margin-top:0.01em; margin-bottom: 0.01em; color: #000; display: inline-block;">{{ prettyTag $key $val }}</span>
+			{{ end }}
+			</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Volumes) 0 }}
+	<h3>Volumes</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Tags</strong></th>
+		</tr>
+	{{ range $i, $volume := .Volumes }}
+	<tr {{ if and (even $i) (not (whitelisted $volume)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $volume }}style="background-color: #c9fc99;"{{ end }}>
+			<td style="white-space: nowrap;">{{ $volume.Location }}</td>
+			<td style="white-space: nowrap;">{{ $volume.ID }}</td>
+			<td style="white-space: nowrap;">{{ daysrunning $volume.CreationTime }}</td>
+			<td>
+			{{ range $key, $val := $volume.Tags }}
+			<span style="background-color: #d6d6d6; padding-top: 0.2em; padding-bottom: 0.2em; padding-left: 0.5em; padding-right: 0.5em; border-radius: 2em; margin-left: 0.1em; margin-right: 0.1em; margin-top:0.01em; margin-bottom: 0.01em; color: #000; display: inline-block;">{{ prettyTag $key $val }}</span>
+			{{ end }}
+			</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Snapshots) 0 }}
+	<h3>Snapshots</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Tags</strong></th>
+		</tr>
+	{{ range $i, $snapshot := .Snapshots }}
+	<tr {{ if and (even $i) (not (whitelisted $snapshot)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $snapshot }}style="background-color: #c9fc99;"{{ end }}>
+			<td style="white-space: nowrap;">{{ $snapshot.Location }}</td>
+			<td style="white-space: nowrap;">{{ $snapshot.ID }}</td>
+			<td style="white-space: nowrap;">{{ daysrunning $snapshot.CreationTime }}</td>
+			<td>
+			{{ range $key, $val := $snapshot.Tags }}
+			<span style="background-color: #d6d6d6; padding-top: 0.2em; padding-bottom: 0.2em; padding-left: 0.5em; padding-right: 0.5em; border-radius: 2em; margin-left: 0.1em; margin-right: 0.1em; margin-top:0.01em; margin-bottom: 0.01em; color: #000; display: inline-block;">{{ prettyTag $key $val }}</span>
+			{{ end }}
+			</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Buckets) 0 }}
+	<h3>Buckets</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>ID</strong></th>
+			<th><strong>Tags</strong></th>
+		</tr>
+	{{ range $i, $bucket := .Buckets }}
+	<tr {{ if and (even $i) (not (whitelisted $bucket)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $bucket }}style="background-color: #c9fc99;"{{ end }}>
+			<td style="white-space: nowrap;">{{ $bucket.ID }}</td>
+			<td>
+			{{ range $key, $val := $bucket.Tags }}
+			<span style="background-color: #d6d6d6; padding-top: 0.2em; padding-bottom: 0.2em; padding-left: 0.5em; padding-right: 0.5em; border-radius: 2em; margin-left: 0.1em; margin-right: 0.1em; margin-top:0.01em; margin-bottom: 0.01em; color: #000; display: inline-block;">{{ prettyTag $key $val }}</span>
+			{{ end }}
+			</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+<p>
+Thank you,<br />
+Your loyal housekeeper
+</p>
+`
