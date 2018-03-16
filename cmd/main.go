@@ -64,18 +64,6 @@ const (
 )
 
 func main() {
-	org := parseOrganization("organization.json")
-	for _, emp := range org.Employees {
-		if emp.Username == "hsson" || emp.Username == "olle" {
-			fmt.Printf(`Name: %s
-Manager: %s
-Department: %s
-===========
-`, emp.RealName, emp.Manager.RealName, emp.Department.Name)
-		}
-	}
-
-	return
 	fmt.Println(banner)
 	flag.Parse()
 	csp := cspFromFlag(*cspToUse)
