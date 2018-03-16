@@ -1,0 +1,130 @@
+package housekeeper
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+// Organization represents the Immutable Systems employees,
+// their departments and their managers.
+type Organization struct {
+	Managers    Employees   `json:"-"`
+	ManagerIDs  []managerID `json:"managers"`
+	Departments Departments `json:"departments"`
+	Employees   Employees   `json:"employees"`
+
+	managerMapping    map[string]*Employee
+	departmentMapping map[string]*Department
+	employeeMapping   map[string]*Employee
+	managerEmployees  map[string]Employees
+}
+
+type managerID struct {
+	ID string `json:"username"`
+}
+
+// Department represents a department in Immutable Systems
+type Department struct {
+	Number int    `json:"number"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+}
+
+// Departments is a list of Department
+type Departments []*Department
+
+// Employee represents an Immuutable Systems employee, which
+// belong to a department and has a manager. An employee can
+// also have multiple accounts and projects associated with
+// them in AWS and GCP. "Disabled" employees are employees
+// who should no longer be regarded as active in the company
+type Employee struct {
+	Username     string      `json:"username"`
+	RealName     string      `json:"real_name"`
+	ManagerID    string      `json:"manager"`
+	Manager      *Employee   `json:"-"`
+	DepartmentID string      `json:"department"`
+	Department   *Department `json:"-"`
+	Disabled     bool        `json:"disabled,omitempty"`
+	AWSAccounts  AWSAccounts `json:"aws_accounts"`
+	GCPProjects  GCPProjects `json:"gcp_projects"`
+}
+
+// Employees is a list of Employee
+type Employees []*Employee
+
+// AWSAccount represents an account in AWS. An account
+// can have automatic cleanup enabled, indiacated by
+// the HouseKeeperEnabled attribute.
+type AWSAccount struct {
+	ID                 int64 `json:"id"`
+	HouseKeeperEnabled bool  `json:"housekeeper_enabled,omitempty"`
+}
+
+// AWSAccounts is a list of AWSAccount
+type AWSAccounts []*AWSAccount
+
+// GCPProject represents a project in GPC. A project
+// can have automatic cleanup enabled, indiacated by
+// the HouseKeeperEnabled attribute.
+type GCPProject struct {
+	ID                 string `json:"id"`
+	HouseKeeperEnabled bool   `json:"housekeeper_enabled,omitempty"`
+}
+
+// GCPProjects is a list of GCPProject
+type GCPProjects []*GCPProject
+
+// InitOrganization initializes an organisation from raw data,
+// e.g. the contents of a JSON file.
+func InitOrganization(orgData []byte) (*Organization, error) {
+	org := new(Organization)
+	err := json.Unmarshal(orgData, org)
+	if err != nil {
+		return nil, err
+	}
+	org.departmentMapping = make(map[string]*Department, len(org.Departments))
+	for i := range org.Departments {
+		org.departmentMapping[org.Departments[i].ID] = org.Departments[i]
+	}
+	// First initalize all employees
+	org.employeeMapping = make(map[string]*Employee, len(org.Employees))
+	for i := range org.Employees {
+		org.employeeMapping[org.Employees[i].Username] = org.Employees[i]
+		if department, exist := org.departmentMapping[org.Employees[i].DepartmentID]; exist {
+			org.Employees[i].Department = department
+		} else {
+			// TODO: Fail if employee's department doesn't exist
+		}
+	}
+	// Then map the employees' managers
+	org.managerMapping = make(map[string]*Employee, len(org.Managers))
+	org.Managers = Employees{}
+	for i := range org.ManagerIDs {
+		org.managerMapping[org.ManagerIDs[i].ID] = org.employeeMapping[org.ManagerIDs[i].ID]
+		org.Managers = append(org.Managers, org.employeeMapping[org.ManagerIDs[i].ID])
+	}
+	org.managerEmployees = make(map[string]Employees, len(org.Managers))
+	for i := range org.Employees {
+		if manager, exist := org.managerMapping[org.Employees[i].ManagerID]; exist {
+			org.Employees[i].Manager = manager
+			org.managerEmployees[manager.Username] = append(org.managerEmployees[manager.Username], org.Employees[i])
+		} else {
+			// TODO: Fail if employee's manager doesn't exist
+		}
+	}
+	return org, nil
+}
+
+// EmployeesForManager gets all the employees who has the
+// specifed manager as their manager.
+func (org *Organization) EmployeesForManager(manager *Employee) (Employees, error) {
+	if _, isManager := org.managerMapping[manager.Username]; !isManager {
+		return nil, fmt.Errorf("%s is not a manager", manager.Username)
+	}
+	if employees, exist := org.managerEmployees[manager.Username]; exist {
+		return employees, nil
+	}
+	// Manager has no employees
+	return Employees{}, nil
+}

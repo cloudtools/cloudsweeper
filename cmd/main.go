@@ -64,6 +64,18 @@ const (
 )
 
 func main() {
+	org := parseOrganization("organization.json")
+	for _, emp := range org.Employees {
+		if emp.Username == "hsson" || emp.Username == "olle" {
+			fmt.Printf(`Name: %s
+Manager: %s
+Department: %s
+===========
+`, emp.RealName, emp.Manager.RealName, emp.Department.Name)
+		}
+	}
+
+	return
 	fmt.Println(banner)
 	flag.Parse()
 	csp := cspFromFlag(*cspToUse)
@@ -132,6 +144,18 @@ func parseAWSAccounts(inputFile string) hk.Owners {
 		owners = append(owners, hk.Owner{Name: "solo-friendlies-mark", ID: soloFriendliesMark})
 	}
 	return owners
+}
+
+func parseOrganization(inputFile string) *hk.Organization {
+	raw, err := ioutil.ReadFile(inputFile)
+	if err != nil {
+		log.Fatalf("Could not read organization file: %s\n", err)
+	}
+	org, err := hk.InitOrganization(raw)
+	if err != nil {
+		log.Fatalf("Failed to initalize organization: %s\n", err)
+	}
+	return org
 }
 
 func getPositional() string {
