@@ -1,27 +1,26 @@
-ALL_ACCOUNTS 		:= aws_accounts.json
-FRIENDLIES 			:= friendly_accounts.json
+ORG_FILE            := organization.json
 WARNING_HOURS		:= 48
 
 build:
-	docker build -t housekeeper .
+	docker build --build-arg CACHE_DATE=$$(date +%Y-%m-%d:%H:%M:%S) -t housekeeper .
 
 run:
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper  $${CSP:+--csp=${CSP}} --accounts-file=$(FRIENDLIES)
+		--rm housekeeper  $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE)
 
 cleanup: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --accounts-file=$(FRIENDLIES) cleanup
+		--rm housekeeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) cleanup
 
 reset: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --accounts-file=$(FRIENDLIES) reset
+		--rm housekeeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) reset
 
 review: build
 	docker run \
@@ -29,13 +28,13 @@ review: build
 		-e AWS_SECRET_ACCESS_KEY \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --accounts-file=$(FRIENDLIES) review
+		--rm housekeeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) review
 
 mark: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --accounts-file=$(FRIENDLIES) mark-for-cleanup
+		--rm housekeeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) mark-for-cleanup
 
 warn: build
 	docker run \
@@ -43,7 +42,7 @@ warn: build
 		-e AWS_SECRET_ACCESS_KEY \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --warning-hours=$(WARNING_HOURS) --accounts-file=$(FRIENDLIES) warn
+		--rm housekeeper $${CSP:+--csp=${CSP}} --warning-hours=$(WARNING_HOURS) --org-file=$(ORG_FILE) warn
 
 untagged: build
 	docker run \
@@ -59,7 +58,7 @@ billing-report: build
 		-e AWS_SECRET_ACCESS_KEY \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --accounts-file=$(ALL_ACCOUNTS) billing-report
+		--rm housekeeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) billing-report
 
 setup: build
 	docker run \

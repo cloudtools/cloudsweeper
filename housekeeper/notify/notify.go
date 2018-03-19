@@ -4,7 +4,6 @@ import (
 	"brkt/olga/cloud"
 	"brkt/olga/cloud/billing"
 	"brkt/olga/cloud/filter"
-	"brkt/olga/housekeeper"
 	"fmt"
 	"log"
 	"time"
@@ -33,7 +32,7 @@ type monthToDateData struct {
 	SortedUsers      billing.UserList
 	MinimumTotalCost float64
 	MinimumCost      float64
-	Owners           housekeeper.Owners
+	AccountToUser    map[string]string
 }
 
 func (d *resourceMailData) ResourceCount() int {
@@ -47,14 +46,12 @@ func (d *resourceMailData) ResourceCount() int {
 //		- Resource is older than 30 days
 //		- A whitelisted resource is older than 6 months
 //		- An instance marked with do-not-delete is older than a week
-func OldResourceReview(csp cloud.CSP, owners housekeeper.Owners) {
-	mngr := cloud.NewManager(csp, owners.AllIDs()...)
+func OldResourceReview(mngr cloud.ResourceManager, accountUserMapping map[string]string) {
 	allCompute := mngr.AllResourcesPerAccount()
 	allBuckets := mngr.BucketsPerAccount()
-	ownerNames := owners.IDToName()
-	for owner, resources := range allCompute {
-		log.Println("Performing old resource review in", owner)
-		ownerName := convertEmailExceptions(ownerNames[owner])
+	for account, resources := range allCompute {
+		log.Println("Performing old resource review in", account)
+		ownerName := convertEmailExceptions(accountUserMapping[account])
 
 		// Create filters
 		generalFilter := filter.New()
@@ -82,7 +79,7 @@ func OldResourceReview(csp cloud.CSP, owners housekeeper.Owners) {
 			Snapshots: filter.Snapshots(resources.Snapshots, generalFilter, whitelistFilter),
 			Buckets:   []cloud.Bucket{},
 		}
-		if bucks, ok := allBuckets[owner]; ok {
+		if bucks, ok := allBuckets[account]; ok {
 			mailHolder.Buckets = filter.Buckets(bucks, generalFilter, whitelistFilter)
 		}
 
@@ -106,23 +103,21 @@ func OldResourceReview(csp cloud.CSP, owners housekeeper.Owners) {
 
 // UntaggedResourcesReview will look for resources without any tags, and
 // send out a mail encouraging to tag tag them
-func UntaggedResourcesReview(csp cloud.CSP, owners housekeeper.Owners) {
-	mngr := cloud.NewManager(csp, owners.AllIDs()...)
+func UntaggedResourcesReview(mngr cloud.ResourceManager, accountUserMapping map[string]string) {
 	// We only care about untagged resources in EC2
 	allCompute := mngr.AllResourcesPerAccount()
-	ownerNames := owners.IDToName()
-	for owner, resources := range allCompute {
-		log.Printf("Performing untagged resources review in %s", owner)
+	for account, resources := range allCompute {
+		log.Printf("Performing untagged resources review in %s", account)
 		untaggedFilter := filter.New()
 		untaggedFilter.AddGeneralRule(filter.Negate(filter.HasTag("Name")))
 
 		// We care about un-tagged whitelisted resources too
 		untaggedFilter.OverrideWhitelist = true
 
-		ownerName := convertEmailExceptions(ownerNames[owner])
+		ownerName := convertEmailExceptions(accountUserMapping[account])
 		mailHolder := resourceMailData{
 			Owner:     ownerName,
-			OwnerID:   owner,
+			OwnerID:   account,
 			Instances: filter.Instances(resources.Instances, untaggedFilter),
 			// Only report on instances for now
 			//Images:    filter.Images(resources.Images, untaggedFilter),
@@ -153,13 +148,11 @@ func UntaggedResourcesReview(csp cloud.CSP, owners housekeeper.Owners) {
 // `hoursInAdvance` hours, and send an email to the owner of those resources
 // with a warning. Resources explicitly tagged to be deleted are not included
 // in this warning.
-func DeletionWarning(hoursInAdvance int, csp cloud.CSP, owners housekeeper.Owners) {
-	mngr := cloud.NewManager(csp, owners.AllIDs()...)
+func DeletionWarning(hoursInAdvance int, mngr cloud.ResourceManager, accountUserMapping map[string]string) {
 	allCompute := mngr.AllResourcesPerAccount()
 	allBuckets := mngr.BucketsPerAccount()
-	ownerNames := owners.IDToName()
-	for owner, resources := range allCompute {
-		ownerName := convertEmailExceptions(ownerNames[owner])
+	for account, resources := range allCompute {
+		ownerName := convertEmailExceptions(accountUserMapping[account])
 		fil := filter.New()
 		fil.AddGeneralRule(filter.DeleteWithinXHours(hoursInAdvance))
 		mailHolder := struct {
@@ -168,7 +161,7 @@ func DeletionWarning(hoursInAdvance int, csp cloud.CSP, owners housekeeper.Owner
 		}{
 			resourceMailData{
 				ownerName,
-				owner,
+				account,
 				filter.Instances(resources.Instances, fil),
 				filter.Images(resources.Images, fil),
 				filter.Snapshots(resources.Snapshots, fil),
@@ -177,7 +170,7 @@ func DeletionWarning(hoursInAdvance int, csp cloud.CSP, owners housekeeper.Owner
 			},
 			hoursInAdvance,
 		}
-		if bucks, ok := allBuckets[owner]; ok {
+		if bucks, ok := allBuckets[account]; ok {
 			mailHolder.Buckets = filter.Buckets(bucks, fil)
 		}
 
@@ -201,9 +194,9 @@ func DeletionWarning(hoursInAdvance int, csp cloud.CSP, owners housekeeper.Owner
 
 // MonthToDateReport sends an email to engineering with the
 // Month-to-Date billing report
-func MonthToDateReport(report billing.Report, owners housekeeper.Owners) {
+func MonthToDateReport(report billing.Report, accountUserMapping map[string]string) {
 	mailClient := getMailClient()
-	reportData := monthToDateData{report.CSP, report.TotalCost(), report.SortedUsersByTotalCost(owners), billing.MinimumTotalCost, billing.MinimumCost, owners}
+	reportData := monthToDateData{report.CSP, report.TotalCost(), report.SortedUsersByTotalCost(), billing.MinimumTotalCost, billing.MinimumCost, accountUserMapping}
 	mailContent, err := generateMail(reportData, monthToDateTemplate)
 	if err != nil {
 		log.Fatalln("Could not generate email:", err)

@@ -3,12 +3,10 @@ package main
 import (
 	"brkt/olga/cloud"
 	"brkt/olga/cloud/billing"
-	"brkt/olga/housekeeper"
 	hk "brkt/olga/housekeeper"
 	"brkt/olga/housekeeper/cleanup"
 	"brkt/olga/housekeeper/notify"
 	"brkt/olga/housekeeper/setup"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -18,24 +16,17 @@ import (
 )
 
 const (
-	defaultAccountsFile = "aws_accounts.json"
+	defaultOrgFile = "organization.json"
 
 	sharedQAAccount     = "475063612724"
 	sharedDevAWSAccount = "164337164081"
 	prodAWSAccount      = "992270393355"
-	secProdAWSAccount   = "108660276130"
-	secDevAWSAccount    = "120690514258"
-	secStageAWSAccount  = "605040402381"
-	soloProdAWSAccount  = "067829456282"
-	soloStageAWSAccount = "842789976943"
-	soloFriendliesAgari = "139798613772"
-	soloFriendliesMark  = "586683603820"
 
 	warningHoursInAdvance = 48
 )
 
 var (
-	accountsFile = flag.String("accounts-file", defaultAccountsFile, "Specify where to find the JSON with all accounts")
+	orgFile      = flag.String("org-file", defaultOrgFile, "Specify where to find the JSON with organization information")
 	warningHours = flag.Int("warning-hours", warningHoursInAdvance, "The number of hours in advance to warn about resource deletion")
 	cspToUse     = flag.String("csp", defaultCSPFlag, "Which CSP to run against")
 )
@@ -46,7 +37,7 @@ const banner = `
 / __  / (_) | |_| \__ \  __/ __ \  __/  __/ |_) |  __/ |
 \/ /_/ \___/ \__,_|___/\___\/  \/\___|\___| .__/ \___|_|
                                           |_|
-										`
+`
 
 const (
 	cmdCleanup  = "cleanup"
@@ -71,34 +62,50 @@ func main() {
 	switch getPositional() {
 	case cmdCleanup:
 		log.Println("Cleaning up old resources")
-		cleanup.PerformCleanup(csp, parseAWSAccounts(*accountsFile))
+		org := parseOrganization(*orgFile)
+		mngr := initManager(csp, org)
+		cleanup.PerformCleanup(mngr)
 	case cmdReset:
 		log.Println("Resetting all tags")
-		cleanup.ResetHousekeeper(csp, parseAWSAccounts(*accountsFile))
+		org := parseOrganization(*orgFile)
+		mngr := initManager(csp, org)
+		cleanup.ResetHousekeeper(mngr)
 	case cmdMark:
 		log.Println("Marking old resources for cleanup")
-		cleanup.MarkForCleanup(csp, parseAWSAccounts(*accountsFile))
+		org := parseOrganization(*orgFile)
+		mngr := initManager(csp, org)
+		cleanup.MarkForCleanup(mngr)
 	case cmdReview:
 		log.Println("Sending out old resource review")
-		notify.OldResourceReview(csp, parseAWSAccounts(*accountsFile))
+		org := parseOrganization(*orgFile)
+		mngr := initManager(csp, org)
+		notify.OldResourceReview(mngr, org.AccountToUserMapping(csp))
 	case cmdWarn:
 		log.Println("Sending out cleanup warning")
-		notify.DeletionWarning(*warningHours, csp, parseAWSAccounts(*accountsFile))
+		org := parseOrganization(*orgFile)
+		mngr := initManager(csp, org)
+		notify.DeletionWarning(*warningHours, mngr, org.AccountToUserMapping(csp))
 	case cmdBilling:
-		log.Println("Generating month-to-date billing report")
-		owners := parseAWSAccounts(*accountsFile)
-		report := billing.GenerateReport(csp, owners)
-		log.Println(report.FormatReport(owners))
-		notify.MonthToDateReport(report, owners)
+		log.Println("Generating month-to-date billing report for", csp)
+		reporter, err := billing.NewReporter(csp)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		report := billing.GenerateReport(reporter)
+		org := parseOrganization(*orgFile)
+		mapping := org.AccountToUserMapping(csp)
+		log.Println(report.FormatReport(mapping))
+		notify.MonthToDateReport(report, mapping)
 	case cmdUntagged:
 		log.Println("Finding untagged resources")
 		// Only care about prod, shared-dev and QA
-		owners := housekeeper.Owners{
-			housekeeper.Owner{Name: "cloud-dev", ID: sharedDevAWSAccount},
-			housekeeper.Owner{Name: "prod", ID: prodAWSAccount},
-			housekeeper.Owner{Name: "qa", ID: sharedQAAccount},
+		mngr, err := cloud.NewManager(csp, sharedDevAWSAccount, prodAWSAccount, sharedQAAccount)
+		if err != nil {
+			log.Fatal(err)
 		}
-		notify.UntaggedResourcesReview(csp, owners)
+		mapping := map[string]string{"cloud-dev": sharedDevAWSAccount, "prod": prodAWSAccount, "qa": sharedQAAccount}
+		notify.UntaggedResourcesReview(mngr, mapping)
 	case cmdSetup:
 		log.Println("Running housekeeper setup")
 		setup.PerformSetup()
@@ -109,29 +116,13 @@ func main() {
 	}
 }
 
-func parseAWSAccounts(inputFile string) hk.Owners {
-	raw, err := ioutil.ReadFile(inputFile)
+func initManager(csp cloud.CSP, org *hk.Organization) cloud.ResourceManager {
+	manager, err := cloud.NewManager(csp, org.EnabledAccounts(csp)...)
 	if err != nil {
-		log.Fatalln("Could not read accounts file:", err)
+		log.Fatal(err)
+		return nil
 	}
-	owners := hk.Owners{}
-	err = json.Unmarshal(raw, &owners)
-	if err != nil {
-		log.Fatalln("Could not parse JSON:", err)
-	}
-	if *accountsFile == defaultAccountsFile {
-		// Add any additional accounts that are not present in the accounts file
-		owners = append(owners, hk.Owner{Name: "cloud-dev", ID: sharedDevAWSAccount})
-		owners = append(owners, hk.Owner{Name: "prod", ID: prodAWSAccount})
-		owners = append(owners, hk.Owner{Name: "sec-prod", ID: secProdAWSAccount})
-		owners = append(owners, hk.Owner{Name: "sec-dev", ID: secDevAWSAccount})
-		owners = append(owners, hk.Owner{Name: "sec-stage", ID: secStageAWSAccount})
-		owners = append(owners, hk.Owner{Name: "solo-prod", ID: soloProdAWSAccount})
-		owners = append(owners, hk.Owner{Name: "solo-stage", ID: soloStageAWSAccount})
-		owners = append(owners, hk.Owner{Name: "solo-friendlies-agari", ID: soloFriendliesAgari})
-		owners = append(owners, hk.Owner{Name: "solo-friendlies-mark", ID: soloFriendliesMark})
-	}
-	return owners
+	return manager
 }
 
 func parseOrganization(inputFile string) *hk.Organization {

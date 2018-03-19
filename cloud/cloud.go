@@ -141,38 +141,37 @@ const (
 )
 
 // NewManager will build a new resource manager for the specified CSP
-func NewManager(c CSP, accounts ...string) ResourceManager {
+func NewManager(c CSP, accounts ...string) (ResourceManager, error) {
 	switch c {
 	case AWS:
 		log.Println("Initializing AWS Resource Manager")
 		manager := &awsResourceManager{
 			accounts: accounts,
 		}
-		return manager
+		return manager, nil
 	case GCP:
 		log.Println("Initializing GCP Resource Manager")
 		client, err := getGCPHttpClient()
 		if err != nil {
-			log.Fatalln(err)
+			return nil, err
 		}
 		computeService, err := compute.New(client)
 		if err != nil {
-			log.Fatalf("Could not initialize compute service: %s", err)
+			return nil, fmt.Errorf("Could not initialize compute service: %s", err)
 		}
 		storageService, err := storage.New(client)
 		if err != nil {
-			log.Fatalf("Could not initialize storage service: %s", err)
+			return nil, fmt.Errorf("Coult not initialize storage service: %s", err)
 		}
 		manager := &gcpResourceManager{
 			projects: accounts,
 			compute:  computeService,
 			storage:  storageService,
 		}
-		return manager
+		return manager, nil
 	default:
-		log.Fatalln("Invalid CSP specified")
+		return nil, fmt.Errorf("Invalid CSP specified: %s", c)
 	}
-	return nil
 }
 
 func getGCPHttpClient() (*http.Client, error) {

@@ -1,1 +1,0 @@
-git+https://jenkins-ro:YrerrGLoNE9fcZ9Vn99YHqrN@gerrit.int.brkt.net/metavisor.git@master#egg=csp_utils&subdirectory=src/nucleolus/libraries/csp_utils

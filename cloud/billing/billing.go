@@ -2,11 +2,9 @@ package billing
 
 import (
 	"brkt/olga/cloud"
-	"brkt/olga/housekeeper"
 	"bytes"
 	"errors"
 	"fmt"
-	"log"
 	"sort"
 	"time"
 )
@@ -110,7 +108,7 @@ func (r *Report) TotalCost() float64 {
 }
 
 // SortedUsersByTotalCost returns a sorted list of Users by TotalCost
-func (r *Report) SortedUsersByTotalCost(owners housekeeper.Owners) UserList {
+func (r *Report) SortedUsersByTotalCost() UserList {
 	type tempUser struct {
 		name          string
 		totalCost     float64
@@ -135,43 +133,47 @@ func (r *Report) SortedUsersByTotalCost(owners housekeeper.Owners) UserList {
 		}
 	}
 
-	idToNameMap := owners.IDToName()
 	userList := make(UserList, 0, len(userMap))
 	for _, user := range userMap {
 		// omit users with low TotalCost
 		if user.totalCost < MinimumTotalCost {
 			continue
 		}
-		// rename users if possible
-		name := user.name
-		if realName, ok := idToNameMap[user.name]; ok {
-			name = realName
-		}
 		// convert detailedCosts into sorted CostLists
 		detailedCostList := convertCostMapToSortedList(user.detailedCosts)
 		// add generated User to userList
-		userList = append(userList, User{name, user.totalCost, detailedCostList})
+		userList = append(userList, User{user.name, user.totalCost, detailedCostList})
 	}
 
 	sort.Sort(sort.Reverse(userList))
 	return userList
 }
 
-// FormatReport returns a simple version of the Month-to-date billing report
-func (r *Report) FormatReport(owners housekeeper.Owners) string {
+// FormatReport returns a simple version of the Month-to-date billing report. It
+// takes a mapping form account/project ID to employee username in order to
+// more easily distinguish the owner of a cost.
+func (r *Report) FormatReport(accountToUserMapping map[string]string) string {
 	b := new(bytes.Buffer)
-	sortedUsersByTotalCost := r.SortedUsersByTotalCost(owners)
+	sortedUsersByTotalCost := r.SortedUsersByTotalCost()
 
 	fmt.Fprintln(b, "\n\nSummary:")
 	fmt.Fprintln(b, "Account      | Cost ($)")
 	fmt.Fprintln(b, "----------------------------")
 	for _, user := range sortedUsersByTotalCost {
-		fmt.Fprintf(b, "%-12s | %8.2f\n", user.Name, user.TotalCost)
+		name := user.Name
+		if realName, exist := accountToUserMapping[name]; exist {
+			name = realName
+		}
+		fmt.Fprintf(b, "%-12s | %8.2f\n", name, user.TotalCost)
 	}
 
 	fmt.Fprintf(b, "\nDetails:")
 	for _, user := range sortedUsersByTotalCost {
-		fmt.Fprintf(b, "\n%s's costs:\n", user.Name)
+		name := user.Name
+		if realName, exist := accountToUserMapping[name]; exist {
+			name = realName
+		}
+		fmt.Fprintf(b, "\n%s's costs:\n", name)
 		fmt.Fprintln(b, "Cost ($) | Description")
 		fmt.Fprintln(b, "---------------------------")
 		for _, cost := range user.DetailedCosts {
@@ -182,12 +184,7 @@ func (r *Report) FormatReport(owners housekeeper.Owners) string {
 }
 
 // GenerateReport generates a Month-to-date billing report for the current month
-func GenerateReport(c cloud.CSP, owners housekeeper.Owners) Report {
-	reporter, err := NewReporter(c)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	log.Println("Generating report for", c)
+func GenerateReport(reporter Reporter) Report {
 	today := time.Now()
 	startDate := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, time.Local)
 	return reporter.GenerateReport(startDate, today)

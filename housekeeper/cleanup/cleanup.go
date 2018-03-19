@@ -3,7 +3,6 @@ package cleanup
 import (
 	"brkt/olga/cloud"
 	"brkt/olga/cloud/filter"
-	"brkt/olga/housekeeper"
 	"log"
 	"time"
 )
@@ -24,8 +23,7 @@ const (
 // 		- non-whitelisted snapshots > 6 months
 // 		- non-whitelisted volumes > 6 months
 //		- untagged resources > 30 days (this should take care of instances)
-func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
-	mngr := cloud.NewManager(csp, owners.AllIDs()...)
+func MarkForCleanup(mngr cloud.ResourceManager) {
 	allResources := mngr.AllResourcesPerAccount()
 	allBuckets := mngr.BucketsPerAccount()
 
@@ -115,14 +113,13 @@ func MarkForCleanup(csp cloud.CSP, owners housekeeper.Owners) {
 
 // PerformCleanup will run different cleanup functions which all
 // do some sort of rule based cleanup
-func PerformCleanup(csp cloud.CSP, owners housekeeper.Owners) {
-	mngr := cloud.NewManager(csp, owners.AllIDs()...)
+func PerformCleanup(mngr cloud.ResourceManager) {
 	// Cleanup all resources with a lifetime tag that has passed. This
 	// includes both the lifetime and the expiry tag
 	cleanupLifetimePassed(mngr)
 
 	// This will cleanup old released AMIs if they're older than a year
-	cleanupReleaseImages(csp)
+	cleanupReleaseImagesAWS()
 }
 
 func cleanupLifetimePassed(mngr cloud.ResourceManager) {
@@ -167,9 +164,12 @@ func cleanupLifetimePassed(mngr cloud.ResourceManager) {
 // This function will look for released images. If the image is older
 // than 6 months they will be made private and set to be de-registered
 // after another 6 months have passed
-func cleanupReleaseImages(csp cloud.CSP) {
-	// TODO: Change when GCP is supported
-	mngr := cloud.NewManager(csp, sharedDevAWSAccount)
+func cleanupReleaseImagesAWS() {
+	mngr, err := cloud.NewManager(cloud.AWS, sharedDevAWSAccount)
+	if err != nil {
+		log.Printf("Could not initalize resource manager for release image cleanup: %s", err)
+		return
+	}
 	allImages := mngr.ImagesPerAccount()
 	for owner, images := range allImages {
 		log.Println("Performing release image cleanup in", owner)
@@ -221,8 +221,9 @@ func cleanCleanupReleaseImagesHelper(mngr cloud.ResourceManager, images []cloud.
 	return nil
 }
 
-func ResetHousekeeper(csp cloud.CSP, owners housekeeper.Owners) {
-	mngr := cloud.NewManager(csp, owners.AllIDs()...)
+// ResetHousekeeper will remove any cleanup tags existing in the accounts
+// associated with the provided resource manager
+func ResetHousekeeper(mngr cloud.ResourceManager) {
 	allResources := mngr.AllResourcesPerAccount()
 
 	for owner, res := range allResources {

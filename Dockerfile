@@ -1,12 +1,15 @@
+FROM alpine:3.7 AS organization
+RUN apk -U upgrade && \
+    apk add --no-cache -U git
+ARG CACHE_DATE=a_date
+RUN git clone https://jenkins-ro:YrerrGLoNE9fcZ9Vn99YHqrN@gerrit.int.brkt.net/a/brkt-infrastructure /src/brkt-infrastructure && \
+    cp /src/brkt-infrastructure/organization/organization.json /src/organization.json && \
+    rm -rf /src/brkt-infrastructure
+
 FROM golang:1.9-alpine3.7
 
-# Install packages for python
 RUN apk -U upgrade && \
-    apk add --no-cache -U python-dev py-pip git python
-
-# Install dependencies for python
-COPY requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+    apk add --no-cache -U git
 
 RUN mkdir -p $GOPATH/src/brkt/olga
 ADD . $GOPATH/src/brkt/olga/
@@ -14,6 +17,6 @@ WORKDIR $GOPATH/src/brkt/olga
 
 RUN go get ./...
 
-RUN python accounts_retriever.py --output=$GOPATH/src/brkt/olga/aws_accounts.json
+COPY --from=organization /src/organization.json ./organization.json
 RUN go build -o olga cmd/*.go
 ENTRYPOINT [ "./olga" ]

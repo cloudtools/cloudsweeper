@@ -1,8 +1,10 @@
 package housekeeper
 
 import (
+	"brkt/olga/cloud"
 	"encoding/json"
 	"fmt"
+	"strconv"
 )
 
 // Organization represents the Immutable Systems employees,
@@ -101,7 +103,12 @@ func InitOrganization(orgData []byte) (*Organization, error) {
 	org.managerMapping = make(map[string]*Employee, len(org.Managers))
 	org.Managers = Employees{}
 	for i := range org.ManagerIDs {
-		org.managerMapping[org.ManagerIDs[i].ID] = org.employeeMapping[org.ManagerIDs[i].ID]
+		if manager, exist := org.employeeMapping[org.ManagerIDs[i].ID]; exist {
+			org.managerMapping[org.ManagerIDs[i].ID] = manager
+		} else {
+			// A manager doesn't have an record in the employee list
+			return nil, fmt.Errorf("Manager %s is not in the list of employees", org.ManagerIDs[i])
+		}
 		org.Managers = append(org.Managers, org.employeeMapping[org.ManagerIDs[i].ID])
 	}
 	org.managerEmployees = make(map[string]Employees, len(org.Managers))
@@ -127,4 +134,46 @@ func (org *Organization) EmployeesForManager(manager *Employee) (Employees, erro
 	}
 	// Manager has no employees
 	return Employees{}, nil
+}
+
+// EnabledAccounts will return a list of all housekeeper enabled accounts
+// in the specified CSP
+func (org *Organization) EnabledAccounts(csp cloud.CSP) []string {
+	accounts := []string{}
+	for _, employee := range org.Employees {
+		switch csp {
+		case cloud.AWS:
+			for _, account := range employee.AWSAccounts {
+				if account.HouseKeeperEnabled {
+					accounts = append(accounts, strconv.FormatInt(account.ID, 10))
+				}
+			}
+		case cloud.GCP:
+			for _, project := range employee.GCPProjects {
+				if project.HouseKeeperEnabled {
+					accounts = append(accounts, project.ID)
+				}
+			}
+		}
+	}
+	return accounts
+}
+
+// AccountToUserMapping is a helper method that maps accounts to their owners
+// username. This is useful for e.g. sending out emails to the owner of an account.
+func (org *Organization) AccountToUserMapping(csp cloud.CSP) map[string]string {
+	result := make(map[string]string)
+	for _, employee := range org.Employees {
+		switch csp {
+		case cloud.AWS:
+			for _, account := range employee.AWSAccounts {
+				result[strconv.FormatInt(account.ID, 10)] = employee.Username
+			}
+		case cloud.GCP:
+			for _, project := range employee.GCPProjects {
+				result[project.ID] = employee.Username
+			}
+		}
+	}
+	return result
 }

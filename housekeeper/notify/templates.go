@@ -328,7 +328,7 @@ Your loyal housekeeper
 `
 
 const monthToDateTemplate = `
-{{ $owners := .Owners }}
+{{ $accountToUserMapping := .AccountToUser }}
 <h2>Hello,</h2>
 
 <p>
@@ -350,7 +350,7 @@ In the detailed breakdown, only costs over ${{ .MinimumCost }} are listed (but e
 		</tr>
 	{{ range $i, $user := .SortedUsers }}
 		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
-			<td>{{ $user.Name }}</td>
+			<td>{{ maybeRealName $user.Name $accountToUserMapping }}</td>
 			<td>{{ printf "$%.2f" $user.TotalCost }}</td>
 		</tr>
 	{{ end }}
@@ -361,7 +361,8 @@ In the detailed breakdown, only costs over ${{ .MinimumCost }} are listed (but e
 <h3>Details:</h3>
 {{ if gt (len .SortedUsers) 0 }}
 	{{ range $index, $user := .SortedUsers }}
-		<h3>{{- $user.Name -}}'s costs: {{ with $account_id := (maybeNameToID $user.Name $owners) -}} (Account ID: {{ $account_id -}}){{- end -}}</h3>
+		<h3>{{- maybeRealName $user.Name $accountToUserMapping -}}'s costs:</h3>
+		<h4>(Account ID: {{ $user.Name }})</h4>
 		<table>
 		<tr style="text-align:left;">
 			<th><strong>Cost</strong></th>
