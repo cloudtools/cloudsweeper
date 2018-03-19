@@ -42,6 +42,7 @@ func MarkForCleanup(mngr cloud.ResourceManager) {
 		// Don't cleanup resources tagged for release
 		oldFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		oldFilter.AddSnapshotRule(filter.IsNotInUse())
+		oldFilter.AddVolumeRule(filter.IsUnattached())
 		oldFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		unattachedFilter := filter.New()
