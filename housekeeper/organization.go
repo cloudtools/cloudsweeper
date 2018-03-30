@@ -4,7 +4,6 @@ import (
 	"brkt/olga/cloud"
 	"encoding/json"
 	"fmt"
-	"strconv"
 )
 
 // Organization represents the Immutable Systems employees,
@@ -59,8 +58,8 @@ type Employees []*Employee
 // can have automatic cleanup enabled, indiacated by
 // the HouseKeeperEnabled attribute.
 type AWSAccount struct {
-	ID                 int64 `json:"id"`
-	HouseKeeperEnabled bool  `json:"housekeeper_enabled,omitempty"`
+	ID                 string `json:"id"`
+	HouseKeeperEnabled bool   `json:"housekeeper_enabled,omitempty"`
 }
 
 // AWSAccounts is a list of AWSAccount
@@ -145,7 +144,7 @@ func (org *Organization) EnabledAccounts(csp cloud.CSP) []string {
 		case cloud.AWS:
 			for _, account := range employee.AWSAccounts {
 				if account.HouseKeeperEnabled {
-					accounts = append(accounts, strconv.FormatInt(account.ID, 10))
+					accounts = append(accounts, account.ID)
 				}
 			}
 		case cloud.GCP:
@@ -167,7 +166,7 @@ func (org *Organization) AccountToUserMapping(csp cloud.CSP) map[string]string {
 		switch csp {
 		case cloud.AWS:
 			for _, account := range employee.AWSAccounts {
-				result[strconv.FormatInt(account.ID, 10)] = employee.Username
+				result[account.ID] = employee.Username
 			}
 		case cloud.GCP:
 			for _, project := range employee.GCPProjects {
