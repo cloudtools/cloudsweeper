@@ -2,15 +2,16 @@ package cleanup
 
 import (
 	"brkt/olga/cloud"
+	"brkt/olga/cloud/billing"
 	"brkt/olga/cloud/filter"
 	"log"
 	"time"
 )
 
 const (
-	releaseTag = "Release"
-
+	releaseTag          = "Release"
 	sharedDevAWSAccount = "164337164081"
+	totalCostThreshold  = 100.0
 )
 
 // MarkForCleanup will look for resources that should be automatically
@@ -59,48 +60,50 @@ func MarkForCleanup(mngr cloud.ResourceManager) {
 
 		timeToDelete := time.Now().AddDate(0, 0, 4)
 
+		resourcesToTag := []cloud.Resource{}
+		totalCost := 0.0
+
 		// Tag instances
 		for _, res := range filter.Instances(res.Instances, untaggedFilter) {
-			err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
-			if err != nil {
-				log.Printf("%s: Failed to tag %s for deletion: %s\n", owner, res.ID(), err)
-			} else {
-				log.Printf("%s: Marked %s for deletion at %s\n", owner, res.ID(), timeToDelete)
-			}
+			resourcesToTag = append(resourcesToTag, res)
+			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
+			costPerDay := billing.ResourceCostPerDay(res)
+			totalCost += days * costPerDay
 		}
 
 		// Tag volumes
 		for _, res := range filter.Volumes(res.Volumes, oldFilter, unattachedFilter) {
-			err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
-			if err != nil {
-				log.Printf("%s: Failed to tag %s for deletion: %s\n", owner, res.ID(), err)
-			} else {
-				log.Printf("%s: Marked %s for deletion at %s\n", owner, res.ID(), timeToDelete)
-			}
+			resourcesToTag = append(resourcesToTag, res)
+			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
+			costPerDay := billing.ResourceCostPerDay(res)
+			totalCost += days * costPerDay
 		}
 
 		// Tag snapshots
 		for _, res := range filter.Snapshots(res.Snapshots, oldFilter, untaggedFilter) {
-			err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
-			if err != nil {
-				log.Printf("%s: Failed to tag %s for deletion: %s\n", owner, res.ID(), err)
-			} else {
-				log.Printf("%s: Marked %s for deletion at %s\n", owner, res.ID(), timeToDelete)
-			}
+			resourcesToTag = append(resourcesToTag, res)
+			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
+			costPerDay := billing.ResourceCostPerDay(res)
+			totalCost += days * costPerDay
 		}
 
 		// Tag images
 		for _, res := range filter.Images(res.Images, oldFilter, untaggedFilter) {
-			err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
-			if err != nil {
-				log.Printf("%s: Failed to tag %s for deletion: %s\n", owner, res.ID(), err)
-			} else {
-				log.Printf("%s: Marked %s for deletion at %s\n", owner, res.ID(), timeToDelete)
-			}
+			resourcesToTag = append(resourcesToTag, res)
+			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
+			costPerDay := billing.ResourceCostPerDay(res)
+			totalCost += days * costPerDay
 		}
 
 		if buck, ok := allBuckets[owner]; ok {
 			for _, res := range filter.Buckets(buck, bucketFilter) {
+				resourcesToTag = append(resourcesToTag, res)
+				totalCost += billing.BucketPricePerMonth(res)
+			}
+		}
+
+		if totalCost >= totalCostThreshold {
+			for _, res := range resourcesToTag {
 				err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
 				if err != nil {
 					log.Printf("%s: Failed to tag %s for deletion: %s\n", owner, res.ID(), err)
@@ -108,6 +111,8 @@ func MarkForCleanup(mngr cloud.ResourceManager) {
 					log.Printf("%s: Marked %s for deletion at %s\n", owner, res.ID(), timeToDelete)
 				}
 			}
+		} else {
+			log.Printf("%s: Skipping the tagging of resources, total cost $%.2f is less than $%.2f", owner, totalCost, totalCostThreshold)
 		}
 	}
 }
@@ -174,14 +179,14 @@ func cleanupReleaseImagesAWS() {
 	allImages := mngr.ImagesPerAccount()
 	for owner, images := range allImages {
 		log.Println("Performing release image cleanup in", owner)
-		err := cleanCleanupReleaseImagesHelper(mngr, images)
+		err := cleanupReleaseImagesHelper(mngr, images)
 		if err != nil {
 			log.Printf("Release cleanup for \"%s\" failed:\n%s\n", owner, err)
 		}
 	}
 }
 
-func cleanCleanupReleaseImagesHelper(mngr cloud.ResourceManager, images []cloud.Image) error {
+func cleanupReleaseImagesHelper(mngr cloud.ResourceManager, images []cloud.Image) error {
 	// First find public images older than 6 months. Make these images
 	// private and add an expiry to them.
 	filPub := filter.New()
