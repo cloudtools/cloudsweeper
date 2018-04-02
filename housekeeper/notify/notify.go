@@ -4,6 +4,7 @@ import (
 	"brkt/olga/cloud"
 	"brkt/olga/cloud/billing"
 	"brkt/olga/cloud/filter"
+	hk "brkt/olga/housekeeper"
 	"fmt"
 	"log"
 	"time"
@@ -14,16 +15,39 @@ const (
 	smtpPassKey          = "SMTP_PASS"
 	mailDisplayName      = "HouseKeeper"
 	monthToDateAddressee = "eng@brkt.com"
+	totalSumAddressee    = "ben"
 )
 
 type resourceMailData struct {
-	Owner     string
-	OwnerID   string
-	Instances []cloud.Instance
-	Images    []cloud.Image
-	Snapshots []cloud.Snapshot
-	Volumes   []cloud.Volume
-	Buckets   []cloud.Bucket
+	Owner          string
+	OwnerID        string
+	Instances      []cloud.Instance
+	Images         []cloud.Image
+	Snapshots      []cloud.Snapshot
+	Volumes        []cloud.Volume
+	Buckets        []cloud.Bucket
+	HoursInAdvance int
+}
+
+func (d *resourceMailData) ResourceCount() int {
+	return len(d.Images) + len(d.Instances) + len(d.Snapshots) + len(d.Volumes) + len(d.Buckets)
+}
+
+func (d *resourceMailData) SendEmail(mailTemplate, title string, debugAddressees ...string) {
+	mailClient := getMailClient()
+	mailContent, err := generateMail(d, mailTemplate)
+	if err != nil {
+		log.Fatalln("Could not generate email:", err)
+	}
+	username := convertEmailExceptions(d.Owner)
+
+	ownerMail := fmt.Sprintf("%s@brkt.com", username)
+	log.Printf("Sending out email to %s\n", ownerMail)
+	addressees := append(debugAddressees, ownerMail)
+	err = mailClient.SendEmail(title, mailContent, addressees...)
+	if err != nil {
+		log.Fatalf("Failed to email %s: %s\n", ownerMail, err)
+	}
 }
 
 type monthToDateData struct {
@@ -35,8 +59,30 @@ type monthToDateData struct {
 	AccountToUser    map[string]string
 }
 
-func (d *resourceMailData) ResourceCount() int {
-	return len(d.Images) + len(d.Instances) + len(d.Snapshots) + len(d.Volumes) + len(d.Buckets)
+func initTotalSummaryMailData() *resourceMailData {
+	return &resourceMailData{
+		Owner:     totalSumAddressee,
+		Instances: []cloud.Instance{},
+		Images:    []cloud.Image{},
+		Snapshots: []cloud.Snapshot{},
+		Volumes:   []cloud.Volume{},
+		Buckets:   []cloud.Bucket{},
+	}
+}
+
+func initManagerToMailDataMapping(managers hk.Employees) map[string]*resourceMailData {
+	result := make(map[string]*resourceMailData)
+	for _, manager := range managers {
+		result[manager.Username] = &resourceMailData{
+			Owner:     manager.Username,
+			Instances: []cloud.Instance{},
+			Images:    []cloud.Image{},
+			Snapshots: []cloud.Snapshot{},
+			Volumes:   []cloud.Volume{},
+			Buckets:   []cloud.Bucket{},
+		}
+	}
+	return result
 }
 
 // OldResourceReview will review (but not do any cleanup action) old resources
@@ -46,59 +92,86 @@ func (d *resourceMailData) ResourceCount() int {
 //		- Resource is older than 30 days
 //		- A whitelisted resource is older than 6 months
 //		- An instance marked with do-not-delete is older than a week
-func OldResourceReview(mngr cloud.ResourceManager, accountUserMapping map[string]string) {
+func OldResourceReview(mngr cloud.ResourceManager, org *hk.Organization, csp cloud.CSP) {
 	allCompute := mngr.AllResourcesPerAccount()
 	allBuckets := mngr.BucketsPerAccount()
+	accountUserMapping := org.AccountToUserMapping(csp)
+	userEmployeeMapping := org.UsernameToEmployeeMapping()
+	totalSummaryMailData := initTotalSummaryMailData()
+	managerToMailDataMapping := initManagerToMailDataMapping(org.Managers)
+
+	// Create filters
+	generalFilter := filter.New()
+	generalFilter.AddGeneralRule(filter.OlderThanXDays(30))
+
+	whitelistFilter := filter.New()
+	whitelistFilter.OverrideWhitelist = true
+	whitelistFilter.AddGeneralRule(filter.OlderThanXMonths(6))
+
+	// These only apply to instances
+	dndFilter := filter.New()
+	dndFilter.AddGeneralRule(filter.HasTag("no-not-delete"))
+	dndFilter.AddGeneralRule(filter.OlderThanXDays(7))
+
+	dndFilter2 := filter.New()
+	dndFilter2.AddGeneralRule(filter.NameContains("do-not-delete"))
+	dndFilter2.AddGeneralRule(filter.OlderThanXDays(7))
+
 	for account, resources := range allCompute {
 		log.Println("Performing old resource review in", account)
-		ownerName := convertEmailExceptions(accountUserMapping[account])
-
-		// Create filters
-		generalFilter := filter.New()
-		generalFilter.AddGeneralRule(filter.OlderThanXDays(30))
-
-		whitelistFilter := filter.New()
-		whitelistFilter.OverrideWhitelist = true
-		whitelistFilter.AddGeneralRule(filter.OlderThanXMonths(6))
-
-		// These only apply to instances
-		dndFilter := filter.New()
-		dndFilter.AddGeneralRule(filter.HasTag("no-not-delete"))
-		dndFilter.AddGeneralRule(filter.OlderThanXDays(7))
-
-		dndFilter2 := filter.New()
-		dndFilter2.AddGeneralRule(filter.NameContains("do-not-delete"))
-		dndFilter2.AddGeneralRule(filter.OlderThanXDays(7))
+		username := accountUserMapping[account]
+		employee := userEmployeeMapping[username]
 
 		// Apply filters
-		mailHolder := resourceMailData{
-			Owner:     ownerName,
+		userMailData := resourceMailData{
+			Owner:     username,
 			Instances: filter.Instances(resources.Instances, generalFilter, whitelistFilter, dndFilter, dndFilter2),
 			Images:    filter.Images(resources.Images, generalFilter, whitelistFilter),
 			Volumes:   filter.Volumes(resources.Volumes, generalFilter, whitelistFilter),
 			Snapshots: filter.Snapshots(resources.Snapshots, generalFilter, whitelistFilter),
 			Buckets:   []cloud.Bucket{},
 		}
-		if bucks, ok := allBuckets[account]; ok {
-			mailHolder.Buckets = filter.Buckets(bucks, generalFilter, whitelistFilter)
+		if buckets, ok := allBuckets[account]; ok {
+			userMailData.Buckets = filter.Buckets(buckets, generalFilter, whitelistFilter)
 		}
 
-		if mailHolder.ResourceCount() > 0 {
-			// Now send email
-			mailClient := getMailClient()
-			mailContent, err := generateMail(mailHolder, reviewMailTemplate)
-			if err != nil {
-				log.Fatalln("Could not generate email:", err)
-			}
-			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
-			log.Printf("Sending out old resource review to %s\n", ownerMail)
-			title := fmt.Sprintf("You have %d old resources to review (%s)", mailHolder.ResourceCount(), time.Now().Format("2006-01-02"))
-			err = mailClient.SendEmail(title, mailContent, ownerMail)
-			if err != nil {
-				log.Printf("Failed to email %s: %s\n", ownerMail, err)
-			}
+		// Add to the manager summary
+		if managerSummaryMailData, ok := managerToMailDataMapping[employee.Manager.Username]; ok { // safe or org _should_ have thrown an error
+			managerSummaryMailData.Instances = append(managerSummaryMailData.Instances, userMailData.Instances...)
+			managerSummaryMailData.Images = append(managerSummaryMailData.Images, userMailData.Images...)
+			managerSummaryMailData.Snapshots = append(managerSummaryMailData.Snapshots, userMailData.Snapshots...)
+			managerSummaryMailData.Volumes = append(managerSummaryMailData.Volumes, userMailData.Volumes...)
+			managerSummaryMailData.Buckets = append(managerSummaryMailData.Buckets, userMailData.Buckets...)
+		} else {
+			log.Fatalf("%s is not a manager??? Verify `organization.go` and the org repo itself for issues", employee.Manager.Username)
+		}
+
+		// Add to the total summary
+		totalSummaryMailData.Instances = append(totalSummaryMailData.Instances, userMailData.Instances...)
+		totalSummaryMailData.Images = append(totalSummaryMailData.Images, userMailData.Images...)
+		totalSummaryMailData.Snapshots = append(totalSummaryMailData.Snapshots, userMailData.Snapshots...)
+		totalSummaryMailData.Volumes = append(totalSummaryMailData.Volumes, userMailData.Volumes...)
+		totalSummaryMailData.Buckets = append(totalSummaryMailData.Buckets, userMailData.Buckets...)
+
+		if userMailData.ResourceCount() > 0 {
+			title := fmt.Sprintf("You have %d old resources to review (%s)", userMailData.ResourceCount(), time.Now().Format("2006-01-02"))
+			userMailData.SendEmail(reviewMailTemplate, title)
 		}
 	}
+
+	// Send out manager emails
+	for username, managerSummaryMailData := range managerToMailDataMapping {
+		log.Printf("Collecting old resources to review for %s's team\n", username)
+		if managerSummaryMailData.ResourceCount() > 0 {
+			title := fmt.Sprintf("Your team has %d old resources to review (%s)", managerSummaryMailData.ResourceCount(), time.Now().Format("2006-01-02"))
+			managerSummaryMailData.SendEmail(managerReviewMailTemplate, title)
+		}
+	}
+
+	// Send out a total summary
+	log.Println("Collecting old resource review for the Immutable org")
+	title := fmt.Sprintf("Immutable has %d old resources to review (%s)", totalSummaryMailData.ResourceCount(), time.Now().Format("2006-01-02"))
+	totalSummaryMailData.SendEmail(totalReviewMailTemplate, title)
 }
 
 // UntaggedResourcesReview will look for resources without any tags, and
@@ -114,9 +187,9 @@ func UntaggedResourcesReview(mngr cloud.ResourceManager, accountUserMapping map[
 		// We care about un-tagged whitelisted resources too
 		untaggedFilter.OverrideWhitelist = true
 
-		ownerName := convertEmailExceptions(accountUserMapping[account])
-		mailHolder := resourceMailData{
-			Owner:     ownerName,
+		username := accountUserMapping[account]
+		mailData := resourceMailData{
+			Owner:     username,
 			OwnerID:   account,
 			Instances: filter.Instances(resources.Instances, untaggedFilter),
 			// Only report on instances for now
@@ -126,20 +199,11 @@ func UntaggedResourcesReview(mngr cloud.ResourceManager, accountUserMapping map[
 			Buckets: []cloud.Bucket{},
 		}
 
-		if mailHolder.ResourceCount() > 0 {
+		if mailData.ResourceCount() > 0 {
 			// Send mail
-			mailClient := getMailClient()
-			mailContent, err := generateMail(mailHolder, untaggedMailTemplate)
-			if err != nil {
-				log.Fatalf("Could not generate email: %s", err)
-			}
-			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
-			log.Printf("Sending out untagged resource review to %s\n", ownerMail)
-			title := fmt.Sprintf("You have %d un-tagged resources to review (%s)", mailHolder.ResourceCount(), time.Now().Format("2006-01-02"))
-			err = mailClient.SendEmail(title, mailContent, ownerMail, "hsson@brkt.com", "ben@brkt.com") // # TODO: Remove temporary mails to hsson and ben
-			if err != nil {
-				log.Printf("Failed to email %s: %s\n", ownerMail, err)
-			}
+			title := fmt.Sprintf("You have %d un-tagged resources to review (%s)", mailData.ResourceCount(), time.Now().Format("2006-01-02"))
+			debugAddressees := []string{"hsson@brkt.com", "ben@brkt.com"} // TODO: Remove tmp emails to hsson and ben
+			mailData.SendEmail(untaggedMailTemplate, title, debugAddressees...)
 		}
 	}
 }
@@ -155,39 +219,25 @@ func DeletionWarning(hoursInAdvance int, mngr cloud.ResourceManager, accountUser
 		ownerName := convertEmailExceptions(accountUserMapping[account])
 		fil := filter.New()
 		fil.AddGeneralRule(filter.DeleteWithinXHours(hoursInAdvance))
-		mailHolder := struct {
-			resourceMailData
-			Hours int
-		}{
-			resourceMailData{
-				ownerName,
-				account,
-				filter.Instances(resources.Instances, fil),
-				filter.Images(resources.Images, fil),
-				filter.Snapshots(resources.Snapshots, fil),
-				filter.Volumes(resources.Volumes, fil),
-				[]cloud.Bucket{},
-			},
+		mailData := resourceMailData{
+			ownerName,
+			account,
+			filter.Instances(resources.Instances, fil),
+			filter.Images(resources.Images, fil),
+			filter.Snapshots(resources.Snapshots, fil),
+			filter.Volumes(resources.Volumes, fil),
+			[]cloud.Bucket{},
 			hoursInAdvance,
 		}
-		if bucks, ok := allBuckets[account]; ok {
-			mailHolder.Buckets = filter.Buckets(bucks, fil)
+		if buckets, ok := allBuckets[account]; ok {
+			mailData.Buckets = filter.Buckets(buckets, fil)
 		}
 
-		if mailHolder.ResourceCount() > 0 {
+		if mailData.ResourceCount() > 0 {
 			// Now send email
-			mailClient := getMailClient()
-			mailContent, err := generateMail(mailHolder, deletionWarningTemplate)
-			if err != nil {
-				log.Fatalln("Could not generate email:", err)
-			}
-			ownerMail := fmt.Sprintf("%s@brkt.com", mailHolder.Owner)
-			log.Printf("Warning %s about resource deletion\n", ownerMail)
-			title := fmt.Sprintf("Deletion warning, %d resources are cleaned up within %d hours", mailHolder.ResourceCount(), hoursInAdvance)
-			err = mailClient.SendEmail(title, mailContent, ownerMail, "hsson@brkt.com", "ben@brkt.com") // TODO: Remove tmp emails to hsson and ben
-			if err != nil {
-				log.Printf("Failed to email %s: %s\n", ownerMail, err)
-			}
+			title := fmt.Sprintf("Deletion warning, %d resources are cleaned up within %d hours", mailData.ResourceCount(), hoursInAdvance)
+			debugAddressees := []string{"hsson@brkt.com", "ben@brkt.com"} // TODO: Remove tmp emails to hsson and ben
+			mailData.SendEmail(deletionWarningTemplate, title, debugAddressees...)
 		}
 	}
 }

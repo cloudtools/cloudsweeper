@@ -79,7 +79,7 @@ func main() {
 		log.Println("Sending out old resource review")
 		org := parseOrganization(*orgFile)
 		mngr := initManager(csp, org)
-		notify.OldResourceReview(mngr, org.AccountToUserMapping(csp))
+		notify.OldResourceReview(mngr, org, csp)
 	case cmdWarn:
 		log.Println("Sending out cleanup warning")
 		org := parseOrganization(*orgFile)
@@ -104,7 +104,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		mapping := map[string]string{"cloud-dev": sharedDevAWSAccount, "prod": prodAWSAccount, "qa": sharedQAAccount}
+		mapping := map[string]string{sharedDevAWSAccount: "cloud-dev", prodAWSAccount: "prod", sharedQAAccount: "qa"}
 		notify.UntaggedResourcesReview(mngr, mapping)
 	case cmdSetup:
 		log.Println("Running housekeeper setup")

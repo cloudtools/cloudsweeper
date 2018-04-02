@@ -176,3 +176,8 @@ func (org *Organization) AccountToUserMapping(csp cloud.CSP) map[string]string {
 	}
 	return result
 }
+
+// UsernameToEmployeeMapping is a helper method that returns a map of username to Employee struct.
+func (org *Organization) UsernameToEmployeeMapping() map[string]*Employee {
+	return org.employeeMapping
+}

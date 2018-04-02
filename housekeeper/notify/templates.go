@@ -176,12 +176,296 @@ Your loyal housekeeper
 </p>
 `
 
+const managerReviewMailTemplate = `<h1>Hello {{ .Owner -}},</h1>
+
+<p>
+This is a summary of all old/unused resources for your team.
+</p>
+
+<h2>Old resources:</h2>
+<p>
+Resources marked <span style="background-color: #c9fc99;">in green</span> are whitelisted.
+</p>
+{{ if gt (len .Instances) 0 }}
+	<h3>Instances</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Name</strong></th>
+			<th><strong>Instance type</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Total cost</strong></th>
+		</tr>
+	{{ range $i, $instance := .Instances }}
+		<tr {{ if and (even $i) (not (whitelisted $instance)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $instance }}style="background-color: #c9fc99;"{{ end }}>
+			<td>{{ $instance.Owner }}</td>
+			<td>{{ $instance.Location }}</td>
+			<td>{{ $instance.ID }}</td>
+			<td>{{ instname $instance }}</td>
+			<td>{{ $instance.InstanceType }}</td>
+			<td>{{ fdate $instance.CreationTime "2006-01-02" }} ({{ daysrunning $instance.CreationTime }})</td>
+			<td>{{ accucost $instance }}</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Images) 0 }}
+	<h3>Images</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Name</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Total cost</strong></th>
+		</tr>
+	{{ range $i, $image := .Images }}
+	<tr {{ if and (even $i) (not (whitelisted $image)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $image }}style="background-color: #c9fc99;"{{ end }}>
+			<td>{{ $image.Owner }}</td>
+			<td>{{ $image.Location }}</td>
+			<td>{{ $image.ID }}</td>
+			<td>{{ $image.Name }}</td>
+			<td>{{ fdate $image.CreationTime "2006-01-02" }} ({{ daysrunning $image.CreationTime }})</td>
+			<td>{{ accucost $image }}</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Volumes) 0 }}
+	<h3>Volumes</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Size (GB)</strong></th>
+			<th><strong>Attached to instance</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Volume type</strong></th>
+			<th><strong>Total cost</strong></th>
+		</tr>
+	{{ range $i, $volume := .Volumes }}
+	<tr {{ if and (even $i) (not (whitelisted $volume)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $volume }}style="background-color: #c9fc99;"{{ end }}>
+			<td>{{ $volume.Owner }}</td>
+			<td>{{ $volume.Location }}</td>
+			<td>{{ $volume.ID }}</td>
+			<td>{{ $volume.SizeGB }} GB</td>
+			<td>{{ yesno $volume.Attached }}</td>
+			<td>{{ fdate $volume.CreationTime "2006-01-02" }} ({{ daysrunning $volume.CreationTime }})</td>
+			<td>{{ $volume.VolumeType }}</td>
+			<td>{{ accucost $volume }}</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Snapshots) 0 }}
+	<h3>Snapshots</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Size (GB)</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Total cost</strong></th>
+		</tr>
+	{{ range $i, $snapshot := .Snapshots }}
+	<tr {{ if and (even $i) (not (whitelisted $snapshot)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $snapshot }}style="background-color: #c9fc99;"{{ end }}>
+			<td>{{ $snapshot.Owner }}</td>
+			<td>{{ $snapshot.Location }}</td>
+			<td>{{ $snapshot.ID }}</td>
+			<td>{{ $snapshot.SizeGB }} GB</td>
+			<td>{{ fdate $snapshot.CreationTime "2006-01-02" }} ({{ daysrunning $snapshot.CreationTime }})</td>
+			<td>{{ accucost $snapshot }}</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Buckets) 0 }}
+	<h3>Buckets</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Size (GB)</strong></th>
+			<th><strong>Files</strong></th>
+			<th><strong>Last modified</strong></th>
+			<th><strong>Monthly cost</strong></th>
+		</tr>
+	{{ range $i, $bucket := .Buckets }}
+	<tr {{ if and (even $i) (not (whitelisted $bucket)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $bucket }}style="background-color: #c9fc99;"{{ end }}>
+			<td>{{ $bucket.Owner }}</td>
+			<td>{{ $bucket.ID }}</td>
+			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
+			<td>{{ $bucket.ObjectCount }}</td>
+			<td>{{ fdate $bucket.LastModified "2006-01-02" }} ({{ daysrunning $bucket.LastModified }})</td>
+			<td>{{ printf "$%.3f" (bucketcost $bucket) }}</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+<p>
+Thank you,<br />
+Your loyal housekeeper
+</p>
+`
+
+const totalReviewMailTemplate = `<h1>Hello {{ .Owner -}},</h1>
+
+<p>
+This is a summary of all old/unused resources for Immutable Systems.
+</p>
+
+<h2>Old resources:</h2>
+<p>
+Resources marked <span style="background-color: #c9fc99;">in green</span> are whitelisted.
+</p>
+{{ if gt (len .Instances) 0 }}
+	<h3>Instances</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Name</strong></th>
+			<th><strong>Instance type</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Total cost</strong></th>
+		</tr>
+	{{ range $i, $instance := .Instances }}
+		<tr {{ if and (even $i) (not (whitelisted $instance)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $instance }}style="background-color: #c9fc99;"{{ end }}>
+			<td>{{ $instance.Owner }}</td>
+			<td>{{ $instance.Location }}</td>
+			<td>{{ $instance.ID }}</td>
+			<td>{{ instname $instance }}</td>
+			<td>{{ $instance.InstanceType }}</td>
+			<td>{{ fdate $instance.CreationTime "2006-01-02" }} ({{ daysrunning $instance.CreationTime }})</td>
+			<td>{{ accucost $instance }}</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Images) 0 }}
+	<h3>Images</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Name</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Total cost</strong></th>
+		</tr>
+	{{ range $i, $image := .Images }}
+	<tr {{ if and (even $i) (not (whitelisted $image)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $image }}style="background-color: #c9fc99;"{{ end }}>
+			<td>{{ $image.Owner }}</td>
+			<td>{{ $image.Location }}</td>
+			<td>{{ $image.ID }}</td>
+			<td>{{ $image.Name }}</td>
+			<td>{{ fdate $image.CreationTime "2006-01-02" }} ({{ daysrunning $image.CreationTime }})</td>
+			<td>{{ accucost $image }}</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Volumes) 0 }}
+	<h3>Volumes</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Size (GB)</strong></th>
+			<th><strong>Attached to instance</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Volume type</strong></th>
+			<th><strong>Total cost</strong></th>
+		</tr>
+	{{ range $i, $volume := .Volumes }}
+	<tr {{ if and (even $i) (not (whitelisted $volume)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $volume }}style="background-color: #c9fc99;"{{ end }}>
+			<td>{{ $volume.Owner }}</td>
+			<td>{{ $volume.Location }}</td>
+			<td>{{ $volume.ID }}</td>
+			<td>{{ $volume.SizeGB }} GB</td>
+			<td>{{ yesno $volume.Attached }}</td>
+			<td>{{ fdate $volume.CreationTime "2006-01-02" }} ({{ daysrunning $volume.CreationTime }})</td>
+			<td>{{ $volume.VolumeType }}</td>
+			<td>{{ accucost $volume }}</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Snapshots) 0 }}
+	<h3>Snapshots</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>Location</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Size (GB)</strong></th>
+			<th><strong>Created</strong></th>
+			<th><strong>Total cost</strong></th>
+		</tr>
+	{{ range $i, $snapshot := .Snapshots }}
+	<tr {{ if and (even $i) (not (whitelisted $snapshot)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $snapshot }}style="background-color: #c9fc99;"{{ end }}>
+			<td>{{ $snapshot.Owner }}</td>
+			<td>{{ $snapshot.Location }}</td>
+			<td>{{ $snapshot.ID }}</td>
+			<td>{{ $snapshot.SizeGB }} GB</td>
+			<td>{{ fdate $snapshot.CreationTime "2006-01-02" }} ({{ daysrunning $snapshot.CreationTime }})</td>
+			<td>{{ accucost $snapshot }}</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+{{ if gt (len .Buckets) 0 }}
+	<h3>Buckets</h3>
+	<table style="width: 100%;">
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>ID</strong></th>
+			<th><strong>Size (GB)</strong></th>
+			<th><strong>Files</strong></th>
+			<th><strong>Last modified</strong></th>
+			<th><strong>Monthly cost</strong></th>
+		</tr>
+	{{ range $i, $bucket := .Buckets }}
+	<tr {{ if and (even $i) (not (whitelisted $bucket)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $bucket }}style="background-color: #c9fc99;"{{ end }}>
+			<td>{{ $bucket.Owner }}</td>
+			<td>{{ $bucket.ID }}</td>
+			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
+			<td>{{ $bucket.ObjectCount }}</td>
+			<td>{{ fdate $bucket.LastModified "2006-01-02" }} ({{ daysrunning $bucket.LastModified }})</td>
+			<td>{{ printf "$%.3f" (bucketcost $bucket) }}</td>
+		</tr>
+	{{ end }}
+	</table>
+{{ end }}
+
+<p>
+Thank you,<br />
+Your loyal housekeeper
+</p>
+`
+
 const deletionWarningTemplate = `<h1>Hello {{ .Owner -}},</h1>
 
-<h2>Resources will be cleaned up within {{ .Hours }} hours</h2>
+<h2>Resources will be cleaned up within {{ .HoursInAdvance }} hours</h2>
 <p>
 Unless you take action, the resources listed below will be cleaned up 
-from your account within the next {{ .Hours }} hours. <b>Make sure
+from your account within the next {{ .HoursInAdvance }} hours. <b>Make sure
 you don't need to keep any of these resources</b>
 </p>
 
@@ -327,65 +611,6 @@ Your loyal housekeeper
 </p>
 `
 
-const monthToDateTemplate = `
-{{ $accountToUserMapping := .AccountToUser }}
-<h2>Hello,</h2>
-
-<p>
-The following is a summary of this month's expenditures in {{ .CSP }}.
-</p>
-<p>
-In the summary, only accounts with a total cost over ${{ .MinimumTotalCost }} are listed.
-</p>
-<p>
-In the detailed breakdown, only costs over ${{ .MinimumCost }} are listed (but every cost is still counted towards the total!)
-</p>
-
-<h3>Summary:</h3>
-{{ if gt (len .SortedUsers) 0 }}
-	<table>
-		<tr style="text-align:left;">
-			<th><strong>Account</strong></th>
-			<th><strong>Cost</strong></th>
-		</tr>
-	{{ range $i, $user := .SortedUsers }}
-		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
-			<td>{{ maybeRealName $user.Name $accountToUserMapping }}</td>
-			<td>{{ printf "$%.2f" $user.TotalCost }}</td>
-		</tr>
-	{{ end }}
-		<td colspan="2"><strong>Total cost: {{ printf "$%.2f" .TotalCost }}<strong></td>
-	</table>
-{{ end }}
-
-<h3>Details:</h3>
-{{ if gt (len .SortedUsers) 0 }}
-	{{ range $index, $user := .SortedUsers }}
-		<h3>{{- maybeRealName $user.Name $accountToUserMapping -}}'s costs:</h3>
-		<h4>(Account ID: {{ $user.Name }})</h4>
-		<table>
-		<tr style="text-align:left;">
-			<th><strong>Cost</strong></th>
-			<th><strong>Description</strong></th>
-		</tr>
-		{{ range $i, $detailedCost := $user.DetailedCosts }}
-			<tr {{ if even $i }} style="background-color: #f2f2f2;"{{ end }}>
-				<td>{{ printf "$%.2f" $detailedCost.Cost }}</td>
-				<td>{{ $detailedCost.Description }}</td>
-			</tr>
-		{{ end }}
-		<td colspan="2"><strong>Total cost: {{ printf "$%.2f" $user.TotalCost }}<strong></td>
-	</table>
-	<br />
-	{{ end }}
-{{ end }}
-
-<p>
-Thank you,<br />
-Your loyal housekeeper
-</p>
-`
-
 const untaggedMailTemplate = `<h1>Hello {{ .Owner -}},</h1>
 
 <p>
@@ -523,6 +748,65 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 		</tr>
 	{{ end }}
 	</table>
+{{ end }}
+
+<p>
+Thank you,<br />
+Your loyal housekeeper
+</p>
+`
+
+const monthToDateTemplate = `
+{{ $accountToUserMapping := .AccountToUser }}
+<h2>Hello,</h2>
+
+<p>
+The following is a summary of this month's expenditures in {{ .CSP }}.
+</p>
+<p>
+In the summary, only accounts with a total cost over ${{ .MinimumTotalCost }} are listed.
+</p>
+<p>
+In the detailed breakdown, only costs over ${{ .MinimumCost }} are listed (but every cost is still counted towards the total!)
+</p>
+
+<h3>Summary:</h3>
+{{ if gt (len .SortedUsers) 0 }}
+	<table>
+		<tr style="text-align:left;">
+			<th><strong>Account</strong></th>
+			<th><strong>Cost</strong></th>
+		</tr>
+	{{ range $i, $user := .SortedUsers }}
+		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
+			<td>{{ maybeRealName $user.Name $accountToUserMapping }}</td>
+			<td>{{ printf "$%.2f" $user.TotalCost }}</td>
+		</tr>
+	{{ end }}
+		<td colspan="2"><strong>Total cost: {{ printf "$%.2f" .TotalCost }}<strong></td>
+	</table>
+{{ end }}
+
+<h3>Details:</h3>
+{{ if gt (len .SortedUsers) 0 }}
+	{{ range $index, $user := .SortedUsers }}
+		<h3>{{- maybeRealName $user.Name $accountToUserMapping -}}'s costs:</h3>
+		<h4>(Account ID: {{ $user.Name }})</h4>
+		<table>
+		<tr style="text-align:left;">
+			<th><strong>Cost</strong></th>
+			<th><strong>Description</strong></th>
+		</tr>
+		{{ range $i, $detailedCost := $user.DetailedCosts }}
+			<tr {{ if even $i }} style="background-color: #f2f2f2;"{{ end }}>
+				<td>{{ printf "$%.2f" $detailedCost.Cost }}</td>
+				<td>{{ $detailedCost.Description }}</td>
+			</tr>
+		{{ end }}
+		<td colspan="2"><strong>Total cost: {{ printf "$%.2f" $user.TotalCost }}<strong></td>
+	</table>
+	<br />
+	{{ end }}
 {{ end }}
 
 <p>
