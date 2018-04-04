@@ -6,11 +6,13 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 const (
-	awsPricingURL      = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json"
-	s3BucketPerGBMonth = 0.023
+	awsPricingURL       = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json"
+	s3BucketPerGBMonth  = 0.023
+	gcpBucketPerGBMonth = 0.026
 )
 
 var (
@@ -48,6 +50,45 @@ var awsStorageCostMap = map[string]float64{
 	"snapshot": 0.05 / 30.0,
 }
 
+// Storage cost per GB per day
+var gcpStorageCostGBDayMap = map[string]float64{
+	"pd-ssd":      0.170 / 30.0,
+	"pd-standard": 0.040 / 30.0,
+	"snapshot":    0.026 / 30.0,
+}
+
+var gcpInstanceCostPerHourMap = map[string]float64{
+	"n1-standard-1":  0.0475,
+	"n1-standard-2":  0.0950,
+	"n1-standard-4":  0.1900,
+	"n1-standard-8":  0.3800,
+	"n1-standard-16": 0.7600,
+	"n1-standard-32": 1.5200,
+	"n1-standard-64": 3.0400,
+	"n1-standard-96": 4.5600,
+
+	"n1-highmem-2":  0.1184,
+	"n1-highmem-4":  0.2368,
+	"n1-highmem-8":  0.4736,
+	"n1-highmem-16": 0.9472,
+	"n1-highmem-32": 1.8944,
+	"n1-highmem-64": 3.7888,
+	"n1-highmem-96": 5.6832,
+
+	"n1-highcpu-2":  0.0709,
+	"n1-highcpu-4":  0.1418,
+	"n1-highcpu-8":  0.2836,
+	"n1-highcpu-16": 0.5672,
+	"n1-highcpu-32": 1.1344,
+	"n1-highcpu-64": 2.2688,
+	"n1-highcpu-96": 3.4020,
+
+	"f1-micro": 0.0076,
+	"g1-small": 0.0257,
+
+	"n1-megamem-96": 10.6740,
+}
+
 // ResourceCostPerDay returns the daily cost of a resource in USD
 func ResourceCostPerDay(resource cloud.Resource) float64 {
 	if inst, ok := resource.(cloud.Instance); ok {
@@ -70,9 +111,18 @@ func VolumeCostPerDay(volume cloud.Volume) float64 {
 	if volume.CSP() == cloud.AWS {
 		price, ok := awsStorageCostMap[volume.VolumeType()]
 		if !ok {
-			return 0.0
+			log.Printf("Could not find price for %s", volume.VolumeType())
+			return -1.0
 		}
 		return price * float64(volume.SizeGB())
+	} else if volume.CSP() == cloud.GCP {
+		price, ok := gcpStorageCostGBDayMap[volume.VolumeType()]
+		if !ok {
+			log.Printf("Could not find price for %s", volume.VolumeType())
+			return -1.0
+		}
+		days := time.Since(volume.CreationTime()).Hours() / 24
+		return price * float64(volume.SizeGB()) * days
 	}
 	log.Panicln("Unsupported CSP:", volume.CSP())
 	return 0.0
@@ -83,6 +133,10 @@ func VolumeCostPerDay(volume cloud.Volume) float64 {
 func SnapshotCostPerDay(snapshot cloud.Snapshot) float64 {
 	if snapshot.CSP() == cloud.AWS {
 		return awsStorageCostMap["snapshot"] * float64(snapshot.SizeGB())
+	} else if snapshot.CSP() == cloud.GCP {
+		price := gcpStorageCostGBDayMap["snapshot"]
+		days := time.Since(snapshot.CreationTime()).Hours() / 24
+		return price * float64(snapshot.SizeGB()) * days
 	}
 	log.Panicln("Unsupported CSP:", snapshot.CSP())
 	return 0.0
@@ -93,6 +147,10 @@ func SnapshotCostPerDay(snapshot cloud.Snapshot) float64 {
 func ImageCostPerDay(image cloud.Image) float64 {
 	if image.CSP() == cloud.AWS {
 		return awsStorageCostMap["snapshot"] * float64(image.SizeGB())
+	} else if image.CSP() == cloud.GCP {
+		price := gcpStorageCostGBDayMap["snapshot"]
+		days := time.Since(image.CreationTime()).Hours() / 24
+		return price * float64(image.SizeGB()) * days
 	}
 	log.Panicln("Unsupported CSP:", image.CSP())
 	return 0.0
@@ -103,6 +161,14 @@ func ImageCostPerDay(image cloud.Image) float64 {
 func InstancePricePerHour(instance cloud.Instance) float64 {
 	if instance.CSP() == cloud.AWS {
 		return awsInstancePricePerHour(instance.Location(), instance.InstanceType())
+	} else if instance.CSP() == cloud.GCP {
+		price, ok := gcpInstanceCostPerHourMap[instance.InstanceType()]
+		if !ok {
+			log.Printf("Could not find price for %s", instance.InstanceType())
+			return -1.0
+		}
+		hours := time.Since(instance.CreationTime()).Hours()
+		return price * hours
 	}
 	log.Panicln("Unsupported CSP:", instance.CSP())
 	return 0.0
@@ -115,6 +181,8 @@ func InstancePricePerHour(instance cloud.Instance) float64 {
 func BucketPricePerMonth(bucket cloud.Bucket) float64 {
 	if bucket.CSP() == cloud.AWS {
 		return s3BucketPerGBMonth * bucket.TotalSizeGB()
+	} else if bucket.CSP() == cloud.GCP {
+		return gcpBucketPerGBMonth * bucket.TotalSizeGB()
 	}
 	log.Panicln("Unsupported CSP:", bucket.CSP())
 	return 0.0
