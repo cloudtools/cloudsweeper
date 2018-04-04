@@ -32,6 +32,7 @@ func (m *gcpResourceManager) Owners() []string {
 }
 
 func (m *gcpResourceManager) InstancesPerAccount() map[string][]Instance {
+	log.Println("Getting instances in all projects")
 	result := make(map[string][]Instance)
 	var resultMutex sync.Mutex // Projects are processed in parallel
 	m.forEachProject(func(project string) {
@@ -61,6 +62,7 @@ func (m *gcpResourceManager) InstancesPerAccount() map[string][]Instance {
 }
 
 func (m *gcpResourceManager) ImagesPerAccount() map[string][]Image {
+	log.Println("Getting images in all projects")
 	result := make(map[string][]Image)
 	var resultMutex sync.Mutex // Projects are processed in parallel
 	m.forEachProject(func(project string) {
@@ -83,6 +85,7 @@ func (m *gcpResourceManager) ImagesPerAccount() map[string][]Image {
 }
 
 func (m *gcpResourceManager) VolumesPerAccount() map[string][]Volume {
+	log.Println("Getting volumes in all projects")
 	result := make(map[string][]Volume)
 	var resultMutex sync.Mutex // Projects are processed in parallel
 	m.forEachProject(func(project string) {
@@ -112,6 +115,7 @@ func (m *gcpResourceManager) VolumesPerAccount() map[string][]Volume {
 }
 
 func (m *gcpResourceManager) SnapshotsPerAccount() map[string][]Snapshot {
+	log.Println("Getting snapshots in all projects")
 	result := make(map[string][]Snapshot)
 	var resultMutex sync.Mutex
 	m.forEachProject(func(project string) {
@@ -134,6 +138,7 @@ func (m *gcpResourceManager) SnapshotsPerAccount() map[string][]Snapshot {
 }
 
 func (m *gcpResourceManager) BucketsPerAccount() map[string][]Bucket {
+	log.Println("Getting buckets in all projects")
 	result := make(map[string][]Bucket)
 	var resultMutex sync.Mutex
 	m.forEachProject(func(project string) {
@@ -222,6 +227,7 @@ func (m *gcpResourceManager) forEachProject(f func(project string)) {
 	wg.Add(len(m.projects))
 	for i := range m.projects {
 		go func(i int) {
+			log.Printf("Accessing project %s", m.projects[i])
 			f(m.projects[i])
 			wg.Done()
 		}(i)
