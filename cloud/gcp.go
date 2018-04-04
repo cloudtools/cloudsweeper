@@ -249,7 +249,7 @@ func (m *gcpResourceManager) forEachZone(project string, f func(zone string)) {
 func (m *gcpResourceManager) getInstances(project, zone string) ([]Instance, error) {
 	instances, err := m.compute.Instances.List(project, zone).Do()
 	if err != nil {
-		if isGCPAccessDeniedError(instances.HTTPStatusCode) {
+		if instances != nil && isGCPAccessDeniedError(instances.HTTPStatusCode) {
 			return nil, ErrPermissionDenied
 		}
 		return nil, err
@@ -287,7 +287,7 @@ func (m *gcpResourceManager) getInstances(project, zone string) ([]Instance, err
 func (m *gcpResourceManager) getImages(project string) ([]Image, error) {
 	images, err := m.compute.Images.List(project).Do()
 	if err != nil {
-		if isGCPAccessDeniedError(images.HTTPStatusCode) {
+		if images != nil && isGCPAccessDeniedError(images.HTTPStatusCode) {
 			return nil, ErrPermissionDenied
 		}
 		return nil, err
@@ -327,7 +327,7 @@ func (m *gcpResourceManager) getImages(project string) ([]Image, error) {
 func (m *gcpResourceManager) getVolumes(project, zone string) ([]Volume, error) {
 	volumes, err := m.compute.Disks.List(project, zone).Do()
 	if err != nil {
-		if isGCPAccessDeniedError(volumes.HTTPStatusCode) {
+		if volumes != nil && isGCPAccessDeniedError(volumes.HTTPStatusCode) {
 			return nil, ErrPermissionDenied
 		}
 		return nil, err
@@ -369,7 +369,7 @@ func (m *gcpResourceManager) getVolumes(project, zone string) ([]Volume, error) 
 func (m *gcpResourceManager) getSnapshots(project string) ([]Snapshot, error) {
 	snapshots, err := m.compute.Snapshots.List(project).Do()
 	if err != nil {
-		if isGCPAccessDeniedError(snapshots.HTTPStatusCode) {
+		if snapshots != nil && isGCPAccessDeniedError(snapshots.HTTPStatusCode) {
 			return nil, ErrPermissionDenied
 		}
 		return nil, err
@@ -410,7 +410,7 @@ func (m *gcpResourceManager) getSnapshots(project string) ([]Snapshot, error) {
 func (m *gcpResourceManager) getBuckets(project string) ([]Bucket, error) {
 	buckets, err := m.storage.Buckets.List(project).Do()
 	if err != nil {
-		if isGCPAccessDeniedError(buckets.HTTPStatusCode) {
+		if buckets != nil && isGCPAccessDeniedError(buckets.HTTPStatusCode) {
 			return nil, ErrPermissionDenied
 		}
 		return nil, err
@@ -464,7 +464,7 @@ func (m *gcpResourceManager) bucketDetails(bucketID string) (int64, float64, err
 	for ok := true; ok; ok = nextPageToken != "" {
 		objs, err := m.storage.Objects.List(bucketID).Do()
 		if err != nil {
-			if isGCPAccessDeniedError(objs.HTTPStatusCode) {
+			if objs != nil && isGCPAccessDeniedError(objs.HTTPStatusCode) {
 				return 0, 0.0, ErrPermissionDenied
 			}
 			return 0, 0.0, err
