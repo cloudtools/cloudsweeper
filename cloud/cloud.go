@@ -17,7 +17,7 @@ import (
 const (
 	// GcpCredentialsFileKey is the Env variable to store path
 	// to service accounts credentials JSON file
-	GcpCredentialsFileKey = "OLGA_GCP_IAM"
+	GcpCredentialsFileKey = "GOOGLE_APPLICATION_CREDENTIALS"
 
 	scopeGCPCompute = "https://www.googleapis.com/auth/compute"
 	scopeGCPStorage = "https://www.googleapis.com/auth/devstorage.read_write"

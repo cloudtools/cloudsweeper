@@ -57,7 +57,7 @@ func (l CostList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
 // Reporter is a general interface that can be implemented
 // for both AWS and GCP to generate expense reports.
 type Reporter interface {
-	GenerateReport(startDate, endDate time.Time) Report
+	GenerateReport(start time.Time) Report
 }
 
 // NewReporter intializes a new billing reporter for the specified CSP
@@ -68,7 +68,9 @@ func NewReporter(csp cloud.CSP) (Reporter, error) {
 			csp: cloud.AWS,
 		}, nil
 	case cloud.GCP:
-		return nil, errors.New("GCP is not supported yet")
+		return &gcpReporter{
+			csp: cloud.GCP,
+		}, nil
 	default:
 		return nil, errors.New("Invalid CSP specified")
 	}
@@ -79,23 +81,8 @@ func NewReporter(csp cloud.CSP) (Reporter, error) {
 // span. The report struct also has methods to help work with
 // all the items.
 type Report struct {
-	CSP          cloud.CSP
-	StartDate    time.Time
-	EndDate      time.Time
-	CreationDate time.Time
-	Items        []ReportItem
-}
-
-// FormatStartDate will return the StartDate formatted into
-// YYYY-MM-DD, e.g. 2017-01-16
-func (r *Report) FormatStartDate() string {
-	return r.StartDate.Format(dateFormatLayout)
-}
-
-// FormatEndDate will return the EndDate formatted into
-// YYYY-MM-DD, e.g. 2017-01-16
-func (r *Report) FormatEndDate() string {
-	return r.StartDate.Format(dateFormatLayout)
+	CSP   cloud.CSP
+	Items []ReportItem
 }
 
 // TotalCost returns the total cost for all items
@@ -163,6 +150,11 @@ func (r *Report) FormatReport(accountToUserMapping map[string]string) string {
 		name := user.Name
 		if realName, exist := accountToUserMapping[name]; exist {
 			name = realName
+		} else {
+			// Assume this is a support cost
+			if name == "" {
+				name = "Support"
+			}
 		}
 		fmt.Fprintf(b, "%-12s | %8.2f\n", name, user.TotalCost)
 	}
@@ -172,6 +164,11 @@ func (r *Report) FormatReport(accountToUserMapping map[string]string) string {
 		name := user.Name
 		if realName, exist := accountToUserMapping[name]; exist {
 			name = realName
+		} else {
+			// Assume this is a support cost
+			if name == "" {
+				name = "support"
+			}
 		}
 		fmt.Fprintf(b, "\n%s's costs:\n", name)
 		fmt.Fprintln(b, "Cost ($) | Description")
@@ -186,8 +183,8 @@ func (r *Report) FormatReport(accountToUserMapping map[string]string) string {
 // GenerateReport generates a Month-to-date billing report for the current month
 func GenerateReport(reporter Reporter) Report {
 	today := time.Now()
-	startDate := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, time.Local)
-	return reporter.GenerateReport(startDate, today)
+	start := time.Date(today.Year(), today.Month(), 1, 0, 0, 0, 0, time.Local)
+	return reporter.GenerateReport(start)
 }
 
 func convertCostMapToSortedList(costMap map[string]float64) CostList {
@@ -201,31 +198,10 @@ func convertCostMapToSortedList(costMap map[string]float64) CostList {
 	return costList
 }
 
-// DaysBetween return all days between two given dates (inclusive)
-func DaysBetween(startTime, endTime time.Time) []time.Time {
-	//  date.Year() != endTime.Year() && date.Month() != endTime.Month() && date.Day() != endTime.Day()
-	sameDates := func(t1, t2 time.Time) bool {
-		y1, m1, d1 := t1.Date()
-		y2, m2, d2 := t2.Date()
-		return y1 == y2 && m1 == m2 && d1 == d2
+func updateCsvHeaders(record []string) map[string]int {
+	csvHeaders := make(map[string]int)
+	for i, column := range record {
+		csvHeaders[column] = i
 	}
-
-	result := []time.Time{}
-	for date := startTime; !sameDates(date, endTime); date = date.AddDate(0, 0, 1) {
-		result = append(result, date)
-	}
-	// Add the last date too so that list is inclusive
-	result = append(result, endTime)
-	return result
-}
-
-// MonthsBetween return all months between two given dates (inclusive)
-func MonthsBetween(startTime, endTime time.Time) []time.Time {
-	result := []time.Time{}
-	for date := startTime; date.Year() != endTime.Year() && date.Month() != endTime.Month(); date = date.AddDate(0, 1, 0) {
-		result = append(result, date)
-	}
-	// Add the last date too so that list is inclusive
-	result = append(result, endTime)
-	return result
+	return csvHeaders
 }

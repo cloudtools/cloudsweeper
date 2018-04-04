@@ -29,57 +29,29 @@ const (
 	awsCSVNameFormat       = "%s-aws-billing-detailed-line-items-%d-%02d.csv.zip"
 )
 
-// This is really ugly... Must be some better way
-var awsCSVHeaderMap = map[string]int{
-	"InvoiceID":        0,
-	"PayerAccountId":   1,
-	"LinkedAccountId":  2,
-	"RecordType":       3,
-	"ProductName":      4,
-	"RateId":           5,
-	"SubscriptionId":   6,
-	"PricingPlanId":    7,
-	"UsageType":        8,
-	"Operation":        9,
-	"AvailabilityZone": 10,
-	"ReservedInstance": 11,
-	"ItemDescription":  12,
-	"UsageStartDate":   13,
-	"UsageEndDate":     14,
-	"UsageQuantity":    15,
-	"BlendedRate":      16,
-	"BlendedCost":      17,
-	"UnBlendedRate":    18,
-	"UnBlendedCost":    19,
-}
-
 type awsReporter struct {
 	csp cloud.CSP
 }
 
-func (r *awsReporter) GenerateReport(startDate, endDate time.Time) Report {
+func (r *awsReporter) GenerateReport(start time.Time) Report {
 	report := Report{}
-	report.CreationDate = time.Now()
-	report.StartDate = startDate
-	report.EndDate = endDate
 	report.CSP = r.csp
 
-	allMonths := MonthsBetween(startDate, endDate)
-	for _, date := range allMonths {
-		name := fmt.Sprintf(awsCSVNameFormat, awsBillingAccount, date.Year(), date.Month())
-		csvFile, err := getCSVFromS3(name)
-		if err != nil {
-			log.Println("Failed to get", name, ":", err)
-		}
-		err = processCSV(&report, csvFile, true)
-		if err != nil {
-			log.Println("Failed to process CSV", name)
-		}
+	name := fmt.Sprintf(awsCSVNameFormat, awsBillingAccount, start.Year(), start.Month())
+	csvFile, err := getCSVFromS3(name)
+	if err != nil {
+		log.Println("Failed to get", name, ":", err)
 	}
+	err = processAwsCsv(&report, csvFile, true)
+	if err != nil {
+		log.Println("Failed to process CSV", name)
+	}
+
 	return report
 }
 
-func processCSV(report *Report, csvFile *csv.Reader, allowFailed bool) error {
+func processAwsCsv(report *Report, csvFile *csv.Reader, allowFailed bool) error {
+	csvHeaders := make(map[string]int)
 	line := 0
 	for {
 		record, err := csvFile.Read()
@@ -94,20 +66,20 @@ func processCSV(report *Report, csvFile *csv.Reader, allowFailed bool) error {
 			}
 		}
 		if line == 0 {
-			// Skip header line
+			csvHeaders = updateCsvHeaders(record)
 			line++
 			continue
 		}
-		if record[awsCSVHeaderMap["RecordType"]] != "LineItem" {
+		if record[csvHeaders["RecordType"]] != "LineItem" {
 			// Ignore lines with AccountTotal (so we don't count it twice)
 			line++
 			continue
 		}
 
 		reportItem := ReportItem{}
-		reportItem.Owner = record[awsCSVHeaderMap["LinkedAccountId"]]
-		reportItem.Description = record[awsCSVHeaderMap["ItemDescription"]]
-		cost := record[awsCSVHeaderMap["UnBlendedCost"]]
+		reportItem.Owner = record[csvHeaders["LinkedAccountId"]]
+		reportItem.Description = record[csvHeaders["ItemDescription"]]
+		cost := record[csvHeaders["UnBlendedCost"]]
 		cost = strings.Replace(cost, ",", "", -1)
 		costNumber, err := strconv.ParseFloat(cost, 64)
 		if err != nil {
