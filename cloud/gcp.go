@@ -232,7 +232,7 @@ func (m *gcpResourceManager) forEachProject(f func(project string)) {
 func (m *gcpResourceManager) forEachZone(project string, f func(zone string)) {
 	zones, err := m.compute.Zones.List(project).Do()
 	if err != nil {
-		log.Printf("Could not list zones in %s", project)
+		log.Printf("Could not list zones in %s. Err: %v", project, err)
 		return
 	}
 	var wg sync.WaitGroup
