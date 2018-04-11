@@ -26,6 +26,8 @@ type gcpReporter struct {
 
 func (r *gcpReporter) GenerateReport(start time.Time) Report {
 	report := Report{}
+	report.CSP = r.csp
+
 	ctx := context.Background()
 	credsFilePath, exist := os.LookupEnv(cloud.GcpCredentialsFileKey)
 	if !exist {
