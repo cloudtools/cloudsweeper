@@ -20,8 +20,7 @@ func PerformSetup() {
 	fmt.Println(`
 SUCCESS
 
-Nothing else to setup, all done! :)
-`)
+Nothing else to setup, all done! :)`)
 }
 
 func getYes(prompt string, yesDefault bool) bool {
