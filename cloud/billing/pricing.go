@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 const (
@@ -121,8 +120,7 @@ func VolumeCostPerDay(volume cloud.Volume) float64 {
 			log.Printf("Could not find price for %s", volume.VolumeType())
 			return -1.0
 		}
-		days := time.Since(volume.CreationTime()).Hours() / 24
-		return price * float64(volume.SizeGB()) * days
+		return price * float64(volume.SizeGB())
 	}
 	log.Panicln("Unsupported CSP:", volume.CSP())
 	return 0.0
@@ -135,8 +133,7 @@ func SnapshotCostPerDay(snapshot cloud.Snapshot) float64 {
 		return awsStorageCostMap["snapshot"] * float64(snapshot.SizeGB())
 	} else if snapshot.CSP() == cloud.GCP {
 		price := gcpStorageCostGBDayMap["snapshot"]
-		days := time.Since(snapshot.CreationTime()).Hours() / 24
-		return price * float64(snapshot.SizeGB()) * days
+		return price * float64(snapshot.SizeGB())
 	}
 	log.Panicln("Unsupported CSP:", snapshot.CSP())
 	return 0.0
@@ -149,8 +146,7 @@ func ImageCostPerDay(image cloud.Image) float64 {
 		return awsStorageCostMap["snapshot"] * float64(image.SizeGB())
 	} else if image.CSP() == cloud.GCP {
 		price := gcpStorageCostGBDayMap["snapshot"]
-		days := time.Since(image.CreationTime()).Hours() / 24
-		return price * float64(image.SizeGB()) * days
+		return price * float64(image.SizeGB())
 	}
 	log.Panicln("Unsupported CSP:", image.CSP())
 	return 0.0
@@ -167,8 +163,7 @@ func InstancePricePerHour(instance cloud.Instance) float64 {
 			log.Printf("Could not find price for %s", instance.InstanceType())
 			return -1.0
 		}
-		hours := time.Since(instance.CreationTime()).Hours()
-		return price * hours
+		return price
 	}
 	log.Panicln("Unsupported CSP:", instance.CSP())
 	return 0.0
