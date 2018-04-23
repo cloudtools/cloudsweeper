@@ -2,6 +2,7 @@ package cloud
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -41,6 +42,7 @@ const (
 	accessDeniedErrorCode = "AccessDenied"
 	unauthorizedErrorCode = "UnauthorizedOperation"
 	notFoundErrorOcde     = "NotFound"
+	requestLimitErrorCode = "RequestLimitExceeded"
 
 	snapshotIDFilterName = "block-device-mapping.snapshot-id"
 )
@@ -50,6 +52,8 @@ var (
 	instanceStateRunning    = ec2.InstanceStateNameRunning
 
 	awsOwnerIDSelfValue = "self"
+
+	errAWSRequestLimit = errors.New("aws request limit hit")
 )
 
 func (m *awsResourceManager) InstancesPerAccount() map[string][]Instance {
