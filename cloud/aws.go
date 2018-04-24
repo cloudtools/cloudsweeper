@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"sync"
 	"time"
 
@@ -45,6 +46,8 @@ const (
 	requestLimitErrorCode = "RequestLimitExceeded"
 
 	snapshotIDFilterName = "block-device-mapping.snapshot-id"
+
+	awsMaxRequestRetries = 6
 )
 
 var (
@@ -570,5 +573,20 @@ func removeAWSTag(r Resource, key string) error {
 		}},
 	}
 	_, err := client.DeleteTags(input)
+	return err
+}
+
+func awsTryWithBackoff(f func() error) error {
+	try := 1
+	var err error
+	for {
+		err = f()
+		if err == nil || err != errAWSRequestLimit || try > awsMaxRequestRetries {
+			break
+		}
+		// Stupid but simple backoff (2^try seconds): 2, 4, 8, 16, 32 etc... seconds
+		time.Sleep(time.Duration(math.Exp2(float64(try))) * time.Second)
+		try++
+	}
 	return err
 }

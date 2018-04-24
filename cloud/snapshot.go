@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws/awserr"
 
@@ -53,29 +51,20 @@ type awsSnapshot struct {
 
 func (s *awsSnapshot) Cleanup() error {
 	log.Printf("Cleaning up snapshot %s in %s", s.ID(), s.Owner())
+	return awsTryWithBackoff(s.cleanup)
+}
+
+func (s *awsSnapshot) cleanup() error {
 	client := clientForAWSResource(s)
 	input := &ec2.DeleteSnapshotInput{
 		SnapshotId: aws.String(s.ID()),
 	}
-	var try int
-	var err error
-	for {
-		err = s.doCleanup(client, input)
-		if err == nil || err != errAWSRequestLimit || try >= 5 {
-			break
-		}
-		// Stupid but simple backoff: 0, 2, 4, 8, 16 seconds
-		time.Sleep(time.Duration(math.Exp2(float64(try))) * time.Second)
-		try++
-	}
-	return err
-}
-
-func (s *awsSnapshot) doCleanup(client *ec2.EC2, input *ec2.DeleteSnapshotInput) error {
 	_, err := client.DeleteSnapshot(input)
-	aerr, ok := err.(awserr.Error)
-	if ok && aerr.Code() == requestLimitErrorCode {
-		return errAWSRequestLimit
+	if err != nil {
+		aerr, ok := err.(awserr.Error)
+		if ok && aerr.Code() == requestLimitErrorCode {
+			return errAWSRequestLimit
+		}
 	}
 	return err
 }

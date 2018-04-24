@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	compute "google.golang.org/api/compute/v1"
 )
@@ -54,11 +55,21 @@ type awsVolume struct {
 
 func (v *awsVolume) Cleanup() error {
 	log.Printf("Cleaning up volume %s in %s", v.ID(), v.Owner())
+	return awsTryWithBackoff(v.cleanup)
+}
+
+func (v *awsVolume) cleanup() error {
 	client := clientForAWSResource(v)
 	input := &ec2.DeleteVolumeInput{
 		VolumeId: aws.String(v.ID()),
 	}
 	_, err := client.DeleteVolume(input)
+	if err != nil {
+		aerr, ok := err.(awserr.Error)
+		if ok && aerr.Code() == requestLimitErrorCode {
+			return errAWSRequestLimit
+		}
+	}
 	return err
 }
 

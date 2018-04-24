@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	compute "google.golang.org/api/compute/v1"
@@ -40,11 +42,21 @@ type awsInstance struct {
 // Cleanup will termiante this instance
 func (i *awsInstance) Cleanup() error {
 	log.Printf("Cleaning up instance %s in %s", i.ID(), i.Owner())
+	return awsTryWithBackoff(i.cleanup)
+}
+
+func (i *awsInstance) cleanup() error {
 	client := clientForAWSResource(i)
 	input := &ec2.TerminateInstancesInput{
 		InstanceIds: aws.StringSlice([]string{i.id}),
 	}
 	_, err := client.TerminateInstances(input)
+	if err != nil {
+		aerr, ok := err.(awserr.Error)
+		if ok && aerr.Code() == requestLimitErrorCode {
+			return errAWSRequestLimit
+		}
+	}
 	return err
 }
 

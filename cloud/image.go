@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	compute "google.golang.org/api/compute/v1"
 )
@@ -44,11 +45,21 @@ type awsImage struct {
 
 func (i *awsImage) Cleanup() error {
 	log.Printf("Cleaning up image %s in %s", i.ID(), i.Owner())
+	return awsTryWithBackoff(i.cleanup)
+}
+
+func (i *awsImage) cleanup() error {
 	client := clientForAWSResource(i)
 	input := &ec2.DeregisterImageInput{
 		ImageId: aws.String(i.ID()),
 	}
 	_, err := client.DeregisterImage(input)
+	if err != nil {
+		aerr, ok := err.(awserr.Error)
+		if ok && aerr.Code() == requestLimitErrorCode {
+			return errAWSRequestLimit
+		}
+	}
 	return err
 }
 
