@@ -42,6 +42,7 @@ var awsRegionNameToIDMap = map[string]string{
 
 // Storage cost per GB per day
 var awsStorageCostMap = map[string]float64{
+	"standard": 0.05 / 30.0,
 	"gp2":      0.1 / 30.0,
 	"io1":      0.125 / 30.0,
 	"st1":      0.045 / 30.0,
@@ -110,15 +111,15 @@ func VolumeCostPerDay(volume cloud.Volume) float64 {
 	if volume.CSP() == cloud.AWS {
 		price, ok := awsStorageCostMap[volume.VolumeType()]
 		if !ok {
-			log.Printf("Could not find price for %s", volume.VolumeType())
-			return -1.0
+			log.Fatalf("Could not find price for %s in AWS", volume.VolumeType())
+			return 0.0
 		}
 		return price * float64(volume.SizeGB())
 	} else if volume.CSP() == cloud.GCP {
 		price, ok := gcpStorageCostGBDayMap[volume.VolumeType()]
 		if !ok {
-			log.Printf("Could not find price for %s", volume.VolumeType())
-			return -1.0
+			log.Fatalf("Could not find price for %s in GCP", volume.VolumeType())
+			return 0.0
 		}
 		return price * float64(volume.SizeGB())
 	}
@@ -160,8 +161,8 @@ func InstancePricePerHour(instance cloud.Instance) float64 {
 	} else if instance.CSP() == cloud.GCP {
 		price, ok := gcpInstanceCostPerHourMap[instance.InstanceType()]
 		if !ok {
-			log.Printf("Could not find price for %s", instance.InstanceType())
-			return -1.0
+			log.Fatalf("Could not find price for %s in GCP", instance.InstanceType())
+			return 0.0
 		}
 		return price
 	}

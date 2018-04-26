@@ -12,7 +12,7 @@ import (
 const (
 	dateFormatLayout = "2006-01-02"
 	// MinimumTotalCost is also used in notify.MonthToDateReport
-	MinimumTotalCost = 100.0
+	MinimumTotalCost = 10.0
 	// MinimumCost is also used in notify.MonthToDateReport
 	MinimumCost = 5.0
 )

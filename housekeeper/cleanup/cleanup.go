@@ -11,7 +11,7 @@ import (
 const (
 	releaseTag          = "Release"
 	sharedDevAWSAccount = "164337164081"
-	totalCostThreshold  = 100.0
+	totalCostThreshold  = 10.0
 )
 
 // MarkForCleanup will look for resources that should be automatically
