@@ -8,7 +8,7 @@ To setup HouseKeeper to work with your account, you must create a role in AWS to
 It's also possible to run `aws_setup.sh`, if you have the `aws` CLI installed and properly setup.
 
 ## Usage
-The program relies on having a list of account to actually check. This list can either be provided manually, or through other scripts.
+The program relies on having a list of accounts to actually check. This list can either be provided manually, or through other scripts.
 
 The recommended way of using Housekeeper is through Docker. For the most common use cases, there are make targets (take a look in the `Makefile`).
 
@@ -50,6 +50,6 @@ If housekeeper has automatically marked a resource for deletion, it will have a 
 Olga (1887—1971) was a cleaner and later a concierge at Chalmers University of Technology, the university where brkt have had a lot of interns from. She played a central role in a lot of students' lives, known for being very friendly and helpful with everything.
 
 ## LICENSE
-olga is licenses under the BSD 2-clause licenses. Originally written at
+olga is licensed under the BSD 2-clause licenses. Originally written at
 Bracket Computing, it was made open source by VMware to enable further
 development by the original authors.
