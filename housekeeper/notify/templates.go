@@ -324,7 +324,7 @@ Your loyal housekeeper
 const totalReviewMailTemplate = `<h1>Hello {{ .Owner -}},</h1>
 
 <p>
-This is a summary of all old/unused resources for Immutable Systems.
+This is a summary of all old/unused resources for your org.
 </p>
 
 <h2>Old resources:</h2>

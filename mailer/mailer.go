@@ -11,6 +11,12 @@ import (
 	"text/template"
 )
 
+// This tool depends on whomever is running it to have already 
+// configured credentials for the gmail account that is being used.  
+// You could substitute your own smtp server here, but we 
+// recommend against including credentials.  Run this from a
+// container that already has credentials available to it.
+ 
 const (
 	smtpServer    = "smtp.gmail.com"
 	smtpPort      = 587
