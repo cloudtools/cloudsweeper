@@ -51,7 +51,7 @@ func (d *resourceMailData) SendEmail(mailTemplate, title string, debugAddressees
 	username := convertEmailExceptions(d.Owner)
 
 // Insert a domain name into the usernames in the organization json file
-	ownerMail := fmt.Sprintf("%s@.example.com, username)
+	ownerMail := fmt.Sprintf("%s@.example.com", username)
 	log.Printf("Sending out email to %s\n", ownerMail)
 	addressees := append(debugAddressees, ownerMail)
 	err = mailClient.SendEmail(title, mailContent, addressees...)
@@ -211,10 +211,10 @@ func UntaggedResourcesReview(mngr cloud.ResourceManager, accountUserMapping map[
 
 		if mailData.ResourceCount() > 0 {
 			// Send mail
-			title := fmt.Sprintf("You have %d un-tagged resources to review (%s)", mailData.ResourceCount(), time.Now().Format("2006-01-02"))
-//You can add some debug email address to ensure it works
-		//	debugAddressees := []string{"ben@example.com"} 
-	//		mailData.SendEmail(untaggedMailTemplate, title, debugAddressees...)
+			// title := fmt.Sprintf("You have %d un-tagged resources to review (%s)", mailData.ResourceCount(), time.Now().Format("2006-01-02"))
+			// You can add some debug email address to ensure it works
+			// debugAddressees := []string{"ben@example.com"} 
+			// mailData.SendEmail(untaggedMailTemplate, title, debugAddressees...)
 		}
 	}
 }
@@ -246,9 +246,9 @@ func DeletionWarning(hoursInAdvance int, mngr cloud.ResourceManager, accountUser
 
 		if mailData.ResourceCount() > 0 {
 			// Now send email
-			title := fmt.Sprintf("Deletion warning, %d resources are cleaned up within %d hours", mailData.ResourceCount(), hoursInAdvance)
-	//		debugAddressees := []string{"ben@example.com"} 
-		//	mailData.SendEmail(deletionWarningTemplate, title, debugAddressees...)
+			// title := fmt.Sprintf("Deletion warning, %d resources are cleaned up within %d hours", mailData.ResourceCount(), hoursInAdvance)
+			// debugAddressees := []string{"ben@example.com"} 
+			// mailData.SendEmail(deletionWarningTemplate, title, debugAddressees...)
 		}
 	}
 }
