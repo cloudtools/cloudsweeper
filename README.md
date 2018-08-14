@@ -2,8 +2,12 @@
 
 _New and improved housekeeper, now in Go._
 
+## Overview
+Housekeeper was created because developers have better things to do than to constantly monitor their cloud accounts for things they left around. The tool monitors developer accounts for old items that might have been forgotten, and then sends reports to you or others to let them know what will be deleted (and to whitelist anything they do not want deleted).  It also can let you know when you haven't been tagging things properly.  
+
+
 ## Setup
-To setup HouseKeeper to work with your account, you must create a role in AWS to allow access. This is easily done using the `--setup` flag of housekeeper. It will handle everything for you. Then all you need to do is to make sure you're in the list of accounts that will be checked. Reach out to the QA team if you have any questions.
+To setup HouseKeeper to work with your account, you must create a role in AWS to allow access. This is easily done using the `--setup` flag of housekeeper. It will handle everything for you. Then all you need to do is to make sure you're in the list of accounts that will be checked. 
 
 It's also possible to run `aws_setup.sh`, if you have the `aws` CLI installed and properly setup.
 
@@ -22,6 +26,8 @@ The review target will look for really old resources that housekeeper is too uns
 - An instance marked with do-not-delete is older than a week
 
 The account owner will get an email with these resources listed.
+
+These thresholds may be modified to your own preference.
 
 ### Warning - `make warn`
 The warning target will look for resources that are about to be automatically cleaned up by housekeeper (not resources that the owner explicitly said should be deleted) and warn the owner about this.

@@ -11,6 +11,7 @@ RUN go get ./...
 
 RUN go build -o olga cmd/*.go
 
-ADD https://s3-us-west-2.amazonaws.com/packages.int.brkt.net/org/latest/organization.json ./organization.json
+# you need to specify the location of a file that follows the format for users as described in organizations.go.  Specify the location of a source file (maybe in an S3 bucket?) and the local path
+ADD sourcepath.json ./organization.json
 
 ENTRYPOINT [ "./olga" ]

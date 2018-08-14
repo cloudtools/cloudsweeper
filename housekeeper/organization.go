@@ -1,6 +1,11 @@
 // Copyright (c) 2018 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: BSD-2-Clause
 
+// This structure was set up for an org wherein all employees 
+// have their own cloud accounts, and are aggregated under a 
+// single payer account.  In the case you have only a single 
+// account, this will be superfluous.
+
 package housekeeper
 
 import (
@@ -9,7 +14,7 @@ import (
 	"fmt"
 )
 
-// Organization represents the Immutable Systems employees,
+// Organization represents the employees,
 // their departments and their managers.
 type Organization struct {
 	Managers    Employees   `json:"-"`
@@ -27,7 +32,7 @@ type managerID struct {
 	ID string `json:"username"`
 }
 
-// Department represents a department in Immutable Systems
+// Department represents a department in your org
 type Department struct {
 	Number int    `json:"number"`
 	ID     string `json:"id"`
@@ -37,7 +42,7 @@ type Department struct {
 // Departments is a list of Department
 type Departments []*Department
 
-// Employee represents an Immuutable Systems employee, which
+// Employee represents an employee, which
 // belong to a department and has a manager. An employee can
 // also have multiple accounts and projects associated with
 // them in AWS and GCP. "Disabled" employees are employees
@@ -162,7 +167,7 @@ func (org *Organization) EnabledAccounts(csp cloud.CSP) []string {
 }
 
 // AccountToUserMapping is a helper method that maps accounts to their owners
-// username. This is useful for e.g. sending out emails to the owner of an account.
+// username. This is useful for sending out emails to the owner of an account.
 func (org *Organization) AccountToUserMapping(csp cloud.CSP) map[string]string {
 	result := make(map[string]string)
 	for _, employee := range org.Employees {
