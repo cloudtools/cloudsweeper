@@ -4,7 +4,7 @@
 package filter
 
 import (
-	"brkt/olga/cloud"
+	"brkt/cloudsweeper/cloud"
 	"testing"
 	"time"
 )

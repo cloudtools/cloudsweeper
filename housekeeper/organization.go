@@ -9,7 +9,7 @@
 package housekeeper
 
 import (
-	"brkt/olga/cloud"
+	"brkt/cloudsweeper/cloud"
 	"encoding/json"
 	"fmt"
 )

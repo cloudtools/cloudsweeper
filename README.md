@@ -1,4 +1,4 @@
-# Olga — HouseKeeper v2
+# CloudSweeper — HouseKeeper v2
 
 _New and improved housekeeper, now in Go._
 
@@ -52,10 +52,7 @@ A resource can have an expiry date. This is specified with the tag `Key: houseke
 #### Delete at
 If housekeeper has automatically marked a resource for deletion, it will have a tag with the key `housekeeper-delete-at`, and the value will be an RFC3339 encoded timestamp. If the current time is after that timestamp, the resource will get cleaned up.
 
-## About Olga
-Olga (1887—1971) was a cleaner and later a concierge at Chalmers University of Technology, the university where brkt have had a lot of interns from. She played a central role in a lot of students' lives, known for being very friendly and helpful with everything.
-
 ## LICENSE
-olga is licensed under the BSD 2-clause licenses. Originally written at
-Bracket Computing, it was made open source by VMware to enable further
+CloudSweeper is licensed under the BSD 2-clause licenses. Originally written
+at Bracket Computing, it was made open source by VMware to enable further
 development by the original authors.

@@ -4,10 +4,10 @@
 package notify
 
 import (
-	"brkt/olga/cloud"
-	"brkt/olga/cloud/billing"
-	"brkt/olga/cloud/filter"
-	hk "brkt/olga/housekeeper"
+	"brkt/cloudsweeper/cloud"
+	"brkt/cloudsweeper/cloud/billing"
+	"brkt/cloudsweeper/cloud/filter"
+	hk "brkt/cloudsweeper/housekeeper"
 	"fmt"
 	"log"
 	"time"

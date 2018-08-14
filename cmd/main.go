@@ -4,12 +4,12 @@
 package main
 
 import (
-	"brkt/olga/cloud"
-	"brkt/olga/cloud/billing"
-	hk "brkt/olga/housekeeper"
-	"brkt/olga/housekeeper/cleanup"
-	"brkt/olga/housekeeper/notify"
-	"brkt/olga/housekeeper/setup"
+	"brkt/cloudsweeper/cloud"
+	"brkt/cloudsweeper/cloud/billing"
+	hk "brkt/cloudsweeper/housekeeper"
+	"brkt/cloudsweeper/housekeeper/cleanup"
+	"brkt/cloudsweeper/housekeeper/notify"
+	"brkt/cloudsweeper/housekeeper/setup"
 	"flag"
 	"fmt"
 	"io/ioutil"

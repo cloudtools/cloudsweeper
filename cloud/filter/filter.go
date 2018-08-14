@@ -4,7 +4,7 @@
 package filter
 
 import (
-	"brkt/olga/cloud"
+	"brkt/cloudsweeper/cloud"
 )
 
 // New will create a new resource filter ready to use

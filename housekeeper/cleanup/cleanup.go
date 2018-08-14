@@ -4,9 +4,9 @@
 package cleanup
 
 import (
-	"brkt/olga/cloud"
-	"brkt/olga/cloud/billing"
-	"brkt/olga/cloud/filter"
+	"brkt/cloudsweeper/cloud"
+	"brkt/cloudsweeper/cloud/billing"
+	"brkt/cloudsweeper/cloud/filter"
 	"log"
 	"time"
 )
