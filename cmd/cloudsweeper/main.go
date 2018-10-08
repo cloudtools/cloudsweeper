@@ -20,12 +20,7 @@ import (
 )
 
 const (
-	defaultOrgFile = "organization.json"
-
-	sharedQAAccount     = "475063612724"
-	sharedDevAWSAccount = "164337164081"
-	prodAWSAccount      = "992270393355"
-
+	defaultOrgFile        = "organization.json"
 	warningHoursInAdvance = 48
 )
 
@@ -45,15 +40,6 @@ const banner = `
 `
 
 const (
-	cmdCleanup  = "cleanup"
-	cmdReset    = "reset"
-	cmdMark     = "mark-for-cleanup"
-	cmdReview   = "review"
-	cmdSetup    = "setup"
-	cmdWarn     = "warn"
-	cmdBilling  = "billing-report"
-	cmdUntagged = "find-untagged"
-
 	defaultCSPFlag = cspFlagAWS
 	cspFlagAWS     = "aws"
 	cspFlagGCP     = "gcp"
@@ -64,33 +50,33 @@ func main() {
 	flag.Parse()
 	csp := cspFromFlag(*cspToUse)
 	fmt.Printf("Running against %s...\n", csp)
-	switch getPositional() {
-	case cmdCleanup:
+	switch getPositionalCmd() {
+	case "cleanup":
 		log.Println("Cleaning up old resources")
 		org := parseOrganization(*orgFile)
 		mngr := initManager(csp, org)
 		cleanup.PerformCleanup(mngr)
-	case cmdReset:
+	case "reset":
 		log.Println("Resetting all tags")
 		org := parseOrganization(*orgFile)
 		mngr := initManager(csp, org)
 		cleanup.ResetCloudsweeper(mngr)
-	case cmdMark:
+	case "mark-for-cleanup":
 		log.Println("Marking old resources for cleanup")
 		org := parseOrganization(*orgFile)
 		mngr := initManager(csp, org)
 		cleanup.MarkForCleanup(mngr)
-	case cmdReview:
+	case "review":
 		log.Println("Sending out old resource review")
 		org := parseOrganization(*orgFile)
 		mngr := initManager(csp, org)
 		notify.OldResourceReview(mngr, org, csp)
-	case cmdWarn:
+	case "warn":
 		log.Println("Sending out cleanup warning")
 		org := parseOrganization(*orgFile)
 		mngr := initManager(csp, org)
 		notify.DeletionWarning(*warningHours, mngr, org.AccountToUserMapping(csp))
-	case cmdBilling:
+	case "billing-report":
 		log.Println("Generating month-to-date billing report for", csp)
 		reporter, err := billing.NewReporter(csp)
 		if err != nil {
@@ -102,22 +88,17 @@ func main() {
 		mapping := org.AccountToUserMapping(csp)
 		log.Println(report.FormatReport(mapping))
 		notify.MonthToDateReport(report, mapping)
-	case cmdUntagged:
+	case "find-untagged":
 		log.Println("Finding untagged resources")
-		// Only care about prod, shared-dev and QA
-		mngr, err := cloud.NewManager(csp, sharedDevAWSAccount, prodAWSAccount, sharedQAAccount)
-		if err != nil {
-			log.Fatal(err)
-		}
-		mapping := map[string]string{sharedDevAWSAccount: "cloud-dev", prodAWSAccount: "prod", sharedQAAccount: "qa"}
+		org := parseOrganization(*orgFile)
+		mngr := initManager(csp, org)
+		mapping := org.AccountToUserMapping(csp)
 		notify.UntaggedResourcesReview(mngr, mapping)
-	case cmdSetup:
+	case "setup":
 		log.Println("Running cloudsweeper setup")
 		setup.PerformSetup()
 	default:
-		// Default to setup
-		log.Println("Running cloudsweeper setup")
-		setup.PerformSetup()
+		log.Fatalln("Please supply a command")
 	}
 }
 
@@ -142,7 +123,7 @@ func parseOrganization(inputFile string) *cs.Organization {
 	return org
 }
 
-func getPositional() string {
+func getPositionalCmd() string {
 	n := len(os.Args)
 	if n <= 1 {
 		return ""

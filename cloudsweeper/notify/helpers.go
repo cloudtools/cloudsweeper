@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,6 +18,8 @@ import (
 	"github.com/cloudtools/cloudsweeper/cloud/filter"
 	"github.com/cloudtools/cloudsweeper/mailer"
 )
+
+var emailEdgeCases = map[string]string{} // Use this map to fix bad mappings between usernames and email aliases
 
 func generateMail(data interface{}, templateString string) (string, error) {
 	t := template.New("emailTemplate").Funcs(extraTemplateFunctions())
@@ -35,12 +38,11 @@ func generateMail(data interface{}, templateString string) (string, error) {
 // This function will convert some edge case names to their proper
 // email alias
 func convertEmailExceptions(oldName string) (newName string) {
-	switch oldName {
-	case "qa-solo":
-		return "qa"
-	default:
-		return oldName
+	name, hasEdgeCase := emailEdgeCases[oldName]
+	if hasEdgeCase {
+		return name
 	}
+	return oldName
 }
 
 func getMailClient() mailer.Client {
@@ -52,7 +54,23 @@ func getMailClient() mailer.Client {
 	if !exists {
 		log.Fatalf("%s is required\n", smtpPassKey)
 	}
-	return mailer.NewClient(username, password, mailDisplayName)
+
+	server, exists := os.LookupEnv(smtpServerKey)
+	if !exists {
+		log.Fatalf("%s is required\n", smtpServerKey)
+	}
+
+	port, exists := os.LookupEnv(smtpServerPort)
+	if !exists {
+		log.Fatalf("%s is required\n", smtpServerPort)
+	}
+
+	portNumber, err := strconv.Atoi(port)
+	if err != nil {
+		log.Fatalf("%s must be an integer", smtpServerPort)
+	}
+
+	return mailer.NewClient(username, password, mailDisplayName, server, portNumber)
 }
 
 func extraTemplateFunctions() template.FuncMap {

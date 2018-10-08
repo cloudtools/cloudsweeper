@@ -33,7 +33,7 @@ const awsAssumeRoleDoc = `{
 		{
 			"Effect": "Allow",
 			"Principal": {
-				"AWS": "arn:aws:iam::475063612724:user/jenkins-housekeeper" //
+				"AWS": "arn:aws:iam::475063612724:user/jenkins-housekeeper"
 			},
 			"Action": "sts:AssumeRole"
 		}

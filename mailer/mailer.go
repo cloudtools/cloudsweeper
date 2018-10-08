@@ -1,6 +1,11 @@
 // Copyright (c) 2018 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: BSD-2-Clause
 
+// Package mailer is a utility to send email. Configuration is not within
+// the scope of this package, it simply takes an SMTP server, port,
+// username and password as an argument to the NewClient function.
+//
+// This has been tested with Gmail using smtp.gmail.com and port 587
 package mailer
 
 import (
@@ -11,15 +16,7 @@ import (
 	"text/template"
 )
 
-// This tool depends on whomever is running it to have already 
-// configured credentials for the gmail account that is being used.  
-// You could substitute your own smtp server here, but we 
-// recommend against including credentials.  Run this from a
-// container that already has credentials available to it.
- 
 const (
-	smtpServer    = "smtp.gmail.com"
-	smtpPort      = 587
 	emailTemplate = `From: {{ .DisplayName }} <{{- .From -}}>
 To: {{ .To }}
 Subject: {{ .Subject }}
@@ -39,15 +36,19 @@ type mailer struct {
 	user        string
 	auth        smtp.Auth
 	displayName string
+	smtpServer  string
+	smtpPort    int
 }
 
 // NewClient will create a new email client for sending mails
-func NewClient(username, password, displayName string) Client {
+func NewClient(username, password, displayName string, smtpServer string, smtpPort int) Client {
 	auth := smtp.PlainAuth("", username, password, smtpServer)
 	m := new(mailer)
 	m.auth = auth
 	m.user = username
 	m.displayName = displayName
+	m.smtpServer = smtpServer
+	m.smtpPort = smtpPort
 
 	return m
 }
@@ -55,7 +56,7 @@ func NewClient(username, password, displayName string) Client {
 // SendEmail will send a mail to the specified address. Please note that
 // the content is not HTML escaped. That would be up to whoever uses the method
 func (m *mailer) SendEmail(subject, content string, recipients ...string) error {
-	server := fmt.Sprintf("%s:%d", smtpServer, smtpPort)
+	server := fmt.Sprintf("%s:%d", m.smtpServer, m.smtpPort)
 	var msg bytes.Buffer
 
 	context := &mailContext{

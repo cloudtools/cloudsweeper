@@ -1,6 +1,17 @@
 // Copyright (c) 2018 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: BSD-2-Clause
 
+// Package notify is responsible for all actions related
+// to notifying employees and managers about their resources.
+//
+// Email credentials must be set using os environment variables
+// in order to be able to send mail. Note that monthToDateAddressee
+// is intended to be sent weekly to your entire org. The
+// totalSumAddressee is meant to send a total report to the person
+// in your org monitoring costs.
+//
+// The templates.go file contains all email templates used for
+// notifications. This uses the native Go template engine.
 package notify
 
 import (
@@ -14,18 +25,14 @@ import (
 	cs "github.com/cloudtools/cloudsweeper/cloudsweeper"
 )
 
-// Here is where you use credentials to send email
-// note that monthToDateAddressee is intended to be sent weekly
-// to your entire org.
-// the totalSumAddressee is meant to send a total report to
-// the person in your org monitoring costs
-
 const (
 	smtpUserKey          = "SMTP_USER"
 	smtpPassKey          = "SMTP_PASS"
+	smtpServerKey        = "SMTP_SERVER"
+	smtpServerPort       = "SMTP_PORT"
 	mailDisplayName      = "Cloudsweeper"
 	monthToDateAddressee = "eng@example.com"
-	totalSumAddressee    = "ben"
+	totalSumAddressee    = "somemanager"
 )
 
 type resourceMailData struct {
