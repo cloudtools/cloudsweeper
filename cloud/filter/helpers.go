@@ -4,7 +4,7 @@
 package filter
 
 import (
-	"brkt/cloudsweeper/cloud"
+	"github.com/cloudtools/cloudsweeper/cloud"
 )
 
 func (f *ResourceFilter) includeResource(resource cloud.Resource) bool {

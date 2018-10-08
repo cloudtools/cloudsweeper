@@ -4,10 +4,6 @@
 package notify
 
 import (
-	"brkt/cloudsweeper/cloud"
-	"brkt/cloudsweeper/cloud/billing"
-	"brkt/cloudsweeper/cloud/filter"
-	"brkt/cloudsweeper/mailer"
 	"bytes"
 	"fmt"
 	"html/template"
@@ -15,6 +11,11 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/cloudtools/cloudsweeper/cloud"
+	"github.com/cloudtools/cloudsweeper/cloud/billing"
+	"github.com/cloudtools/cloudsweeper/cloud/filter"
+	"github.com/cloudtools/cloudsweeper/mailer"
 )
 
 func generateMail(data interface{}, templateString string) (string, error) {

@@ -4,10 +4,11 @@
 package filter
 
 import (
-	"brkt/cloudsweeper/cloud"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/cloudtools/cloudsweeper/cloud"
 )
 
 func TestAddingFilters(t *testing.T) {

@@ -4,18 +4,19 @@
 package main
 
 import (
-	"brkt/cloudsweeper/cloud"
-	"brkt/cloudsweeper/cloud/billing"
-	hk "brkt/cloudsweeper/housekeeper"
-	"brkt/cloudsweeper/housekeeper/cleanup"
-	"brkt/cloudsweeper/housekeeper/notify"
-	"brkt/cloudsweeper/housekeeper/setup"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/cloudtools/cloudsweeper/cloud"
+	"github.com/cloudtools/cloudsweeper/cloud/billing"
+	cs "github.com/cloudtools/cloudsweeper/cloudsweeper"
+	"github.com/cloudtools/cloudsweeper/cloudsweeper/cleanup"
+	"github.com/cloudtools/cloudsweeper/cloudsweeper/notify"
+	"github.com/cloudtools/cloudsweeper/cloudsweeper/setup"
 )
 
 const (
@@ -35,11 +36,12 @@ var (
 )
 
 const banner = `
-  /\  /\___  _   _ ___  ___  /\ /\___  ___ _ __   ___ _ __
- / /_/ / _ \| | | / __|/ _ \/ //_/ _ \/ _ \ '_ \ / _ \ '__|
-/ __  / (_) | |_| \__ \  __/ __ \  __/  __/ |_) |  __/ |
-\/ /_/ \___/ \__,_|___/\___\/  \/\___|\___| .__/ \___|_|
-                                          |_|
+   ___ _                 _                                       
+  / __\ | ___  _   _  __| |_____      _____  ___ _ __   ___ _ __ 
+ / /  | |/ _ \| | | |/ _` + "`" + ` / __\ \ /\ / / _ \/ _ \ '_ \ / _ \ '__|
+/ /___| | (_) | |_| | (_| \__ \\ V  V /  __/  __/ |_) |  __/ |   
+\____/|_|\___/ \__,_|\__,_|___/ \_/\_/ \___|\___| .__/ \___|_|   
+                                                |_|
 `
 
 const (
@@ -72,7 +74,7 @@ func main() {
 		log.Println("Resetting all tags")
 		org := parseOrganization(*orgFile)
 		mngr := initManager(csp, org)
-		cleanup.ResetHousekeeper(mngr)
+		cleanup.ResetCloudsweeper(mngr)
 	case cmdMark:
 		log.Println("Marking old resources for cleanup")
 		org := parseOrganization(*orgFile)
@@ -110,16 +112,16 @@ func main() {
 		mapping := map[string]string{sharedDevAWSAccount: "cloud-dev", prodAWSAccount: "prod", sharedQAAccount: "qa"}
 		notify.UntaggedResourcesReview(mngr, mapping)
 	case cmdSetup:
-		log.Println("Running housekeeper setup")
+		log.Println("Running cloudsweeper setup")
 		setup.PerformSetup()
 	default:
 		// Default to setup
-		log.Println("Running housekeeper setup")
+		log.Println("Running cloudsweeper setup")
 		setup.PerformSetup()
 	}
 }
 
-func initManager(csp cloud.CSP, org *hk.Organization) cloud.ResourceManager {
+func initManager(csp cloud.CSP, org *cs.Organization) cloud.ResourceManager {
 	manager, err := cloud.NewManager(csp, org.EnabledAccounts(csp)...)
 	if err != nil {
 		log.Fatal(err)
@@ -128,12 +130,12 @@ func initManager(csp cloud.CSP, org *hk.Organization) cloud.ResourceManager {
 	return manager
 }
 
-func parseOrganization(inputFile string) *hk.Organization {
+func parseOrganization(inputFile string) *cs.Organization {
 	raw, err := ioutil.ReadFile(inputFile)
 	if err != nil {
 		log.Fatalf("Could not read organization file: %s\n", err)
 	}
-	org, err := hk.InitOrganization(raw)
+	org, err := cs.InitOrganization(raw)
 	if err != nil {
 		log.Fatalf("Failed to initalize organization: %s\n", err)
 	}

@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
-POLICY_NAME="HouseKeeperPolicy"
-ROLE_NAME="brkt-HouseKeeper"
+POLICY_NAME="CloudsweeperPolicy"
+ROLE_NAME="Cloudsweeper"
 
-HOUSEKEEPER_POLICY='{
+CLOUDSWEEPER_POLICY='{
     "Version": "2012-10-17",
     "Statement": [
         {
@@ -60,7 +60,7 @@ ASSUME_POLICY_DOCUMENT='{
 account=$(aws sts get-caller-identity --output text --query 'Account')
 
 echo "Creating policy"
-aws iam create-policy --policy-name=$POLICY_NAME --policy-document="$HOUSEKEEPER_POLICY"
+aws iam create-policy --policy-name=$POLICY_NAME --policy-document="$CLOUDSWEEPER_POLICY"
 echo "Creating role"
 aws iam create-role --role-name=$ROLE_NAME --assume-role-policy-document="$ASSUME_POLICY_DOCUMENT"
 echo "Attaching policy to role"

@@ -4,25 +4,26 @@
 package notify
 
 import (
-	"brkt/cloudsweeper/cloud"
-	"brkt/cloudsweeper/cloud/billing"
-	"brkt/cloudsweeper/cloud/filter"
-	hk "brkt/cloudsweeper/housekeeper"
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/cloudtools/cloudsweeper/cloud"
+	"github.com/cloudtools/cloudsweeper/cloud/billing"
+	"github.com/cloudtools/cloudsweeper/cloud/filter"
+	cs "github.com/cloudtools/cloudsweeper/cloudsweeper"
 )
 
 // Here is where you use credentials to send email
 // note that monthToDateAddressee is intended to be sent weekly
-// to your entire org.  
+// to your entire org.
 // the totalSumAddressee is meant to send a total report to
 // the person in your org monitoring costs
 
 const (
 	smtpUserKey          = "SMTP_USER"
 	smtpPassKey          = "SMTP_PASS"
-	mailDisplayName      = "HouseKeeper"
+	mailDisplayName      = "Cloudsweeper"
 	monthToDateAddressee = "eng@example.com"
 	totalSumAddressee    = "ben"
 )
@@ -50,7 +51,7 @@ func (d *resourceMailData) SendEmail(mailTemplate, title string, debugAddressees
 	}
 	username := convertEmailExceptions(d.Owner)
 
-// Insert a domain name into the usernames in the organization json file
+	// Insert a domain name into the usernames in the organization json file
 	ownerMail := fmt.Sprintf("%s@.example.com", username)
 	log.Printf("Sending out email to %s\n", ownerMail)
 	addressees := append(debugAddressees, ownerMail)
@@ -80,7 +81,7 @@ func initTotalSummaryMailData() *resourceMailData {
 	}
 }
 
-func initManagerToMailDataMapping(managers hk.Employees) map[string]*resourceMailData {
+func initManagerToMailDataMapping(managers cs.Employees) map[string]*resourceMailData {
 	result := make(map[string]*resourceMailData)
 	for _, manager := range managers {
 		result[manager.Username] = &resourceMailData{
@@ -102,7 +103,7 @@ func initManagerToMailDataMapping(managers hk.Employees) map[string]*resourceMai
 //		- Resource is older than 30 days
 //		- A whitelisted resource is older than 6 months
 //		- An instance marked with do-not-delete is older than a week
-func OldResourceReview(mngr cloud.ResourceManager, org *hk.Organization, csp cloud.CSP) {
+func OldResourceReview(mngr cloud.ResourceManager, org *cs.Organization, csp cloud.CSP) {
 	allCompute := mngr.AllResourcesPerAccount()
 	allBuckets := mngr.BucketsPerAccount()
 	accountUserMapping := org.AccountToUserMapping(csp)
@@ -213,7 +214,7 @@ func UntaggedResourcesReview(mngr cloud.ResourceManager, accountUserMapping map[
 			// Send mail
 			// title := fmt.Sprintf("You have %d un-tagged resources to review (%s)", mailData.ResourceCount(), time.Now().Format("2006-01-02"))
 			// You can add some debug email address to ensure it works
-			// debugAddressees := []string{"ben@example.com"} 
+			// debugAddressees := []string{"ben@example.com"}
 			// mailData.SendEmail(untaggedMailTemplate, title, debugAddressees...)
 		}
 	}
@@ -247,7 +248,7 @@ func DeletionWarning(hoursInAdvance int, mngr cloud.ResourceManager, accountUser
 		if mailData.ResourceCount() > 0 {
 			// Now send email
 			// title := fmt.Sprintf("Deletion warning, %d resources are cleaned up within %d hours", mailData.ResourceCount(), hoursInAdvance)
-			// debugAddressees := []string{"ben@example.com"} 
+			// debugAddressees := []string{"ben@example.com"}
 			// mailData.SendEmail(deletionWarningTemplate, title, debugAddressees...)
 		}
 	}

@@ -3,28 +3,28 @@ WARNING_HOURS		:= 48
 DOCKER_GOOGLE_FLAG	:= $(shell echo $${GOOGLE_APPLICATION_CREDENTIALS:+-v ${GOOGLE_APPLICATION_CREDENTIALS}:/google-creds -e GOOGLE_APPLICATION_CREDENTIALS=/google-creds})
 
 build:
-	docker build -t housekeeper .
+	docker build -t cloudsweeper .
 
 run:
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm housekeeper  $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE)
+		--rm cloudsweeper  $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE)
 
 cleanup: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) cleanup
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) cleanup
 
 reset: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) reset
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) reset
 
 review: build
 	docker run \
@@ -33,14 +33,14 @@ review: build
 		$(DOCKER_GOOGLE_FLAG) \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) review
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) review
 
 mark: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) mark-for-cleanup
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) mark-for-cleanup
 
 warn: build
 	docker run \
@@ -49,7 +49,7 @@ warn: build
 		$(DOCKER_GOOGLE_FLAG) \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --warning-hours=$(WARNING_HOURS) --org-file=$(ORG_FILE) warn
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --warning-hours=$(WARNING_HOURS) --org-file=$(ORG_FILE) warn
 
 untagged: build
 	docker run \
@@ -58,7 +58,7 @@ untagged: build
 		$(DOCKER_GOOGLE_FLAG) \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper find-untagged
+		--rm cloudsweeper find-untagged
 
 billing-report: build
 	docker run \
@@ -67,16 +67,16 @@ billing-report: build
 		$(DOCKER_GOOGLE_FLAG) \
 		-e SMTP_USER \
 		-e SMTP_PASS \
-		--rm housekeeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) billing-report
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) billing-report
 
 setup: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm -it housekeeper setup
+		--rm -it cloudsweeper setup
 
 test: build
-	docker run --rm --entrypoint go housekeeper test -cover ./...
+	docker run --rm --entrypoint go cloudsweeper test -cover ./...
 
 build-and-run: build run

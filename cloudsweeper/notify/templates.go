@@ -6,14 +6,14 @@ package notify
 const reviewMailTemplate = `<h1>Hello {{ .Owner -}},</h1>
 
 <p>
-In a weekly review, HouseKeeper has detected resources that may be out of use, based upon their age
+In a weekly review, Cloudsweeper has detected resources that may be out of use, based upon their age
 </p>
 
 <p><b>Please review and choose from one of two options:</b></p>
 
 <ol>
 	<li>Manually delete old resources no longer in use</li>
-	<li>Wait for housekeeper to delete these items for you (if you signed up for housekeeping services)</li>
+	<li>Wait for Cloudsweeper to delete these items for you (if you signed up for Cloudsweeper services)</li>
 </ol>
 
 <p>
@@ -21,7 +21,7 @@ Whitelisting and cleanup info:
 </p>
 
 <p>
-If you are signed up for housekeeper and whitelisted some items, they are marked in green and will not
+If you are signed up for Cloudsweeper and whitelisted some items, they are marked in green and will not
 be deleted. <b>Please review them in case they no longer should be whitelisted</b>.
 </p>
 
@@ -33,14 +33,14 @@ whitelist it: add a tag with the key "whitelisted" to it.
 <p>
 To schedule automated clean up, please add one of the following two types of tags (key: value) to your resource: 
 <br />
-"<b>housekeeper-lifetime</b>: days-x", where x is the amount of days to keep the resource
+"<b>cloudsweeper-lifetime</b>: days-x", where x is the amount of days to keep the resource
 <br />
-"<b>housekeeper-expiry</b>: YYYY-MM-DD", to clean a resource up after the specified date, e.g. 2018-01-30
+"<b>cloudsweeper-expiry</b>: YYYY-MM-DD", to clean a resource up after the specified date, e.g. 2018-01-30
 </p>
 
 <p>
-Read more about how HouseKeeper works and how to better tag your resources at
-<a href="https://wiki.int.brkt.com/display/eng/HouseKeeper+-+Automated+Cleanup+of+cloud+resources">this Wiki page</a>.
+Read more about how Cloudsweeper works and how to better tag your resources at
+<a href="#">this Wiki page</a>.
 </p>
 
 <h2>Old resources:</h2>
@@ -175,7 +175,7 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 
 <p>
 Thank you,<br />
-Your loyal housekeeper
+Your loyal Cloudsweeper
 </p>
 `
 
@@ -317,7 +317,7 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 
 <p>
 Thank you,<br />
-Your loyal housekeeper
+Your loyal Cloudsweeper
 </p>
 `
 
@@ -459,7 +459,7 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 
 <p>
 Thank you,<br />
-Your loyal housekeeper
+Your loyal Cloudsweeper
 </p>
 `
 
@@ -477,8 +477,8 @@ If you want to save any of these resources, add a tag with the key <b>whiteliste
 </p>
 
 <p>
-Read more about how HouseKeeper works and how to better tag your resources at
-<a href="https://wiki.int.brkt.com/display/eng/HouseKeeper+-+Automated+Cleanup+of+cloud+resources">this Wiki page</a>.
+Read more about how Cloudsweeper works and how to better tag your resources at
+<a href="#">this Wiki page</a>.
 </p>
 
 <h2>Old resources:</h2>
@@ -610,7 +610,7 @@ Read more about how HouseKeeper works and how to better tag your resources at
 
 <p>
 Thank you,<br />
-Your loyal housekeeper
+Your loyal Cloudsweeper
 </p>
 `
 
@@ -627,8 +627,8 @@ Please tag these resources appropriately.
 </p>
 
 <p>
-Read more about how HouseKeeper works and how to better tag your resources at
-<a href="https://wiki.int.brkt.com/display/eng/HouseKeeper+-+Automated+Cleanup+of+cloud+resources">this Wiki page</a>.
+Read more about how Cloudsweeper works and how to better tag your resources at
+<a href="#">this Wiki page</a>.
 </p>
 
 <h2>Untagged resources:</h2>
@@ -755,7 +755,7 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 
 <p>
 Thank you,<br />
-Your loyal housekeeper
+Your loyal Cloudsweeper
 </p>
 `
 
@@ -814,6 +814,6 @@ In the detailed breakdown, only costs over ${{ .MinimumCost }} are listed (but e
 
 <p>
 Thank you,<br />
-Your loyal housekeeper
+Your loyal Cloudsweeper
 </p>
 `

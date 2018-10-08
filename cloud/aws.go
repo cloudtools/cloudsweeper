@@ -41,7 +41,7 @@ func (m *awsResourceManager) Owners() []string {
 }
 
 const (
-	assumeRoleARNTemplate = "arn:aws:iam::%s:role/brkt-HouseKeeper"
+	assumeRoleARNTemplate = "arn:aws:iam::%s:role/Cloudsweeper"
 
 	accessDeniedErrorCode = "AccessDenied"
 	unauthorizedErrorCode = "UnauthorizedOperation"

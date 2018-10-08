@@ -11,9 +11,9 @@ import (
 	"strings"
 )
 
-// PerformSetup will start setting up HouseKeeper for the user.
+// PerformSetup will start setting up Cloudsweeper for the user.
 func PerformSetup() {
-	fmt.Println("Welcome to HouseKeeper, performing account setup...")
+	fmt.Println("Welcome to Cloudsweeper, performing account setup...")
 
 	err := awsSetup()
 	if err != nil {

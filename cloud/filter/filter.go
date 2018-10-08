@@ -4,7 +4,7 @@
 package filter
 
 import (
-	"brkt/cloudsweeper/cloud"
+	"github.com/cloudtools/cloudsweeper/cloud"
 )
 
 // New will create a new resource filter ready to use

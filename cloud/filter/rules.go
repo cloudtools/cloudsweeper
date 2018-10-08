@@ -4,24 +4,25 @@
 package filter
 
 import (
-	"brkt/cloudsweeper/cloud"
 	"log"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/cloudtools/cloudsweeper/cloud"
 )
 
 const (
 	// WhitelistTagKey marks a resource to not matched by filter
 	WhitelistTagKey = "whitelisted"
 	// LifetimeTagKey marks a resource to be cleaned up after X days
-	LifetimeTagKey = "housekeeper-lifetime"
+	LifetimeTagKey = "cloudsweeper-lifetime"
 	// ExpiryTagKey marks a resource to be cleaned up at the specified date (YYYY-MM-DD)
-	ExpiryTagKey = "housekeeper-expiry"
+	ExpiryTagKey = "cloudsweeper-expiry"
 	// DeleteTagKey marks a resource for deletion. This is used internally by houskeeper
 	// to keep track of resources that should be cleaned up, but was not explicitly tagged
 	// by the resource owner.
-	DeleteTagKey = "housekeeper-delete-at"
+	DeleteTagKey = "cloudsweeper-delete-at"
 	// ExpiryTagValueFormat is the format to use when setting expiry date
 	ExpiryTagValueFormat = "2006-01-02" // Used to parse string
 )
@@ -119,7 +120,7 @@ func IsPublic() func(cloud.Resource) bool {
 }
 
 // LifetimeExceeded check if a resource have the lifetime tag,
-// with the format "housekeeper-lifetime: days-X" (where X is the amount of
+// with the format "cloudsweeper-lifetime: days-X" (where X is the amount of
 // days to keep the resource). If the lifetime is passed, then
 // this resource should be included in the filter.
 func LifetimeExceeded() func(cloud.Resource) bool {
@@ -147,7 +148,7 @@ func LifetimeExceeded() func(cloud.Resource) bool {
 }
 
 // ExpiryDatePassed checks is the expiry date for a resource has passed. The
-// expiry tag has the format "housekeeper-expiry: 2018-06-17".
+// expiry tag has the format "cloudsweeper-expiry: 2018-06-17".
 func ExpiryDatePassed() func(cloud.Resource) bool {
 	return func(r cloud.Resource) bool {
 		expiryVal, hasExpiry := r.Tags()[ExpiryTagKey]
@@ -184,7 +185,7 @@ func DeleteWithinXHours(hours int) func(cloud.Resource) bool {
 }
 
 // DeleteAtPassed checks is the delete-at time for a resource has passed. The
-// delete tag has the format "housekeeper-delete-at: 2018-01-25T16:51:39-08:00".
+// delete tag has the format "cloudsweeper-delete-at: 2018-01-25T16:51:39-08:00".
 func DeleteAtPassed() func(cloud.Resource) bool {
 	return func(r cloud.Resource) bool {
 		deleteAt, exist := r.Tags()[DeleteTagKey]

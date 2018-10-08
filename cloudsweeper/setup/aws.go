@@ -19,10 +19,10 @@ import (
 )
 
 const awsInfo = `
-HouseKeeper can be used to monitor your AWS account
+Cloudsweeper can be used to monitor your AWS account
 in order to keep resource usage and cost down for you.
 
-Running this setup will give HouseKeeper access to
+Running this setup will give Cloudsweeper access to
 EC2 and S3 in order to perform monitoring and cleanup.
 `
 
@@ -33,7 +33,7 @@ const awsAssumeRoleDoc = `{
 		{
 			"Effect": "Allow",
 			"Principal": {
-				"AWS": "arn:aws:iam::475063612724:user/jenkins-housekeeper"
+				"AWS": "arn:aws:iam::475063612724:user/jenkins-housekeeper" //
 			},
 			"Action": "sts:AssumeRole"
 		}
@@ -41,9 +41,9 @@ const awsAssumeRoleDoc = `{
   }`
 
 const (
-	roleName   = "brkt-HouseKeeper"
-	policyName = "HouseKeeperPolicy"
-	policyDesc = "Allow HouseKeeper to access your resources"
+	roleName   = "Cloudsweeper"
+	policyName = "CloudsweeperPolicy"
+	policyDesc = "Allow Cloudsweeper to access your resources"
 
 	awsPolicyOrRoleExist = "EntityAlreadyExists"
 
@@ -110,7 +110,7 @@ func awsSetup() error {
 		}
 		role, err = createAWSRole(roleName, iamClient)
 		if err != nil {
-			return fmt.Errorf("Could not create HouseKeeper role: %s", err)
+			return fmt.Errorf("Could not create Cloudsweeper role: %s", err)
 		}
 	} else if err != nil {
 		return err
@@ -123,14 +123,14 @@ func awsSetup() error {
 		PolicyArn: (*policy).Arn,
 	})
 	if err != nil {
-		return fmt.Errorf("Could not attach HouseKeeper policy to HouseKeeper role: %s", err)
+		return fmt.Errorf("Could not attach Cloudsweeper policy to Cloudsweeper role: %s", err)
 	}
 	return nil
 }
 
 func getAWSConf() *config {
 	conf := new(config)
-	if !getYes("Allow HouseKeeper to monitor and cleanup?", true) {
+	if !getYes("Allow Cloudsweeper to monitor and cleanup?", true) {
 		return conf
 	}
 	// Don't let the user choose what to allow, per request
@@ -184,7 +184,7 @@ func deleteAWSRole(name string, iamClient *iam.IAM) error {
 }
 
 func createAWSRole(name string, iamClient *iam.IAM) (*iam.Role, error) {
-	// Create a new role that can be assumed by HouseKeeper
+	// Create a new role that can be assumed by Cloudsweeper
 	input := &iam.CreateRoleInput{
 		AssumeRolePolicyDocument: aws.String(awsAssumeRoleDoc),
 		Description:              aws.String(policyDesc),
@@ -229,7 +229,7 @@ type config struct {
 func (c config) String() string {
 	template := `
 
-### HouseKeeper configuration ###
+### Cloudsweeper configuration ###
 
 Allow monitoring of resources: %t
 	EC2:	%t

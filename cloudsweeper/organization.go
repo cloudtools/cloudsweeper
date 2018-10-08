@@ -1,17 +1,18 @@
 // Copyright (c) 2018 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: BSD-2-Clause
 
-// This structure was set up for an org wherein all employees 
-// have their own cloud accounts, and are aggregated under a 
-// single payer account.  In the case you have only a single 
+// This structure was set up for an org wherein all employees
+// have their own cloud accounts, and are aggregated under a
+// single payer account.  In the case you have only a single
 // account, this will be superfluous.
 
-package housekeeper
+package cloudsweeper
 
 import (
-	"brkt/cloudsweeper/cloud"
 	"encoding/json"
 	"fmt"
+
+	"github.com/cloudtools/cloudsweeper/cloud"
 )
 
 // Organization represents the employees,
@@ -64,10 +65,10 @@ type Employees []*Employee
 
 // AWSAccount represents an account in AWS. An account
 // can have automatic cleanup enabled, indiacated by
-// the HouseKeeperEnabled attribute.
+// the CloudsweeperEnabled attribute.
 type AWSAccount struct {
-	ID                 string `json:"id"`
-	HouseKeeperEnabled bool   `json:"housekeeper_enabled,omitempty"`
+	ID                  string `json:"id"`
+	CloudsweeperEnabled bool   `json:"cloudsweeper_enabled,omitempty"`
 }
 
 // AWSAccounts is a list of AWSAccount
@@ -75,10 +76,10 @@ type AWSAccounts []*AWSAccount
 
 // GCPProject represents a project in GPC. A project
 // can have automatic cleanup enabled, indiacated by
-// the HouseKeeperEnabled attribute.
+// the CloudsweeperEnabled attribute.
 type GCPProject struct {
-	ID                 string `json:"id"`
-	HouseKeeperEnabled bool   `json:"housekeeper_enabled,omitempty"`
+	ID                  string `json:"id"`
+	CloudsweeperEnabled bool   `json:"cloudsweeper_enabled,omitempty"`
 }
 
 // GCPProjects is a list of GCPProject
@@ -143,7 +144,7 @@ func (org *Organization) EmployeesForManager(manager *Employee) (Employees, erro
 	return Employees{}, nil
 }
 
-// EnabledAccounts will return a list of all housekeeper enabled accounts
+// EnabledAccounts will return a list of all cloudsweeper enabled accounts
 // in the specified CSP
 func (org *Organization) EnabledAccounts(csp cloud.CSP) []string {
 	accounts := []string{}
@@ -151,13 +152,13 @@ func (org *Organization) EnabledAccounts(csp cloud.CSP) []string {
 		switch csp {
 		case cloud.AWS:
 			for _, account := range employee.AWSAccounts {
-				if account.HouseKeeperEnabled {
+				if account.CloudsweeperEnabled {
 					accounts = append(accounts, account.ID)
 				}
 			}
 		case cloud.GCP:
 			for _, project := range employee.GCPProjects {
-				if project.HouseKeeperEnabled {
+				if project.CloudsweeperEnabled {
 					accounts = append(accounts, project.ID)
 				}
 			}

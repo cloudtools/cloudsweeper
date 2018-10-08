@@ -4,11 +4,12 @@
 package cleanup
 
 import (
-	"brkt/cloudsweeper/cloud"
-	"brkt/cloudsweeper/cloud/billing"
-	"brkt/cloudsweeper/cloud/filter"
 	"log"
 	"time"
+
+	"github.com/cloudtools/cloudsweeper/cloud"
+	"github.com/cloudtools/cloudsweeper/cloud/billing"
+	"github.com/cloudtools/cloudsweeper/cloud/filter"
 )
 
 const (
@@ -230,13 +231,13 @@ func cleanupReleaseImagesHelper(mngr cloud.ResourceManager, images []cloud.Image
 	return nil
 }
 
-// ResetHousekeeper will remove any cleanup tags existing in the accounts
+// ResetCloudsweeper will remove any cleanup tags existing in the accounts
 // associated with the provided resource manager
-func ResetHousekeeper(mngr cloud.ResourceManager) {
+func ResetCloudsweeper(mngr cloud.ResourceManager) {
 	allResources := mngr.AllResourcesPerAccount()
 
 	for owner, res := range allResources {
-		log.Println("Resetting housekeeper tags in", owner)
+		log.Println("Resetting Cloudsweeper tags in", owner)
 		taggedFilter := filter.New()
 		taggedFilter.AddGeneralRule(filter.HasTag(filter.DeleteTagKey))
 

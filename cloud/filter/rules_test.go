@@ -4,9 +4,10 @@
 package filter
 
 import (
-	"brkt/cloudsweeper/cloud"
 	"testing"
 	"time"
+
+	"github.com/cloudtools/cloudsweeper/cloud"
 )
 
 const (

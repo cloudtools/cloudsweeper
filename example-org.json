@@ -1,0 +1,47 @@
+{
+	"managers": [
+		{
+			"username": "somemanager"
+		}
+	],
+	"departments": [
+		{
+			"number": 1,
+			"id": "dev",
+			"name": "Developers"
+		}
+	],
+	"employees": [
+		{
+			"username": "someuser",
+			"real_name": "Some User",
+			"manager": "somemanager",
+			"department": "dev",
+			"disabled": false,
+			"aws_accounts": [
+				{
+					"id": "12345667890",
+					"cloudsweeper_enabled": true
+				}
+			],
+			"gcp_projects": [
+				{
+					"id": "some-gcp-project"
+				}
+			]
+		},
+		{
+			"username": "somemanager",
+			"real_name": "Some Manager",
+			"manager": "",
+			"department": "dev",
+			"aws_accounts": [
+				{
+					"id": "09876543234",
+					"cloudsweeper_enabled": false
+				}
+			],
+			"gcp_projects": []
+		}
+	]
+}
