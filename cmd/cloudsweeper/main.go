@@ -36,6 +36,7 @@ var (
 	awsBillingBucketRegion = flag.String("billing-bucket-region", "", "Specify AWS region where --billing-bucket is location")
 	gcpBillingCSVPrefix    = flag.String("billing-csv-prefix", "", "Specify name prefix of GCP billing CSV files")
 	billingBucket          = flag.String("billing-bucket", "", "Specify bucket with billing CSVs")
+	awsBillingSortTag      = flag.String("billing-sort-tag", "", "Specify a tag to sort on when creating report")
 
 	mailUser     = flag.String("smpt-username", "", "SMTP username used to send email")
 	mailPassword = flag.String("smpt-password", "", "SMTP password used to send email")
@@ -103,7 +104,8 @@ func main() {
 			billingAccount := findConfig("billing-account")
 			bucket := findConfig("billing-bucket")
 			region := findConfig("billing-bucket-region")
-			reporter = billing.NewReporterAWS(billingAccount, bucket, region)
+			sortTag := findConfig("billing-sort-tag")
+			reporter = billing.NewReporterAWS(billingAccount, bucket, region, sortTag)
 		} else if csp == cloud.GCP {
 			bucket := findConfig("billing-bucket")
 			prefix := findConfig("billing-csv-prefix")
@@ -115,9 +117,10 @@ func main() {
 		report := billing.GenerateReport(reporter)
 		org := parseOrganization(findConfig("org-file"))
 		mapping := org.AccountToUserMapping(csp)
-		log.Println(report.FormatReport(mapping))
+		sortTagKey := findConfig("billing-sort-tag")
+		log.Println(report.FormatReport(mapping, sortTagKey != ""))
 		client := initNotifyClient()
-		client.MonthToDateReport(report, mapping)
+		client.MonthToDateReport(report, mapping, sortTagKey != "")
 	case "find-untagged":
 		log.Println("Finding untagged resources")
 		org := parseOrganization(findConfig("org-file"))

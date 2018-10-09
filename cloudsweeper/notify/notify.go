@@ -276,9 +276,15 @@ func (c *Client) DeletionWarning(hoursInAdvance int, mngr cloud.ResourceManager,
 
 // MonthToDateReport sends an email to engineering with the
 // Month-to-Date billing report
-func (c *Client) MonthToDateReport(report billing.Report, accountUserMapping map[string]string) {
+func (c *Client) MonthToDateReport(report billing.Report, accountUserMapping map[string]string, sortedByTags bool) {
 	mailClient := getMailClient(c)
-	reportData := monthToDateData{report.CSP, report.TotalCost(), report.SortedUsersByTotalCost(), billing.MinimumTotalCost, billing.MinimumCost, accountUserMapping}
+	var sorted billing.UserList
+	if sortedByTags {
+		sorted = report.SortedTagsByTotalCost()
+	} else {
+		sorted = report.SortedUsersByTotalCost()
+	}
+	reportData := monthToDateData{report.CSP, report.TotalCost(), sorted, billing.MinimumTotalCost, billing.MinimumCost, accountUserMapping}
 	mailContent, err := generateMail(reportData, monthToDateTemplate)
 	if err != nil {
 		log.Fatalln("Could not generate email:", err)

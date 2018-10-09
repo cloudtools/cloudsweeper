@@ -25,8 +25,9 @@ import (
 )
 
 const (
-	awsCSVDateFormat = "2006-01-02"
-	awsCSVNameFormat = "%s-aws-billing-detailed-line-items-%d-%02d.csv.zip"
+	awsCSVDateFormat         = "2006-01-02"
+	awsCSVNameFormat         = "%s-aws-billing-detailed-line-items-%d-%02d.csv.zip"
+	awsCSVNameFormatWithTags = "%s-aws-billing-detailed-line-items-with-resources-and-tags-%d-%02d.csv.zip"
 )
 
 type awsReporter struct {
@@ -34,18 +35,25 @@ type awsReporter struct {
 	billingAccount      string
 	billingBucket       string
 	billingBucketRegion string
+	sortByTag           string
 }
 
 func (r *awsReporter) GenerateReport(start time.Time) Report {
 	report := Report{}
 	report.CSP = r.csp
 
-	name := fmt.Sprintf(awsCSVNameFormat, r.billingAccount, start.Year(), start.Month())
+	var name string
+	if r.sortByTag == "" {
+		name = fmt.Sprintf(awsCSVNameFormat, r.billingAccount, start.Year(), start.Month())
+	} else {
+		name = fmt.Sprintf(awsCSVNameFormatWithTags, r.billingAccount, start.Year(), start.Month())
+	}
+
 	csvFile, err := r.getCSVFromS3(name)
 	if err != nil {
 		log.Println("Failed to get", name, ":", err)
 	}
-	err = processAwsCsv(&report, csvFile, true)
+	err = r.processAwsCsv(&report, csvFile, true)
 	if err != nil {
 		log.Println("Failed to process CSV", name)
 	}
@@ -53,7 +61,7 @@ func (r *awsReporter) GenerateReport(start time.Time) Report {
 	return report
 }
 
-func processAwsCsv(report *Report, csvFile *csv.Reader, allowFailed bool) error {
+func (r *awsReporter) processAwsCsv(report *Report, csvFile *csv.Reader, allowFailed bool) error {
 	csvHeaders := make(map[string]int)
 	line := 0
 	for {
@@ -93,6 +101,15 @@ func processAwsCsv(report *Report, csvFile *csv.Reader, allowFailed bool) error 
 			}
 		}
 		reportItem.Cost = costNumber
+		if r.sortByTag != "" {
+			if idx, exist := csvHeaders[fmt.Sprintf("user:%s", r.sortByTag)]; exist {
+				reportItem.sortTagValue = record[idx]
+			} else if idx, exist := csvHeaders[fmt.Sprintf("aws:%s", r.sortByTag)]; exist {
+				reportItem.sortTagValue = record[idx]
+			} else if !allowFailed {
+				return fmt.Errorf("Could not find tag %s in report", r.sortByTag)
+			}
+		}
 		report.Items = append(report.Items, reportItem)
 		line++
 	}

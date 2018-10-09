@@ -11,6 +11,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+const optionalDefault = "<optional>"
+
 type lookup struct {
 	confKey      string
 	defaultValue string
@@ -26,6 +28,7 @@ var configMapping = map[string]lookup{
 	"billing-bucket-region": lookup{"CS_BILLING_BUCKET_REGION", ""},
 	"billing-csv-prefix":    lookup{"CS_BILLING_CSV_PREFIX", ""},
 	"billing-bucket":        lookup{"CS_BILLING_BUCKET_NAME", ""},
+	"billing-sort-tag":      lookup{"CS_BILLING_SORT_TAG", optionalDefault},
 
 	// Email variables
 	"smtp-username": lookup{"CS_SMTP_USER", ""},
@@ -59,11 +62,14 @@ func findConfig(name string) string {
 	flagVal := flag.Lookup(name).Value.String()
 	if flagVal != "" {
 		return flagVal
-	} else if confVal, ok := config[configMapping[name].confKey]; ok {
+	} else if confVal, ok := config[configMapping[name].confKey]; ok && confVal != "" {
 		maybeNoValExit(confVal, name)
 		return confVal
 	} else {
 		defaultVal := configMapping[name].defaultValue
+		if defaultVal == optionalDefault {
+			return ""
+		}
 		maybeNoValExit(defaultVal, name)
 		return defaultVal
 	}

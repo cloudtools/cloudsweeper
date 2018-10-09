@@ -24,9 +24,10 @@ const (
 // the cost for a specific service for a certain user in a certain
 // account/project.
 type ReportItem struct {
-	Owner       string
-	Description string
-	Cost        float64
+	Owner        string
+	Description  string
+	Cost         float64
+	sortTagValue string
 }
 
 // User represents an User and it's TotalCost
@@ -67,7 +68,7 @@ type Reporter interface {
 // requires specifying the account which holds the billing information,
 // the bucket where the billing CSVs can be found as well as which region
 // this bucket is in. None of these arguments must be empty.
-func NewReporterAWS(billingAccount, bucket, bucketRegion string) Reporter {
+func NewReporterAWS(billingAccount, bucket, bucketRegion, sortTag string) Reporter {
 	if billingAccount == "" || bucket == "" || bucketRegion == "" {
 		panic("Invalid arguments, must not be empty (\"\")")
 	}
@@ -76,6 +77,7 @@ func NewReporterAWS(billingAccount, bucket, bucketRegion string) Reporter {
 		billingAccount:      billingAccount,
 		billingBucket:       bucket,
 		billingBucketRegion: bucketRegion,
+		sortByTag:           sortTag,
 	}
 }
 
@@ -155,38 +157,95 @@ func (r *Report) SortedUsersByTotalCost() UserList {
 	return userList
 }
 
+// SortedTagsByTotalCost returns a sorted list of grouped sort tag values,
+// sorted by their total cost.
+func (r *Report) SortedTagsByTotalCost() UserList {
+	type tempTag struct {
+		name          string
+		totalCost     float64
+		detailedCosts map[string]float64
+	}
+	tagMap := make(map[string]*tempTag)
+	// Iterate through all report items
+	for _, item := range r.Items {
+		// Group by sort tag value
+		if tag, ok := tagMap[item.sortTagValue]; ok {
+			tag.totalCost += item.Cost
+			// Group by Description
+			if cost, ok := tag.detailedCosts[item.Description]; ok {
+				tag.detailedCosts[item.Description] = cost + item.Cost
+			} else {
+				tag.detailedCosts[item.Description] = item.Cost
+			}
+		} else {
+			costs := make(map[string]float64)
+			costs[item.Description] = item.Cost
+			tagMap[item.sortTagValue] = &tempTag{item.sortTagValue, item.Cost, costs}
+		}
+	}
+
+	tagList := make(UserList, 0, len(tagMap))
+	for _, tag := range tagMap {
+		// Omit tags with low total cost
+		if tag.totalCost < MinimumTotalCost {
+			continue
+		}
+
+		// Convert detailed costs into sorted cost lists
+		detailedCostList := convertCostMapToSortedList(tag.detailedCosts)
+		// Add generated tag to tag list
+		tagList = append(tagList, User{tag.name, tag.totalCost, detailedCostList})
+	}
+
+	sort.Sort(sort.Reverse(tagList))
+	return tagList
+}
+
 // FormatReport returns a simple version of the Month-to-date billing report. It
 // takes a mapping form account/project ID to employee username in order to
 // more easily distinguish the owner of a cost.
-func (r *Report) FormatReport(accountToUserMapping map[string]string) string {
+func (r *Report) FormatReport(accountToUserMapping map[string]string, sortedByTags bool) string {
 	b := new(bytes.Buffer)
-	sortedUsersByTotalCost := r.SortedUsersByTotalCost()
+	var sorted UserList
+	if sortedByTags {
+		sorted = r.SortedTagsByTotalCost()
+	} else {
+		sorted = r.SortedUsersByTotalCost()
+	}
 
 	fmt.Fprintln(b, "\n\nSummary:")
-	fmt.Fprintln(b, "Account      | Cost ($)")
+	fmt.Fprintln(b, "Name      | Cost ($)")
 	fmt.Fprintln(b, "----------------------------")
-	for _, user := range sortedUsersByTotalCost {
+	for _, user := range sorted {
 		name := user.Name
 		if realName, exist := accountToUserMapping[name]; exist {
 			name = realName
 		} else {
 			// Assume this is a support cost
 			if name == "" {
-				name = "Support"
+				if sortedByTags {
+					name = "<not tagged>"
+				} else {
+					name = "Support"
+				}
 			}
 		}
 		fmt.Fprintf(b, "%-12s | %8.2f\n", name, user.TotalCost)
 	}
 
 	fmt.Fprintf(b, "\nDetails:")
-	for _, user := range sortedUsersByTotalCost {
+	for _, user := range sorted {
 		name := user.Name
 		if realName, exist := accountToUserMapping[name]; exist {
 			name = realName
 		} else {
 			// Assume this is a support cost
 			if name == "" {
-				name = "support"
+				if sortedByTags {
+					name = "<not tagged>"
+				} else {
+					name = "support"
+				}
 			}
 		}
 		fmt.Fprintf(b, "\n%s's costs:\n", name)
