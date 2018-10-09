@@ -15,6 +15,7 @@ import (
 	"github.com/cloudtools/cloudsweeper/cloud/billing"
 	cs "github.com/cloudtools/cloudsweeper/cloudsweeper"
 	"github.com/cloudtools/cloudsweeper/cloudsweeper/cleanup"
+	"github.com/cloudtools/cloudsweeper/cloudsweeper/find"
 	"github.com/cloudtools/cloudsweeper/cloudsweeper/notify"
 	"github.com/cloudtools/cloudsweeper/cloudsweeper/setup"
 )
@@ -48,6 +49,8 @@ var (
 	mailDomain      = flag.String("mail-domain", "", "The mail domain appended to usernames specified in the organization")
 
 	setupARN = flag.String("aws-master-arn", "", "AWS ARN of role in account used by Cloudsweeper to assume roles")
+
+	findResourceID = flag.String("resource-id", "", "ID of resource to find with find-resource command")
 )
 
 const banner = `
@@ -122,6 +125,22 @@ func main() {
 		mapping := org.AccountToUserMapping(csp)
 		client := initNotifyClient()
 		client.UntaggedResourcesReview(mngr, mapping)
+	case "find-resource":
+		id := *findResourceID
+		if id == "" {
+			log.Fatalln("Must specify a resource ID to find, using --resource-id=<ID>")
+		}
+		log.Printf("Finding resource with ID %s", id)
+		org := parseOrganization(findConfig("org-file"))
+		mngr := initManager(csp, org)
+		client, err := find.Init(mngr, org, csp)
+		if err != nil {
+			log.Fatalf("Could not initalize find client: %s", err)
+		}
+		err = client.FindResource(id)
+		if err != nil {
+			log.Fatal(err)
+		}
 	case "setup":
 		log.Println("Running cloudsweeper setup")
 		setup.PerformSetup(findConfig("aws-master-arn"))

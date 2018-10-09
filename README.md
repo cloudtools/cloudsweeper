@@ -46,6 +46,9 @@ Marking will go through resources in the a users account and look for those that
 
 The resources will be marked with a tag with key `cloudsweeper-delete-at` and the value be a RFC3339 encoded timestamp.
 
+### Finding resources - `RESOURCE_ID=<resource ID> make find`
+Cloudsweeper can be used to find out more details about a specified resource in AWS. This is useful to quickly get some more details if all you have is a resource ID. If using the make target, the `RESOURCE_ID` variable must be set. If running the command directly, use the `--resource-id` flag.
+
 ### Cleanup - `make cleanup`
 The cleanup target will look through resources and delete those that should be cleaned up. This is determined by looking at tags of the resources. There are three requirements for this deletion:
 #### Lifetime

@@ -69,6 +69,13 @@ billing-report: build
 		-e SMTP_PASS \
 		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) billing-report
 
+find:
+	docker run \
+		-e AWS_ACCESS_KEY_ID \
+		-e AWS_SECRET_ACCESS_KEY \
+		$(DOCKER_GOOGLE_FLAG) \
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) --resource-id=$(RESOURCE_ID) find-resource
+
 setup: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
