@@ -51,8 +51,6 @@ const (
 
 	awsIDKey     = "AWS_ACCESS_KEY_ID"
 	awsSecretKey = "AWS_SECRET_ACCESS_KEY"
-
-	awsMasterAccountARNKey = "CLOUDSWEEPER_MASTER_ARN"
 )
 
 var (
@@ -67,7 +65,7 @@ var (
 	errSkipAWS     = errors.New("Don't override AWS settings")
 )
 
-func awsSetup() error {
+func awsSetup(masterARN string) error {
 	fmt.Println("Performing AWS setup...")
 
 	_, idExist := os.LookupEnv(awsIDKey)
@@ -103,14 +101,14 @@ func awsSetup() error {
 	fmt.Printf("Created new policy:\n\t%s\n", *policy.Arn)
 
 	// Now create role
-	role, err := createAWSRole(roleName, iamClient)
+	role, err := createAWSRole(masterARN, roleName, iamClient)
 	if err == errRoleExist {
 		// A role already exist, replace it
 		err = deleteAWSRole(roleName, iamClient)
 		if err != nil {
 			return fmt.Errorf("Failed to delete old role: %s", err)
 		}
-		role, err = createAWSRole(roleName, iamClient)
+		role, err = createAWSRole(masterARN, roleName, iamClient)
 		if err != nil {
 			return fmt.Errorf("Could not create Cloudsweeper role: %s", err)
 		}
@@ -185,12 +183,8 @@ func deleteAWSRole(name string, iamClient *iam.IAM) error {
 	return err
 }
 
-func createAWSRole(name string, iamClient *iam.IAM) (*iam.Role, error) {
+func createAWSRole(masterARN, name string, iamClient *iam.IAM) (*iam.Role, error) {
 	// Create a new role that can be assumed by Cloudsweeper
-	masterARN, exist := os.LookupEnv(awsMasterAccountARNKey)
-	if !exist {
-		return nil, errors.New("Master ARN not specified")
-	}
 	policyDoc := fmt.Sprintf(awsAssumeRoleDoc, masterARN)
 	input := &iam.CreateRoleInput{
 		AssumeRolePolicyDocument: aws.String(policyDoc),

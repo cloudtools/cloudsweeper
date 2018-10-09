@@ -20,19 +20,33 @@ import (
 )
 
 const (
-	defaultOrgFile        = "organization.json"
-	warningHoursInAdvance = 48
+	configFileName = "config.conf"
+	cspFlagAWS     = "aws"
+	cspFlagGCP     = "gcp"
 )
 
 var (
-	orgFile      = flag.String("org-file", defaultOrgFile, "Specify where to find the JSON with organization information")
-	warningHours = flag.Int("warning-hours", warningHoursInAdvance, "The number of hours in advance to warn about resource deletion")
-	cspToUse     = flag.String("csp", defaultCSPFlag, "Which CSP to run against")
+	config map[string]string
+
+	cspToUse = flag.String("csp", "", "Which CSP to run against")
+	orgFile  = flag.String("org-file", "", "Specify where to find the JSON with organization information")
 
 	awsBillingAccount      = flag.String("billing-account", "", "Specify AWS billing account id (e.g. 1234661312)")
 	awsBillingBucketRegion = flag.String("billing-bucket-region", "", "Specify AWS region where --billing-bucket is location")
 	gcpBillingCSVPrefix    = flag.String("billing-csv-prefix", "", "Specify name prefix of GCP billing CSV files")
 	billingBucket          = flag.String("billing-bucket", "", "Specify bucket with billing CSVs")
+
+	mailUser     = flag.String("smpt-username", "", "SMTP username used to send email")
+	mailPassword = flag.String("smpt-password", "", "SMTP password used to send email")
+	mailServer   = flag.String("smtp-server", "", "SMTP server used to send mail")
+	mailPort     = flag.String("smtp-port", "", "SMTP port used to send mail")
+
+	warningHours    = flag.String("warning-hours", "", "The number of hours in advance to warn about resource deletion")
+	displayName     = flag.String("display-name", "", "Name displayed on emails sent by Cloudsweeper")
+	summaryReciever = flag.String("summary-addressee", "", "Reciever of month to date summaries")
+	summaryManager  = flag.String("total-sum-addressee", "", "Reciever of total cost sums")
+
+	setupARN = flag.String("aws-master-arn", "", "AWS ARN of role in account used by Cloudsweeper to assume roles")
 )
 
 const banner = `
@@ -44,88 +58,72 @@ const banner = `
                                                 |_|
 `
 
-const (
-	defaultCSPFlag = cspFlagAWS
-	cspFlagAWS     = "aws"
-	cspFlagGCP     = "gcp"
-)
-
 func main() {
 	fmt.Println(banner)
+	loadConfig()
 	flag.Parse()
-	csp := cspFromFlag(*cspToUse)
-	fmt.Printf("Running against %s...\n", csp)
+	csp := cspFromConfig(findConfig("csp"))
+	log.Printf("Running against %s...\n", csp)
 	switch getPositionalCmd() {
 	case "cleanup":
 		log.Println("Cleaning up old resources")
-		org := parseOrganization(*orgFile)
+		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		cleanup.PerformCleanup(mngr)
 	case "reset":
 		log.Println("Resetting all tags")
-		org := parseOrganization(*orgFile)
+		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		cleanup.ResetCloudsweeper(mngr)
 	case "mark-for-cleanup":
 		log.Println("Marking old resources for cleanup")
-		org := parseOrganization(*orgFile)
+		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		cleanup.MarkForCleanup(mngr)
 	case "review":
 		log.Println("Sending out old resource review")
-		org := parseOrganization(*orgFile)
+		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
-		notify.OldResourceReview(mngr, org, csp)
+		client := initNotifyClient()
+		client.OldResourceReview(mngr, org, csp)
 	case "warn":
 		log.Println("Sending out cleanup warning")
-		org := parseOrganization(*orgFile)
+		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
-		notify.DeletionWarning(*warningHours, mngr, org.AccountToUserMapping(csp))
+		client := initNotifyClient()
+		client.DeletionWarning(findConfigInt("warning-hours"), mngr, org.AccountToUserMapping(csp))
 	case "billing-report":
 		log.Println("Generating month-to-date billing report for", csp)
 		var reporter billing.Reporter
 		if csp == cloud.AWS {
-			billingAccount := *awsBillingAccount
-			if billingAccount == "" {
-				log.Fatalf("AWS billing account must be specified")
-			}
-			bucket := *billingBucket
-			if bucket == "" {
-				log.Fatalf("AWS billing bucket must be specified")
-			}
-			region := *awsBillingBucketRegion
-			if region == "" {
-				log.Fatalf("AWS billing bucket region must be specified")
-			}
+			billingAccount := findConfig("billing-account")
+			bucket := findConfig("billing-bucket")
+			region := findConfig("billing-bucket-region")
 			reporter = billing.NewReporterAWS(billingAccount, bucket, region)
 		} else if csp == cloud.GCP {
-			bucket := *billingBucket
-			if bucket == "" {
-				log.Fatalf("GCP billing bucket must be specified")
-			}
-			prefix := *gcpBillingCSVPrefix
-			if prefix == "" {
-				log.Fatalf("GCP billing CSV prefix must be specified")
-			}
+			bucket := findConfig("billing-bucket")
+			prefix := findConfig("billing-csv-prefix")
 			reporter = billing.NewReporterGCP(bucket, prefix)
 		} else {
 			log.Fatalf("Invalid CSP specified")
 			return
 		}
 		report := billing.GenerateReport(reporter)
-		org := parseOrganization(*orgFile)
+		org := parseOrganization(findConfig("org-file"))
 		mapping := org.AccountToUserMapping(csp)
 		log.Println(report.FormatReport(mapping))
-		notify.MonthToDateReport(report, mapping)
+		client := initNotifyClient()
+		client.MonthToDateReport(report, mapping)
 	case "find-untagged":
 		log.Println("Finding untagged resources")
-		org := parseOrganization(*orgFile)
+		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		mapping := org.AccountToUserMapping(csp)
-		notify.UntaggedResourcesReview(mngr, mapping)
+		client := initNotifyClient()
+		client.UntaggedResourcesReview(mngr, mapping)
 	case "setup":
 		log.Println("Running cloudsweeper setup")
-		setup.PerformSetup()
+		setup.PerformSetup(findConfig("aws-master-arn"))
 	default:
 		log.Fatalln("Please supply a command")
 	}
@@ -138,6 +136,19 @@ func initManager(csp cloud.CSP, org *cs.Organization) cloud.ResourceManager {
 		return nil
 	}
 	return manager
+}
+
+func initNotifyClient() *notify.Client {
+	config := &notify.Config{
+		SMTPUsername:     findConfig("smtp-username"),
+		SMTPPassword:     findConfig("smtp-password"),
+		SMTPServer:       findConfig("smtp-server"),
+		SMTPPort:         findConfigInt("smtp-port"),
+		DisplayName:      findConfig("display-name"),
+		SummaryAddressee: findConfig("summary-addressee"),
+		TotalSumAddresse: findConfig("total-sum-addressee"),
+	}
+	return notify.Init(config)
 }
 
 func parseOrganization(inputFile string) *cs.Organization {
@@ -160,7 +171,7 @@ func getPositionalCmd() string {
 	return os.Args[n-1]
 }
 
-func cspFromFlag(rawFlag string) cloud.CSP {
+func cspFromConfig(rawFlag string) cloud.CSP {
 	flagVal := strings.ToLower(rawFlag)
 	switch flagVal {
 	case cspFlagAWS:

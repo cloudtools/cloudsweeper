@@ -12,10 +12,10 @@ import (
 )
 
 // PerformSetup will start setting up Cloudsweeper for the user.
-func PerformSetup() {
+func PerformSetup(awsMasterARN string) {
 	fmt.Println("Welcome to Cloudsweeper, performing account setup...")
 
-	err := awsSetup()
+	err := awsSetup(awsMasterARN)
 	if err != nil {
 		fmt.Printf("AWS setup failed: %s\n", err)
 		os.Exit(1)

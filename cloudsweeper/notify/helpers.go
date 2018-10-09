@@ -7,9 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"log"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -45,32 +42,13 @@ func convertEmailExceptions(oldName string) (newName string) {
 	return oldName
 }
 
-func getMailClient() mailer.Client {
-	username, exists := os.LookupEnv(smtpUserKey)
-	if !exists {
-		log.Fatalf("%s is required\n", smtpUserKey)
-	}
-	password, exists := os.LookupEnv(smtpPassKey)
-	if !exists {
-		log.Fatalf("%s is required\n", smtpPassKey)
-	}
-
-	server, exists := os.LookupEnv(smtpServerKey)
-	if !exists {
-		log.Fatalf("%s is required\n", smtpServerKey)
-	}
-
-	port, exists := os.LookupEnv(smtpServerPort)
-	if !exists {
-		log.Fatalf("%s is required\n", smtpServerPort)
-	}
-
-	portNumber, err := strconv.Atoi(port)
-	if err != nil {
-		log.Fatalf("%s must be an integer", smtpServerPort)
-	}
-
-	return mailer.NewClient(username, password, mailDisplayName, server, portNumber)
+func getMailClient(notifyClient *Client) mailer.Client {
+	username := notifyClient.config.SMTPUsername
+	password := notifyClient.config.SMTPPassword
+	server := notifyClient.config.SMTPServer
+	port := notifyClient.config.SMTPPort
+	displayName := notifyClient.config.DisplayName
+	return mailer.NewClient(username, password, displayName, server, port)
 }
 
 func extraTemplateFunctions() template.FuncMap {

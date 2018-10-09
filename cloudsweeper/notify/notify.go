@@ -19,21 +19,35 @@ import (
 	"log"
 	"time"
 
+	"github.com/cloudtools/cloudsweeper/mailer"
+
 	"github.com/cloudtools/cloudsweeper/cloud"
 	"github.com/cloudtools/cloudsweeper/cloud/billing"
 	"github.com/cloudtools/cloudsweeper/cloud/filter"
 	cs "github.com/cloudtools/cloudsweeper/cloudsweeper"
 )
 
-const (
-	smtpUserKey          = "SMTP_USER"
-	smtpPassKey          = "SMTP_PASS"
-	smtpServerKey        = "SMTP_SERVER"
-	smtpServerPort       = "SMTP_PORT"
-	mailDisplayName      = "Cloudsweeper"
-	monthToDateAddressee = "eng@example.com"
-	totalSumAddressee    = "somemanager"
-)
+// Client is used to perform the notify actions. It must be
+// initalized with correct values to work properly.
+type Client struct {
+	config *Config
+}
+
+// Config is a configuration for the notify Client
+type Config struct {
+	SMTPUsername     string
+	SMTPPassword     string
+	SMTPServer       string
+	SMTPPort         int
+	DisplayName      string
+	SummaryAddressee string
+	TotalSumAddresse string
+}
+
+// Init will initialize a notify Client with a given Config
+func Init(config *Config) *Client {
+	return &Client{config: config}
+}
 
 type resourceMailData struct {
 	Owner          string
@@ -50,8 +64,7 @@ func (d *resourceMailData) ResourceCount() int {
 	return len(d.Images) + len(d.Instances) + len(d.Snapshots) + len(d.Volumes) + len(d.Buckets)
 }
 
-func (d *resourceMailData) SendEmail(mailTemplate, title string, debugAddressees ...string) {
-	mailClient := getMailClient()
+func (d *resourceMailData) SendEmail(client mailer.Client, mailTemplate, title string, debugAddressees ...string) {
 	mailContent, err := generateMail(d, mailTemplate)
 	if err != nil {
 		log.Fatalln("Could not generate email:", err)
@@ -62,7 +75,7 @@ func (d *resourceMailData) SendEmail(mailTemplate, title string, debugAddressees
 	ownerMail := fmt.Sprintf("%s@.example.com", username)
 	log.Printf("Sending out email to %s\n", ownerMail)
 	addressees := append(debugAddressees, ownerMail)
-	err = mailClient.SendEmail(title, mailContent, addressees...)
+	err = client.SendEmail(title, mailContent, addressees...)
 	if err != nil {
 		log.Fatalf("Failed to email %s: %s\n", ownerMail, err)
 	}
@@ -77,7 +90,7 @@ type monthToDateData struct {
 	AccountToUser    map[string]string
 }
 
-func initTotalSummaryMailData() *resourceMailData {
+func initTotalSummaryMailData(totalSumAddressee string) *resourceMailData {
 	return &resourceMailData{
 		Owner:     totalSumAddressee,
 		Instances: []cloud.Instance{},
@@ -110,12 +123,12 @@ func initManagerToMailDataMapping(managers cs.Employees) map[string]*resourceMai
 //		- Resource is older than 30 days
 //		- A whitelisted resource is older than 6 months
 //		- An instance marked with do-not-delete is older than a week
-func OldResourceReview(mngr cloud.ResourceManager, org *cs.Organization, csp cloud.CSP) {
+func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organization, csp cloud.CSP) {
 	allCompute := mngr.AllResourcesPerAccount()
 	allBuckets := mngr.BucketsPerAccount()
 	accountUserMapping := org.AccountToUserMapping(csp)
 	userEmployeeMapping := org.UsernameToEmployeeMapping()
-	totalSummaryMailData := initTotalSummaryMailData()
+	totalSummaryMailData := initTotalSummaryMailData(c.config.TotalSumAddresse)
 	managerToMailDataMapping := initManagerToMailDataMapping(org.Managers)
 
 	// Create filters
@@ -173,7 +186,7 @@ func OldResourceReview(mngr cloud.ResourceManager, org *cs.Organization, csp clo
 
 		if userMailData.ResourceCount() > 0 {
 			title := fmt.Sprintf("You have %d old resources to review (%s)", userMailData.ResourceCount(), time.Now().Format("2006-01-02"))
-			userMailData.SendEmail(reviewMailTemplate, title)
+			userMailData.SendEmail(getMailClient(c), reviewMailTemplate, title)
 		}
 	}
 
@@ -182,19 +195,19 @@ func OldResourceReview(mngr cloud.ResourceManager, org *cs.Organization, csp clo
 		log.Printf("Collecting old resources to review for %s's team\n", username)
 		if managerSummaryMailData.ResourceCount() > 0 {
 			title := fmt.Sprintf("Your team has %d old resources to review (%s)", managerSummaryMailData.ResourceCount(), time.Now().Format("2006-01-02"))
-			managerSummaryMailData.SendEmail(managerReviewMailTemplate, title)
+			managerSummaryMailData.SendEmail(getMailClient(c), managerReviewMailTemplate, title)
 		}
 	}
 
 	// Send out a total summary
 	log.Println("Collecting old resource review for the org")
 	title := fmt.Sprintf("Your org has %d old resources to review (%s)", totalSummaryMailData.ResourceCount(), time.Now().Format("2006-01-02"))
-	totalSummaryMailData.SendEmail(totalReviewMailTemplate, title)
+	totalSummaryMailData.SendEmail(getMailClient(c), totalReviewMailTemplate, title)
 }
 
 // UntaggedResourcesReview will look for resources without any tags, and
 // send out a mail encouraging to tag tag them
-func UntaggedResourcesReview(mngr cloud.ResourceManager, accountUserMapping map[string]string) {
+func (c *Client) UntaggedResourcesReview(mngr cloud.ResourceManager, accountUserMapping map[string]string) {
 	// We only care about untagged resources in EC2
 	allCompute := mngr.AllResourcesPerAccount()
 	for account, resources := range allCompute {
@@ -231,7 +244,7 @@ func UntaggedResourcesReview(mngr cloud.ResourceManager, accountUserMapping map[
 // `hoursInAdvance` hours, and send an email to the owner of those resources
 // with a warning. Resources explicitly tagged to be deleted are not included
 // in this warning.
-func DeletionWarning(hoursInAdvance int, mngr cloud.ResourceManager, accountUserMapping map[string]string) {
+func (c *Client) DeletionWarning(hoursInAdvance int, mngr cloud.ResourceManager, accountUserMapping map[string]string) {
 	allCompute := mngr.AllResourcesPerAccount()
 	allBuckets := mngr.BucketsPerAccount()
 	for account, resources := range allCompute {
@@ -263,17 +276,17 @@ func DeletionWarning(hoursInAdvance int, mngr cloud.ResourceManager, accountUser
 
 // MonthToDateReport sends an email to engineering with the
 // Month-to-Date billing report
-func MonthToDateReport(report billing.Report, accountUserMapping map[string]string) {
-	mailClient := getMailClient()
+func (c *Client) MonthToDateReport(report billing.Report, accountUserMapping map[string]string) {
+	mailClient := getMailClient(c)
 	reportData := monthToDateData{report.CSP, report.TotalCost(), report.SortedUsersByTotalCost(), billing.MinimumTotalCost, billing.MinimumCost, accountUserMapping}
 	mailContent, err := generateMail(reportData, monthToDateTemplate)
 	if err != nil {
 		log.Fatalln("Could not generate email:", err)
 	}
-	log.Printf("Sending the Month-to-date report to %s\n", monthToDateAddressee)
+	log.Printf("Sending the Month-to-date report to %s\n", c.config.SummaryAddressee)
 	title := fmt.Sprintf("Month-to-date %s billing report", report.CSP)
-	err = mailClient.SendEmail(title, mailContent, monthToDateAddressee)
+	err = mailClient.SendEmail(title, mailContent, c.config.SummaryAddressee)
 	if err != nil {
-		log.Printf("Failed to email %s: %s\n", monthToDateAddressee, err)
+		log.Printf("Failed to email %s: %s\n", c.config.SummaryAddressee, err)
 	}
 }
