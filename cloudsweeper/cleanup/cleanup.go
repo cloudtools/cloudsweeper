@@ -13,9 +13,8 @@ import (
 )
 
 const (
-	releaseTag          = "Release"
-	sharedDevAWSAccount = "164337164081"
-	totalCostThreshold  = 10.0
+	releaseTag         = "Release"
+	totalCostThreshold = 10.0
 )
 
 // MarkForCleanup will look for resources that should be automatically
@@ -127,9 +126,6 @@ func PerformCleanup(mngr cloud.ResourceManager) {
 	// Cleanup all resources with a lifetime tag that has passed. This
 	// includes both the lifetime and the expiry tag
 	cleanupLifetimePassed(mngr)
-
-	// This will cleanup old released AMIs if they're older than a year
-	cleanupReleaseImagesAWS()
 }
 
 func cleanupLifetimePassed(mngr cloud.ResourceManager) {
@@ -169,66 +165,6 @@ func cleanupLifetimePassed(mngr cloud.ResourceManager) {
 			}
 		}
 	}
-}
-
-// This function will look for released images. If the image is older
-// than 6 months they will be made private and set to be de-registered
-// after another 6 months have passed
-func cleanupReleaseImagesAWS() {
-	mngr, err := cloud.NewManager(cloud.AWS, sharedDevAWSAccount)
-	if err != nil {
-		log.Printf("Could not initalize resource manager for release image cleanup: %s", err)
-		return
-	}
-	allImages := mngr.ImagesPerAccount()
-	for owner, images := range allImages {
-		log.Println("Performing release image cleanup in", owner)
-		err := cleanupReleaseImagesHelper(mngr, images)
-		if err != nil {
-			log.Printf("Release cleanup for \"%s\" failed:\n%s\n", owner, err)
-		}
-	}
-}
-
-func cleanupReleaseImagesHelper(mngr cloud.ResourceManager, images []cloud.Image) error {
-	// First find public images older than 6 months. Make these images
-	// private and add an expiry to them.
-	filPub := filter.New()
-	filPub.AddGeneralRule(filter.HasTag(releaseTag))
-	filPub.AddGeneralRule(filter.IsPublic())
-	filPub.AddGeneralRule(filter.OlderThanXMonths(6))
-	// Images shoudln't have an expiry tag already
-	filPub.AddGeneralRule(filter.Negate(filter.HasTag(filter.ExpiryTagKey)))
-	imagesToMakePrivate := filter.Images(images, filPub)
-	// Make images private and add expiry tag
-	for i := range imagesToMakePrivate {
-		err := imagesToMakePrivate[i].MakePrivate()
-
-		if err != nil {
-			log.Printf("Failed to make release image '%s' private\n", imagesToMakePrivate[i].ID())
-			return err
-		}
-		expiryDateString := time.Now().AddDate(0, 6, 0).Format(filter.ExpiryTagValueFormat)
-		err = imagesToMakePrivate[i].SetTag(filter.ExpiryTagKey, expiryDateString, true)
-		if err != nil {
-			log.Println("Failed to set expiry tag on image", imagesToMakePrivate[i].ID())
-			return err
-		}
-	}
-
-	// Then check for private images that are expired
-	filPriv := filter.New()
-	filPriv.AddGeneralRule(filter.HasTag(releaseTag))
-	filPriv.AddGeneralRule(filter.Negate(filter.IsPublic()))
-	filPriv.AddGeneralRule(filter.ExpiryDatePassed())
-	imagesToCleanup := filter.Images(images, filPriv)
-	// Cleanup expired images
-	err := mngr.CleanupImages(imagesToCleanup)
-	if err != nil {
-		log.Println("Failed to cleanup expired release images")
-		return err
-	}
-	return nil
 }
 
 // ResetCloudsweeper will remove any cleanup tags existing in the accounts
