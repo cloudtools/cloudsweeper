@@ -27,7 +27,7 @@ be deleted. <b>Please review them in case they no longer should be whitelisted</
 
 <p>
 Conversely, if you see a resource here that you know that you want to keep for a longer time, then please
-whitelist it: add a tag with the key "whitelisted" to it.
+whitelist it: add a tag with the key "cloudsweeper-whitelisted" to it.
 </p>
 
 <p>

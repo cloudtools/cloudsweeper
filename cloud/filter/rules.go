@@ -14,7 +14,7 @@ import (
 
 const (
 	// WhitelistTagKey marks a resource to not matched by filter
-	WhitelistTagKey = "whitelisted"
+	WhitelistTagKey = "cloudsweeper-whitelisted"
 	// LifetimeTagKey marks a resource to be cleaned up after X days
 	LifetimeTagKey = "cloudsweeper-lifetime"
 	// ExpiryTagKey marks a resource to be cleaned up at the specified date (YYYY-MM-DD)

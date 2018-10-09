@@ -140,7 +140,7 @@ func TestCleanupRulesFilter(t *testing.T) {
 
 	// Create some helper tag maps
 	someTags := map[string]string{"test-key": "test-value"}
-	whitelistTags := map[string]string{"whitelisted": ""}
+	whitelistTags := map[string]string{"cloudsweeper-whitelisted": ""}
 
 	// Test instances
 	// No
