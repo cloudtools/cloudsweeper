@@ -9,6 +9,11 @@ To setup Cloudsweeper to work with your account, you must create a role in AWS t
 
 It's also possible to run `aws_setup.sh`, if you have the `aws` CLI installed and properly setup.
 
+**IMPORTANT:** When running any of these setup methods, an environemnt variable named `CLOUDSWEEPER_MASTER_ARN` must be set. This should be the AWS ARN of a role in a specific account that should have permission to assume into your account. This should match up with the role and account used to run Cloudsweeper, as Cloudsweeper will attempt to assume into your account from the role and account specified with this ARN. An example of valid input it:
+```
+arn:aws:iam::123456789123:user/cloudsweeper-master
+```
+
 ## Usage
 The program relies on having a list of accounts to actually check. This list can either be provided manually, or through other scripts.
 

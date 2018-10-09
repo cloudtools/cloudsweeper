@@ -43,19 +43,20 @@ CLOUDSWEEPER_POLICY='{
     ]
 }'
 
-ASSUME_POLICY_DOCUMENT='{
+ASSUME_POLICY_DOCUMENT_TEMPLATE='{
   "Version": "2012-10-17",
   "Statement": [
     {
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::475063612724:user/jenkins-housekeeper"
+        "AWS": "%s"
       },
       "Action": "sts:AssumeRole"
     }
   ]
 }'
 
+ASSUME_POLICY_DOCUMENT=$(printf "$ASSUME_POLICY_DOCUMENT_TEMPLATE" "$CLOUDSWEEPER_MASTER_ARN")
 
 account=$(aws sts get-caller-identity --output text --query 'Account')
 

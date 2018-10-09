@@ -33,7 +33,7 @@ const awsAssumeRoleDoc = `{
 		{
 			"Effect": "Allow",
 			"Principal": {
-				"AWS": "arn:aws:iam::475063612724:user/jenkins-housekeeper"
+				"AWS": "%s"
 			},
 			"Action": "sts:AssumeRole"
 		}
@@ -51,6 +51,8 @@ const (
 
 	awsIDKey     = "AWS_ACCESS_KEY_ID"
 	awsSecretKey = "AWS_SECRET_ACCESS_KEY"
+
+	awsMasterAccountARNKey = "CLOUDSWEEPER_MASTER_ARN"
 )
 
 var (
@@ -185,8 +187,13 @@ func deleteAWSRole(name string, iamClient *iam.IAM) error {
 
 func createAWSRole(name string, iamClient *iam.IAM) (*iam.Role, error) {
 	// Create a new role that can be assumed by Cloudsweeper
+	masterARN, exist := os.LookupEnv(awsMasterAccountARNKey)
+	if !exist {
+		return nil, errors.New("Master ARN not specified")
+	}
+	policyDoc := fmt.Sprintf(awsAssumeRoleDoc, masterARN)
 	input := &iam.CreateRoleInput{
-		AssumeRolePolicyDocument: aws.String(awsAssumeRoleDoc),
+		AssumeRolePolicyDocument: aws.String(policyDoc),
 		Description:              aws.String(policyDesc),
 		RoleName:                 aws.String(roleName),
 	}
