@@ -20,12 +20,13 @@ import (
 )
 
 const (
-	bucket           = "brkt-gce-usage"
-	gcpCSVNameFormat = "BRKT-GCE-USAGE-%d-%02d-%02d.csv"
+	gcpCSVNameFormat = "%s-%d-%02d-%02d.csv"
 )
 
 type gcpReporter struct {
-	csp cloud.CSP
+	csp           cloud.CSP
+	bucket        string
+	csvNamePrefix string
 }
 
 func (r *gcpReporter) GenerateReport(start time.Time) Report {
@@ -48,9 +49,9 @@ func (r *gcpReporter) GenerateReport(start time.Time) Report {
 	}
 
 	for d := start; d.Month() == start.Month(); d = d.AddDate(0, 0, 1) {
-		name := fmt.Sprintf(gcpCSVNameFormat, start.Year(), start.Month(), d.Day())
+		name := fmt.Sprintf(gcpCSVNameFormat, r.csvNamePrefix, start.Year(), start.Month(), d.Day())
 		log.Println("Getting", name)
-		obj := client.Bucket(bucket).Object(name)
+		obj := client.Bucket(r.bucket).Object(name)
 		if err := processObjectHandle(ctx, obj, &report, true); err != nil {
 			log.Println(err, "- skipping...")
 			break

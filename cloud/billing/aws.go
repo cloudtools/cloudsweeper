@@ -25,23 +25,23 @@ import (
 )
 
 const (
-	awsBillingAccount      = "992270393355"
-	awsBillingBucket       = "aws-prod-billing"
-	awsBillingBucketRegion = "us-east-1"
-	awsCSVDateFormat       = "2006-01-02"
-	awsCSVNameFormat       = "%s-aws-billing-detailed-line-items-%d-%02d.csv.zip"
+	awsCSVDateFormat = "2006-01-02"
+	awsCSVNameFormat = "%s-aws-billing-detailed-line-items-%d-%02d.csv.zip"
 )
 
 type awsReporter struct {
-	csp cloud.CSP
+	csp                 cloud.CSP
+	billingAccount      string
+	billingBucket       string
+	billingBucketRegion string
 }
 
 func (r *awsReporter) GenerateReport(start time.Time) Report {
 	report := Report{}
 	report.CSP = r.csp
 
-	name := fmt.Sprintf(awsCSVNameFormat, awsBillingAccount, start.Year(), start.Month())
-	csvFile, err := getCSVFromS3(name)
+	name := fmt.Sprintf(awsCSVNameFormat, r.billingAccount, start.Year(), start.Month())
+	csvFile, err := r.getCSVFromS3(name)
 	if err != nil {
 		log.Println("Failed to get", name, ":", err)
 	}
@@ -98,7 +98,7 @@ func processAwsCsv(report *Report, csvFile *csv.Reader, allowFailed bool) error 
 	}
 }
 
-func getCSVFromS3(name string) (*csv.Reader, error) {
+func (r *awsReporter) getCSVFromS3(name string) (*csv.Reader, error) {
 	tmpZip := filepath.Join(os.TempDir(), name)
 	f, err := os.Create(tmpZip)
 	if err != nil {
@@ -106,10 +106,10 @@ func getCSVFromS3(name string) (*csv.Reader, error) {
 		return nil, err
 	}
 	sess := session.Must(session.NewSession())
-	sess.Config.Region = aws.String(awsBillingBucketRegion)
+	sess.Config.Region = aws.String(r.billingBucketRegion)
 	downloader := s3manager.NewDownloader(sess)
 	input := &s3.GetObjectInput{
-		Bucket: aws.String(awsBillingBucket),
+		Bucket: aws.String(r.billingBucket),
 		Key:    aws.String(name),
 	}
 	_, err = downloader.Download(f, input)

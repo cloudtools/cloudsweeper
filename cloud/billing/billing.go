@@ -5,7 +5,6 @@ package billing
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -64,19 +63,35 @@ type Reporter interface {
 	GenerateReport(start time.Time) Report
 }
 
-// NewReporter intializes a new billing reporter for the specified CSP
-func NewReporter(csp cloud.CSP) (Reporter, error) {
-	switch csp {
-	case cloud.AWS:
-		return &awsReporter{
-			csp: cloud.AWS,
-		}, nil
-	case cloud.GCP:
-		return &gcpReporter{
-			csp: cloud.GCP,
-		}, nil
-	default:
-		return nil, errors.New("Invalid CSP specified")
+// NewReporterAWS will initialize a new Reporter for the AWS cloud. This
+// requires specifying the account which holds the billing information,
+// the bucket where the billing CSVs can be found as well as which region
+// this bucket is in. None of these arguments must be empty.
+func NewReporterAWS(billingAccount, bucket, bucketRegion string) Reporter {
+	if billingAccount == "" || bucket == "" || bucketRegion == "" {
+		panic("Invalid arguments, must not be empty (\"\")")
+	}
+	return &awsReporter{
+		csp:                 cloud.AWS,
+		billingAccount:      billingAccount,
+		billingBucket:       bucket,
+		billingBucketRegion: bucketRegion,
+	}
+}
+
+// NewReporterGCP initializes and returns a new Reporter for the GCP cloud.
+// This requires specifying a bucket where the billing CSVs can be found, as
+// well as the prefix of these CSV files. The prefix will be prepended to
+// the date and .csv suffix (e.g. <YOUR PREFIX>-2018-10-09.csv). None of
+// these argument must be empty.
+func NewReporterGCP(bucket, csvPrefix string) Reporter {
+	if bucket == "" || csvPrefix == "" {
+		panic("Invalid argument, must not be empty")
+	}
+	return &gcpReporter{
+		csp:           cloud.GCP,
+		bucket:        bucket,
+		csvNamePrefix: csvPrefix,
 	}
 }
 

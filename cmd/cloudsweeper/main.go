@@ -28,6 +28,11 @@ var (
 	orgFile      = flag.String("org-file", defaultOrgFile, "Specify where to find the JSON with organization information")
 	warningHours = flag.Int("warning-hours", warningHoursInAdvance, "The number of hours in advance to warn about resource deletion")
 	cspToUse     = flag.String("csp", defaultCSPFlag, "Which CSP to run against")
+
+	awsBillingAccount      = flag.String("billing-account", "", "Specify AWS billing account id (e.g. 1234661312)")
+	awsBillingBucketRegion = flag.String("billing-bucket-region", "", "Specify AWS region where --billing-bucket is location")
+	gcpBillingCSVPrefix    = flag.String("billing-csv-prefix", "", "Specify name prefix of GCP billing CSV files")
+	billingBucket          = flag.String("billing-bucket", "", "Specify bucket with billing CSVs")
 )
 
 const banner = `
@@ -78,9 +83,33 @@ func main() {
 		notify.DeletionWarning(*warningHours, mngr, org.AccountToUserMapping(csp))
 	case "billing-report":
 		log.Println("Generating month-to-date billing report for", csp)
-		reporter, err := billing.NewReporter(csp)
-		if err != nil {
-			log.Fatal(err)
+		var reporter billing.Reporter
+		if csp == cloud.AWS {
+			billingAccount := *awsBillingAccount
+			if billingAccount == "" {
+				log.Fatalf("AWS billing account must be specified")
+			}
+			bucket := *billingBucket
+			if bucket == "" {
+				log.Fatalf("AWS billing bucket must be specified")
+			}
+			region := *awsBillingBucketRegion
+			if region == "" {
+				log.Fatalf("AWS billing bucket region must be specified")
+			}
+			reporter = billing.NewReporterAWS(billingAccount, bucket, region)
+		} else if csp == cloud.GCP {
+			bucket := *billingBucket
+			if bucket == "" {
+				log.Fatalf("GCP billing bucket must be specified")
+			}
+			prefix := *gcpBillingCSVPrefix
+			if prefix == "" {
+				log.Fatalf("GCP billing CSV prefix must be specified")
+			}
+			reporter = billing.NewReporterGCP(bucket, prefix)
+		} else {
+			log.Fatalf("Invalid CSP specified")
 			return
 		}
 		report := billing.GenerateReport(reporter)

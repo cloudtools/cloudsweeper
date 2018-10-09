@@ -1,11 +1,9 @@
 // Copyright (c) 2018 VMware, Inc. All Rights Reserved.
 // SPDX-License-Identifier: BSD-2-Clause
 
-// This structure was set up for an org wherein all employees
-// have their own cloud accounts, and are aggregated under a
-// single payer account.  In the case you have only a single
-// account, this will be superfluous.
-
+// Package cloudsweeper is where all the 'sweeping logic is defined. Such
+// as what to notify about and what to clean up. For using Cloudsweeper in
+// larger organizations, the Organization structure was implemeted.
 package cloudsweeper
 
 import (
@@ -15,8 +13,11 @@ import (
 	"github.com/cloudtools/cloudsweeper/cloud"
 )
 
-// Organization represents the employees,
-// their departments and their managers.
+// Organization represents the employees, their departments, and their managers
+// within an organization. This structure was set up for an org wherein all
+// employees have their own cloud accounts, and are aggregated under a single
+// payer account. In the case you have only a single account, this will be
+// superfluous.
 type Organization struct {
 	Managers    Employees   `json:"-"`
 	ManagerIDs  []managerID `json:"managers"`
