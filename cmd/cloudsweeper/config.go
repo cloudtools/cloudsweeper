@@ -38,6 +38,7 @@ var configMapping = map[string]lookup{
 	"display-name":        lookup{"CS_DISPLAY_NAME", "Cloudsweeper"},
 	"summary-addressee":   lookup{"CS_SUMMARY_ADDRESSEE", ""},
 	"total-sum-addressee": lookup{"CS_TOTAL_SUM_ADDRESSEE", ""},
+	"mail-domain":         lookup{"CS_EMAIL_DOMAIN", ""},
 
 	// Setup variables
 	"aws-master-arn": lookup{"CS_MASTER_ARN", ""},

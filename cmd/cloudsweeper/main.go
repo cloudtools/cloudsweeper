@@ -45,6 +45,7 @@ var (
 	displayName     = flag.String("display-name", "", "Name displayed on emails sent by Cloudsweeper")
 	summaryReciever = flag.String("summary-addressee", "", "Reciever of month to date summaries")
 	summaryManager  = flag.String("total-sum-addressee", "", "Reciever of total cost sums")
+	mailDomain      = flag.String("mail-domain", "", "The mail domain appended to usernames specified in the organization")
 
 	setupARN = flag.String("aws-master-arn", "", "AWS ARN of role in account used by Cloudsweeper to assume roles")
 )
@@ -145,6 +146,7 @@ func initNotifyClient() *notify.Client {
 		SMTPServer:       findConfig("smtp-server"),
 		SMTPPort:         findConfigInt("smtp-port"),
 		DisplayName:      findConfig("display-name"),
+		EmailDomain:      findConfig("mail-domain"),
 		SummaryAddressee: findConfig("summary-addressee"),
 		TotalSumAddresse: findConfig("total-sum-addressee"),
 	}

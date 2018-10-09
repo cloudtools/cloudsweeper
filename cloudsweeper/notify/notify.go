@@ -40,6 +40,7 @@ type Config struct {
 	SMTPServer       string
 	SMTPPort         int
 	DisplayName      string
+	EmailDomain      string
 	SummaryAddressee string
 	TotalSumAddresse string
 }
@@ -64,20 +65,19 @@ func (d *resourceMailData) ResourceCount() int {
 	return len(d.Images) + len(d.Instances) + len(d.Snapshots) + len(d.Volumes) + len(d.Buckets)
 }
 
-func (d *resourceMailData) SendEmail(client mailer.Client, mailTemplate, title string, debugAddressees ...string) {
+func (d *resourceMailData) SendEmail(client mailer.Client, domain, mailTemplate, title string, debugAddressees ...string) {
 	mailContent, err := generateMail(d, mailTemplate)
 	if err != nil {
 		log.Fatalln("Could not generate email:", err)
 	}
-	username := convertEmailExceptions(d.Owner)
 
-	// Insert a domain name into the usernames in the organization json file
-	ownerMail := fmt.Sprintf("%s@.example.com", username)
-	log.Printf("Sending out email to %s\n", ownerMail)
-	addressees := append(debugAddressees, ownerMail)
+	ownerMail := fmt.Sprintf("%s@%s", d.Owner, domain)
+	recieverMail := convertEmailExceptions(ownerMail)
+	log.Printf("Sending out email to %s\n", recieverMail)
+	addressees := append(debugAddressees, recieverMail)
 	err = client.SendEmail(title, mailContent, addressees...)
 	if err != nil {
-		log.Fatalf("Failed to email %s: %s\n", ownerMail, err)
+		log.Fatalf("Failed to email %s: %s\n", recieverMail, err)
 	}
 }
 
@@ -186,7 +186,7 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 
 		if userMailData.ResourceCount() > 0 {
 			title := fmt.Sprintf("You have %d old resources to review (%s)", userMailData.ResourceCount(), time.Now().Format("2006-01-02"))
-			userMailData.SendEmail(getMailClient(c), reviewMailTemplate, title)
+			userMailData.SendEmail(getMailClient(c), c.config.EmailDomain, reviewMailTemplate, title)
 		}
 	}
 
@@ -195,14 +195,14 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 		log.Printf("Collecting old resources to review for %s's team\n", username)
 		if managerSummaryMailData.ResourceCount() > 0 {
 			title := fmt.Sprintf("Your team has %d old resources to review (%s)", managerSummaryMailData.ResourceCount(), time.Now().Format("2006-01-02"))
-			managerSummaryMailData.SendEmail(getMailClient(c), managerReviewMailTemplate, title)
+			managerSummaryMailData.SendEmail(getMailClient(c), c.config.EmailDomain, managerReviewMailTemplate, title)
 		}
 	}
 
 	// Send out a total summary
 	log.Println("Collecting old resource review for the org")
 	title := fmt.Sprintf("Your org has %d old resources to review (%s)", totalSummaryMailData.ResourceCount(), time.Now().Format("2006-01-02"))
-	totalSummaryMailData.SendEmail(getMailClient(c), totalReviewMailTemplate, title)
+	totalSummaryMailData.SendEmail(getMailClient(c), c.config.EmailDomain, totalReviewMailTemplate, title)
 }
 
 // UntaggedResourcesReview will look for resources without any tags, and

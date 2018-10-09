@@ -32,14 +32,14 @@ func generateMail(data interface{}, templateString string) (string, error) {
 	return result.String(), nil
 }
 
-// This function will convert some edge case names to their proper
-// email alias
-func convertEmailExceptions(oldName string) (newName string) {
-	name, hasEdgeCase := emailEdgeCases[oldName]
+// This function will convert some edge case emails to their proper
+// email. This is useful if some user doesn't share the common org domain
+func convertEmailExceptions(oldMail string) string {
+	name, hasEdgeCase := emailEdgeCases[oldMail]
 	if hasEdgeCase {
 		return name
 	}
-	return oldName
+	return oldMail
 }
 
 func getMailClient(notifyClient *Client) mailer.Client {
