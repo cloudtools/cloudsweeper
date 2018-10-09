@@ -1,8 +1,9 @@
 # Cloudsweeper
 
 ## Overview
-Cloudsweeper was created because developers have better things to do than to constantly monitor their cloud accounts for things they left around. The tool monitors developer accounts for old items that might have been forgotten, and then sends reports to you or others to let them know what will be deleted (and to whitelist anything they do not want deleted).  It also can let you know when you haven't been tagging things properly.  
+Cloudsweeper was created because developers have better things to do than to constantly monitor their cloud accounts for things they left around. The tool monitors developer accounts for old items that might have been forgotten, and then sends reports to you or others to let them know what will be deleted (and to whitelist anything they do not want deleted).  It also can let you know when you haven't been tagging things properly.
 
+Detailed instructions can be found in `Instructions.md`.
 
 ## Setup
 To setup Cloudsweeper to work with your account, you must create a role in AWS to allow access. This is easily done using the `--setup` flag of Cloudsweeper. It will handle everything for you. Then all you need to do is to make sure you're in the list of accounts that will be checked. 
