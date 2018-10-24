@@ -5,6 +5,9 @@ DOCKER_GOOGLE_FLAG	:= $(shell echo $${GOOGLE_APPLICATION_CREDENTIALS:+-v ${GOOGL
 build:
 	docker build -t quay.io/agari/cloudsweeper .
 
+push: build
+	docker push quay.io/agari/cloudsweeper:latest
+
 run:
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
