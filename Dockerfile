@@ -13,5 +13,5 @@ RUN apk -U upgrade && \
 
 
 FROM scratch
-COPY --from=builder /cs /app/cs
-ENTRYPOINT [ "/app/cs" ]
+COPY --from=builder /cs /cs
+ENTRYPOINT [ "/cs" ]
