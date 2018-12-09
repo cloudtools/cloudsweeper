@@ -38,8 +38,8 @@ var (
 	billingBucket          = flag.String("billing-bucket", "", "Specify bucket with billing CSVs")
 	awsBillingSortTag      = flag.String("billing-sort-tag", "", "Specify a tag to sort on when creating report")
 
-	mailUser     = flag.String("smpt-username", "", "SMTP username used to send email")
-	mailPassword = flag.String("smpt-password", "", "SMTP password used to send email")
+	mailUser     = flag.String("smtp-username", "", "SMTP username used to send email")
+	mailPassword = flag.String("smtp-password", "", "SMTP password used to send email")
 	mailServer   = flag.String("smtp-server", "", "SMTP server used to send mail")
 	mailPort     = flag.String("smtp-port", "", "SMTP port used to send mail")
 
