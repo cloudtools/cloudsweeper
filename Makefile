@@ -31,8 +31,6 @@ review: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		-e SMTP_USER \
-		-e SMTP_PASS \
 		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) review
 
 mark: build
@@ -47,8 +45,6 @@ warn: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		-e SMTP_USER \
-		-e SMTP_PASS \
 		--rm cloudsweeper $${CSP:+--csp=${CSP}} --warning-hours=$(WARNING_HOURS) --org-file=$(ORG_FILE) warn
 
 untagged: build
@@ -56,8 +52,6 @@ untagged: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		-e SMTP_USER \
-		-e SMTP_PASS \
 		--rm cloudsweeper find-untagged
 
 billing-report: build
@@ -65,8 +59,6 @@ billing-report: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		-e SMTP_USER \
-		-e SMTP_PASS \
 		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) billing-report
 
 find:
