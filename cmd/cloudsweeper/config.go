@@ -37,11 +37,11 @@ var configMapping = map[string]lookup{
 	"smtp-port":     lookup{"CS_SMTP_PORT", "587"},
 
 	// Notifying specific variables
-	"warning-hours":       lookup{"CS_WARNING_HOURS", "48"},
-	"display-name":        lookup{"CS_DISPLAY_NAME", "Cloudsweeper"},
-	"summary-addressee":   lookup{"CS_SUMMARY_ADDRESSEE", ""},
-	"total-sum-addressee": lookup{"CS_TOTAL_SUM_ADDRESSEE", ""},
-	"mail-domain":         lookup{"CS_EMAIL_DOMAIN", ""},
+	"warning-hours":            lookup{"CS_WARNING_HOURS", "48"},
+	"display-name":             lookup{"CS_DISPLAY_NAME", "Cloudsweeper"},
+	"billing-report-addressee": lookup{"CS_BILLING_REPORT_ADDRESSEE", ""},
+	"total-sum-addressee":      lookup{"CS_TOTAL_SUM_ADDRESSEE", ""},
+	"mail-domain":              lookup{"CS_EMAIL_DOMAIN", ""},
 
 	// Setup variables
 	"aws-master-arn": lookup{"CS_MASTER_ARN", ""},
