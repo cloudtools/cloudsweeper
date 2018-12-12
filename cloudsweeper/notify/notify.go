@@ -35,14 +35,14 @@ type Client struct {
 
 // Config is a configuration for the notify Client
 type Config struct {
-	SMTPUsername     string
-	SMTPPassword     string
-	SMTPServer       string
-	SMTPPort         int
-	DisplayName      string
-	EmailDomain      string
-	SummaryAddressee string
-	TotalSumAddresse string
+	SMTPUsername           string
+	SMTPPassword           string
+	SMTPServer             string
+	SMTPPort               int
+	DisplayName            string
+	EmailDomain            string
+	BillingReportAddressee string
+	TotalSumAddresse       string
 }
 
 // Init will initialize a notify Client with a given Config
@@ -289,8 +289,8 @@ func (c *Client) MonthToDateReport(report billing.Report, accountUserMapping map
 	if err != nil {
 		log.Fatalln("Could not generate email:", err)
 	}
-	summaryAddresseeMail := fmt.Sprintf("%s@%s", c.config.SummaryAddressee, c.config.EmailDomain)
-	recipientMail := convertEmailExceptions(summaryAddresseeMail)
+	billingReportMail := fmt.Sprintf("%s@%s", c.config.BillingReportAddressee, c.config.EmailDomain)
+	recipientMail := convertEmailExceptions(billingReportMail)
 	log.Printf("Sending the Month-to-date report to %s\n", recipientMail)
 	title := fmt.Sprintf("Month-to-date %s billing report", report.CSP)
 	err = mailClient.SendEmail(title, mailContent, recipientMail)
