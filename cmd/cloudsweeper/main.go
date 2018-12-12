@@ -43,11 +43,11 @@ var (
 	mailServer   = flag.String("smtp-server", "", "SMTP server used to send mail")
 	mailPort     = flag.String("smtp-port", "", "SMTP port used to send mail")
 
-	warningHours    = flag.String("warning-hours", "", "The number of hours in advance to warn about resource deletion")
-	displayName     = flag.String("display-name", "", "Name displayed on emails sent by Cloudsweeper")
-	summaryReciever = flag.String("summary-addressee", "", "Reciever of month to date summaries")
-	summaryManager  = flag.String("total-sum-addressee", "", "Reciever of total cost sums")
-	mailDomain      = flag.String("mail-domain", "", "The mail domain appended to usernames specified in the organization")
+	warningHours          = flag.String("warning-hours", "", "The number of hours in advance to warn about resource deletion")
+	displayName           = flag.String("display-name", "", "Name displayed on emails sent by Cloudsweeper")
+	billingReportReceiver = flag.String("billing-report-addressee", "", "Receiver of month to date billing report")
+	summaryManager        = flag.String("total-sum-addressee", "", "Receiver of total cost sums")
+	mailDomain            = flag.String("mail-domain", "", "The mail domain appended to usernames specified in the organization")
 
 	setupARN = flag.String("aws-master-arn", "", "AWS ARN of role in account used by Cloudsweeper to assume roles")
 
@@ -163,14 +163,14 @@ func initManager(csp cloud.CSP, org *cs.Organization) cloud.ResourceManager {
 
 func initNotifyClient() *notify.Client {
 	config := &notify.Config{
-		SMTPUsername:     findConfig("smtp-username"),
-		SMTPPassword:     findConfig("smtp-password"),
-		SMTPServer:       findConfig("smtp-server"),
-		SMTPPort:         findConfigInt("smtp-port"),
-		DisplayName:      findConfig("display-name"),
-		EmailDomain:      findConfig("mail-domain"),
-		SummaryAddressee: findConfig("summary-addressee"),
-		TotalSumAddresse: findConfig("total-sum-addressee"),
+		SMTPUsername:           findConfig("smtp-username"),
+		SMTPPassword:           findConfig("smtp-password"),
+		SMTPServer:             findConfig("smtp-server"),
+		SMTPPort:               findConfigInt("smtp-port"),
+		DisplayName:            findConfig("display-name"),
+		EmailDomain:            findConfig("mail-domain"),
+		BillingReportAddressee: findConfig("billing-report-addressee"),
+		TotalSumAddresse:       findConfig("total-sum-addressee"),
 	}
 	return notify.Init(config)
 }
