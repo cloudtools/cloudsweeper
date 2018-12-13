@@ -35,14 +35,14 @@ type Client struct {
 
 // Config is a configuration for the notify Client
 type Config struct {
-	SMTPUsername     string
-	SMTPPassword     string
-	SMTPServer       string
-	SMTPPort         int
-	DisplayName      string
-	EmailDomain      string
-	SummaryAddressee string
-	TotalSumAddresse string
+	SMTPUsername           string
+	SMTPPassword           string
+	SMTPServer             string
+	SMTPPort               int
+	DisplayName            string
+	EmailDomain            string
+	BillingReportAddressee string
+	TotalSumAddresse       string
 }
 
 // Init will initialize a notify Client with a given Config
@@ -232,10 +232,11 @@ func (c *Client) UntaggedResourcesReview(mngr cloud.ResourceManager, accountUser
 
 		if mailData.ResourceCount() > 0 {
 			// Send mail
-			// title := fmt.Sprintf("You have %d un-tagged resources to review (%s)", mailData.ResourceCount(), time.Now().Format("2006-01-02"))
+			title := fmt.Sprintf("You have %d un-tagged resources to review (%s)", mailData.ResourceCount(), time.Now().Format("2006-01-02"))
 			// You can add some debug email address to ensure it works
 			// debugAddressees := []string{"ben@example.com"}
-			// mailData.SendEmail(untaggedMailTemplate, title, debugAddressees...)
+			// mailData.SendEmail(getMailClient(c), c.config.EmailDomain, untaggedMailTemplate, title, debugAddressees...)
+			mailData.SendEmail(getMailClient(c), c.config.EmailDomain, untaggedMailTemplate, title)
 		}
 	}
 }
@@ -266,10 +267,9 @@ func (c *Client) DeletionWarning(hoursInAdvance int, mngr cloud.ResourceManager,
 		}
 
 		if mailData.ResourceCount() > 0 {
-			// Now send email
-			// title := fmt.Sprintf("Deletion warning, %d resources are cleaned up within %d hours", mailData.ResourceCount(), hoursInAdvance)
-			// debugAddressees := []string{"ben@example.com"}
-			// mailData.SendEmail(deletionWarningTemplate, title, debugAddressees...)
+			// Send email
+			title := fmt.Sprintf("Deletion warning, %d resources are cleaned up within %d hours", mailData.ResourceCount(), hoursInAdvance)
+			mailData.SendEmail(getMailClient(c), c.config.EmailDomain, deletionWarningTemplate, title)
 		}
 	}
 }
@@ -289,10 +289,12 @@ func (c *Client) MonthToDateReport(report billing.Report, accountUserMapping map
 	if err != nil {
 		log.Fatalln("Could not generate email:", err)
 	}
-	log.Printf("Sending the Month-to-date report to %s\n", c.config.SummaryAddressee)
+	billingReportMail := fmt.Sprintf("%s@%s", c.config.BillingReportAddressee, c.config.EmailDomain)
+	recipientMail := convertEmailExceptions(billingReportMail)
+	log.Printf("Sending the Month-to-date report to %s\n", recipientMail)
 	title := fmt.Sprintf("Month-to-date %s billing report", report.CSP)
-	err = mailClient.SendEmail(title, mailContent, c.config.SummaryAddressee)
+	err = mailClient.SendEmail(title, mailContent, recipientMail)
 	if err != nil {
-		log.Printf("Failed to email %s: %s\n", c.config.SummaryAddressee, err)
+		log.Printf("Failed to email %s: %s\n", recipientMail, err)
 	}
 }
