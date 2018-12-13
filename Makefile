@@ -3,77 +3,77 @@ WARNING_HOURS		:= 48
 DOCKER_GOOGLE_FLAG	:= $(shell echo $${GOOGLE_APPLICATION_CREDENTIALS:+-v ${GOOGLE_APPLICATION_CREDENTIALS}:/google-creds -e GOOGLE_APPLICATION_CREDENTIALS=/google-creds})
 
 build:
-	docker build -t quay.io/agari/cloudsweeper .
+	docker build -t cloudsweeper .
 
 push: build
-	docker push quay.io/agari/cloudsweeper:latest
+	docker push cloudsweeper:latest
 
 run: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm quay.io/agari/cloudsweeper  $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE)
+		--rm cloudsweeper  $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE)
 
 cleanup: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm quay.io/agari/cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) cleanup
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) cleanup
 
 reset: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm quay.io/agari/cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) reset
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) reset
 
 review: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm quay.io/agari/cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) review
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) review
 
 mark: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm quay.io/agari/cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) mark-for-cleanup
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) mark-for-cleanup
 
 warn: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm quay.io/agari/cloudsweeper $${CSP:+--csp=${CSP}} --warning-hours=$(WARNING_HOURS) --org-file=$(ORG_FILE) warn
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --warning-hours=$(WARNING_HOURS) --org-file=$(ORG_FILE) warn
 
 untagged: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm quay.io/agari/cloudsweeper find-untagged
+		--rm cloudsweeper find-untagged
 
 billing-report: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm quay.io/agari/cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) billing-report
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) billing-report
 
 find: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm quay.io/agari/cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) --resource-id=$(RESOURCE_ID) find-resource
+		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) --resource-id=$(RESOURCE_ID) find-resource
 
 setup: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm -it quay.io/agari/cloudsweeper setup
+		--rm -it cloudsweeper setup
