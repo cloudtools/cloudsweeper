@@ -8,7 +8,7 @@ build:
 push: build
 	docker push quay.io/agari/cloudsweeper:latest
 
-run:
+run: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
@@ -77,5 +77,3 @@ setup: build
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
 		--rm -it quay.io/agari/cloudsweeper setup
-
-build-and-run: build run
