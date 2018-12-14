@@ -8,6 +8,9 @@ build:
 push: build
 	docker push quay.io/agari/cloudsweeper:latest
 
+push: build
+	docker push quay.io/agari/cloudsweeper:latest
+
 run: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
