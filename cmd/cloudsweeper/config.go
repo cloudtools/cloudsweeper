@@ -39,6 +39,7 @@ var configMapping = map[string]lookup{
 	// Notifying specific variables
 	"warning-hours":            lookup{"CS_WARNING_HOURS", "48"},
 	"display-name":             lookup{"CS_DISPLAY_NAME", "Cloudsweeper"},
+	"mail-from":                lookup{"CS_MAIL_FROM", ""},
 	"billing-report-addressee": lookup{"CS_BILLING_REPORT_ADDRESSEE", ""},
 	"total-sum-addressee":      lookup{"CS_TOTAL_SUM_ADDRESSEE", ""},
 	"mail-domain":              lookup{"CS_EMAIL_DOMAIN", ""},

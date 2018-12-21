@@ -45,6 +45,7 @@ var (
 
 	warningHours          = flag.String("warning-hours", "", "The number of hours in advance to warn about resource deletion")
 	displayName           = flag.String("display-name", "", "Name displayed on emails sent by Cloudsweeper")
+	mailFrom              = flag.String("mail-from", "", "'From Email' displayed on emails sent by Cloudsweeper")
 	billingReportReceiver = flag.String("billing-report-addressee", "", "Receiver of month to date billing report")
 	summaryManager        = flag.String("total-sum-addressee", "", "Receiver of total cost sums")
 	mailDomain            = flag.String("mail-domain", "", "The mail domain appended to usernames specified in the organization")
@@ -55,11 +56,11 @@ var (
 )
 
 const banner = `
-   ___ _                 _                                       
-  / __\ | ___  _   _  __| |_____      _____  ___ _ __   ___ _ __ 
+   ___ _                 _
+  / __\ | ___  _   _  __| |_____      _____  ___ _ __   ___ _ __
  / /  | |/ _ \| | | |/ _` + "`" + ` / __\ \ /\ / / _ \/ _ \ '_ \ / _ \ '__|
-/ /___| | (_) | |_| | (_| \__ \\ V  V /  __/  __/ |_) |  __/ |   
-\____/|_|\___/ \__,_|\__,_|___/ \_/\_/ \___|\___| .__/ \___|_|   
+/ /___| | (_) | |_| | (_| \__ \\ V  V /  __/  __/ |_) |  __/ |
+\____/|_|\___/ \__,_|\__,_|___/ \_/\_/ \___|\___| .__/ \___|_|
                                                 |_|
 `
 
@@ -168,6 +169,7 @@ func initNotifyClient() *notify.Client {
 		SMTPServer:             findConfig("smtp-server"),
 		SMTPPort:               findConfigInt("smtp-port"),
 		DisplayName:            findConfig("display-name"),
+		MailFrom:               findConfig("mail-from"),
 		EmailDomain:            findConfig("mail-domain"),
 		BillingReportAddressee: findConfig("billing-report-addressee"),
 		TotalSumAddresse:       findConfig("total-sum-addressee"),

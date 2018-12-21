@@ -35,17 +35,18 @@ type Client interface {
 type mailer struct {
 	user        string
 	auth        smtp.Auth
+	from        string
 	displayName string
 	smtpServer  string
 	smtpPort    int
 }
 
 // NewClient will create a new email client for sending mails
-func NewClient(username, password, displayName string, smtpServer string, smtpPort int) Client {
+func NewClient(username, password, displayName, from, smtpServer string, smtpPort int) Client {
 	auth := smtp.PlainAuth("", username, password, smtpServer)
 	m := new(mailer)
 	m.auth = auth
-	m.user = username
+	m.from = from
 	m.displayName = displayName
 	m.smtpServer = smtpServer
 	m.smtpPort = smtpPort
@@ -60,7 +61,7 @@ func (m *mailer) SendEmail(subject, content string, recipients ...string) error 
 	var msg bytes.Buffer
 
 	context := &mailContext{
-		From:        m.user,
+		From:        m.from,
 		To:          strings.Join(recipients, ", "),
 		Subject:     subject,
 		Body:        content,
@@ -78,7 +79,7 @@ func (m *mailer) SendEmail(subject, content string, recipients ...string) error 
 		return err
 	}
 
-	err = smtp.SendMail(server, m.auth, m.user, recipients, msg.Bytes())
+	err = smtp.SendMail(server, m.auth, m.from, recipients, msg.Bytes())
 	return err
 }
 

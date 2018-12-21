@@ -47,8 +47,9 @@ func getMailClient(notifyClient *Client) mailer.Client {
 	password := notifyClient.config.SMTPPassword
 	server := notifyClient.config.SMTPServer
 	port := notifyClient.config.SMTPPort
+	from := notifyClient.config.MailFrom
 	displayName := notifyClient.config.DisplayName
-	return mailer.NewClient(username, password, displayName, server, port)
+	return mailer.NewClient(username, password, displayName, from, server, port)
 }
 
 func extraTemplateFunctions() template.FuncMap {
