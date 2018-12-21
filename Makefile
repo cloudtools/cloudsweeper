@@ -16,6 +16,8 @@ run: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
+		-v $(shell pwd)/organization.json:/organization.json \
+        -v $(shell pwd)/config.conf:/config.conf \
 		--rm cloudsweeper  $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE)
 
 cleanup: build
@@ -23,6 +25,8 @@ cleanup: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
+		-v $(shell pwd)/organization.json:/organization.json \
+        -v $(shell pwd)/config.conf:/config.conf \
 		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) cleanup
 
 reset: build
@@ -30,6 +34,8 @@ reset: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
+		-v $(shell pwd)/organization.json:/organization.json \
+        -v $(shell pwd)/config.conf:/config.conf \
 		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) reset
 
 review: build
@@ -37,6 +43,8 @@ review: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
+		-v $(shell pwd)/organization.json:/organization.json \
+        -v $(shell pwd)/config.conf:/config.conf \
 		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) review
 
 mark: build
@@ -51,6 +59,8 @@ warn: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
+		-v $(shell pwd)/organization.json:/organization.json \
+        -v $(shell pwd)/config.conf:/config.conf \
 		--rm cloudsweeper $${CSP:+--csp=${CSP}} --warning-hours=$(WARNING_HOURS) --org-file=$(ORG_FILE) warn
 
 untagged: build
@@ -58,6 +68,8 @@ untagged: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
+		-v $(shell pwd)/organization.json:/organization.json \
+        -v $(shell pwd)/config.conf:/config.conf \
 		--rm cloudsweeper find-untagged
 
 billing-report: build
@@ -65,6 +77,8 @@ billing-report: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
+		-v $(shell pwd)/organization.json:/organization.json \
+        -v $(shell pwd)/config.conf:/config.conf \
 		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) billing-report
 
 find: build
@@ -72,6 +86,8 @@ find: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
+		-v $(shell pwd)/organization.json:/organization.json \
+        -v $(shell pwd)/config.conf:/config.conf \
 		--rm cloudsweeper $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) --resource-id=$(RESOURCE_ID) find-resource
 
 setup: build
@@ -79,4 +95,6 @@ setup: build
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
+		-v $(shell pwd)/organization.json:/organization.json \
+        -v $(shell pwd)/config.conf:/config.conf \
 		--rm -it cloudsweeper setup
