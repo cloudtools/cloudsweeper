@@ -5,6 +5,9 @@ DOCKER_GOOGLE_FLAG	:= $(shell echo $${GOOGLE_APPLICATION_CREDENTIALS:+-v ${GOOGL
 build:
 	docker build -t cloudsweeper .
 
+clean:
+	docker image rm quay.io/agari/cloudsweeper
+
 push: build
 	docker push cloudsweeper:latest
 
