@@ -1,5 +1,5 @@
 ORG_FILE            := organization.json
-CONF_FILE           := $(CONF_FILE)
+CONF_FILE           := config.conf
 WARNING_HOURS		:= 48
 DOCKER_GOOGLE_FLAG	:= $(shell echo $${GOOGLE_APPLICATION_CREDENTIALS:+-v ${GOOGLE_APPLICATION_CREDENTIALS}:/google-creds -e GOOGLE_APPLICATION_CREDENTIALS=/google-creds})
 CONTAINER_TAG       := quay.io/agari/cloudsweeper
