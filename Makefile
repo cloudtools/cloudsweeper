@@ -19,7 +19,7 @@ run: build
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
-        -v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
+		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
 		--rm $(CONTAINER_TAG)  $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE)
 
 cleanup: build
@@ -28,7 +28,7 @@ cleanup: build
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
-        -v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
+		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
 		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) cleanup
 
 reset: build
@@ -37,7 +37,7 @@ reset: build
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
-        -v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
+		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
 		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) reset
 
 review: build
@@ -46,7 +46,7 @@ review: build
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
-        -v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
+		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
 		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) review
 
 mark: build
@@ -62,7 +62,7 @@ warn: build
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
-        -v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
+		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
 		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --warning-hours=$(WARNING_HOURS) --org-file=$(ORG_FILE) warn
 
 untagged: build
@@ -71,7 +71,7 @@ untagged: build
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
-        -v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
+		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
 		--rm $(CONTAINER_TAG) find-untagged
 
 billing-report: build
@@ -80,7 +80,7 @@ billing-report: build
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
-        -v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
+		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
 		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) billing-report
 
 find: build
@@ -89,7 +89,7 @@ find: build
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
-        -v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
+		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
 		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) --resource-id=$(RESOURCE_ID) find-resource
 
 setup: build
@@ -98,5 +98,5 @@ setup: build
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
-        -v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
+		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
 		--rm -it $(CONTAINER_TAG) setup
