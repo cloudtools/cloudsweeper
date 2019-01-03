@@ -20,7 +20,7 @@
 			"disabled": false,
 			"aws_accounts": [
 				{
-					"id": "12345667890",
+					"id": "111111111111",
 					"cloudsweeper_enabled": true
 				}
 			],
@@ -37,7 +37,7 @@
 			"department": "dev",
 			"aws_accounts": [
 				{
-					"id": "09876543234",
+					"id": "999999999999",
 					"cloudsweeper_enabled": false
 				}
 			],

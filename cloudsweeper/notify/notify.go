@@ -40,6 +40,7 @@ type Config struct {
 	SMTPServer             string
 	SMTPPort               int
 	DisplayName            string
+	MailFrom               string
 	EmailDomain            string
 	BillingReportAddressee string
 	TotalSumAddresse       string
