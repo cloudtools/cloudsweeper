@@ -20,7 +20,7 @@ run: build
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
 		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
-		--rm $(CONTAINER_TAG)  $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE)
+		--rm $(CONTAINER_TAG)
 
 cleanup: build
 	docker run \
@@ -29,7 +29,7 @@ cleanup: build
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
 		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
-		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) cleanup
+		--rm $(CONTAINER_TAG) cleanup
 
 reset: build
 	docker run \
@@ -38,7 +38,7 @@ reset: build
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
 		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
-		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) reset
+		--rm $(CONTAINER_TAG) reset
 
 review: build
 	docker run \
@@ -47,14 +47,14 @@ review: build
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
 		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
-		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) review
+		--rm $(CONTAINER_TAG) review
 
 mark: build
 	docker run \
 		-e AWS_ACCESS_KEY_ID \
 		-e AWS_SECRET_ACCESS_KEY \
 		$(DOCKER_GOOGLE_FLAG) \
-		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) mark-for-cleanup
+		--rm $(CONTAINER_TAG) mark-for-cleanup
 
 warn: build
 	docker run \
@@ -63,7 +63,7 @@ warn: build
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
 		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
-		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --warning-hours=$(WARNING_HOURS) --org-file=$(ORG_FILE) warn
+		--rm $(CONTAINER_TAG) warn
 
 untagged: build
 	docker run \
@@ -81,7 +81,7 @@ billing-report: build
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
 		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
-		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) billing-report
+		--rm $(CONTAINER_TAG) billing-report
 
 find: build
 	docker run \
@@ -90,7 +90,7 @@ find: build
 		$(DOCKER_GOOGLE_FLAG) \
 		-v $(shell pwd)/$(ORG_FILE):/$(ORG_FILE) \
 		-v $(shell pwd)/$(CONF_FILE):/$(CONF_FILE) \
-		--rm $(CONTAINER_TAG) $${CSP:+--csp=${CSP}} --org-file=$(ORG_FILE) --resource-id=$(RESOURCE_ID) find-resource
+		--rm $(CONTAINER_TAG) --resource-id=$(RESOURCE_ID) find-resource
 
 setup: build
 	docker run \
