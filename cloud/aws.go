@@ -228,7 +228,9 @@ func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
 						tags = convertAWSS3Tags(buTags.TagSet)
 					}
 
-					cw := cloudwatch.New(sess, &aws.Config{Region: aws.String(region)})
+					cw := cloudwatch.New(sess, &aws.Config{
+						Credentials: cred,
+						Region:      aws.String(region)})
 					size := 0
 					numberOfObjects := int64(0)
 
