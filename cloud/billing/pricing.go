@@ -40,7 +40,10 @@ var awsRegionNameToIDMap = map[string]string{
 	"EU (Ireland)":               "eu-west-1",
 	"EU (London)":                "eu-west-2",
 	"EU (Paris)":                 "eu-west-3",
+	"EU (Stockholm)":             "eu-north-1",
 	"South America (Sao Paulo)":  "sa-east-1",
+	"AWS GovCloud (US-East)":     "unknown",
+	"AWS GovCloud (US-West)":     "unknown",
 	"AWS GovCloud (US)":          "unknown",
 }
 
@@ -210,7 +213,7 @@ func awsInstancePricePerHour(region, instanceType string) float64 {
 			for _, price := range term.PriceDimensions {
 				regionID, ok := awsRegionNameToIDMap[product.Region]
 				if !ok {
-					log.Fatalln("Got an unknown region from AWS")
+					log.Fatalln("Got an unknown region from AWS:", product.Region)
 				}
 				key := instanceKeyPair{
 					Region:       regionID,

@@ -103,7 +103,7 @@ func (i *testImg) MakePrivate() error { return nil }
 // This will test the filters being used when marking resources for
 // cleanup. These are:
 // 		- unattached volumes > 30 days old
-//		- unused/unaccessed buckets > 120 days old
+//		- unused/unaccessed buckets > 6 months (182 days)
 // 		- non-whitelisted AMIs > 6 months
 // 		- non-whitelisted snapshots > 6 months
 // 		- non-whitelisted volumes > 6 months
@@ -133,7 +133,7 @@ func TestCleanupRulesFilter(t *testing.T) {
 	unattachedFilter.AddGeneralRule(Negate(TaggedForCleanup()))
 
 	bucketFilter := New()
-	bucketFilter.AddBucketRule(NotModifiedInXDays(120))
+	bucketFilter.AddBucketRule(NotModifiedInXDays(182))
 	bucketFilter.AddGeneralRule(OlderThanXDays(7))
 	bucketFilter.AddGeneralRule(Negate(HasTag("Release")))
 	bucketFilter.AddGeneralRule(Negate(TaggedForCleanup()))

@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -227,17 +228,98 @@ func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
 						tags = convertAWSS3Tags(buTags.TagSet)
 					}
 
-					var count, size int64
-					var lastMod time.Time
+					cw := cloudwatch.New(sess, &aws.Config{Region: aws.String(region)})
+					size := 0
+					numberOfObjects := int64(0)
 
+					var input cloudwatch.GetMetricStatisticsInput
+					input.Namespace = aws.String("AWS/S3")
+					input.MetricName = aws.String("BucketSizeBytes")
+					input.StartTime = aws.Time(time.Now().Add(time.Duration(-24*60) * time.Minute))
+					input.EndTime = aws.Time(time.Now())
+					input.Period = aws.Int64(24 * 60 * 60)
+					input.Statistics = []*string{aws.String("Average")}
+					input.Unit = aws.String("Bytes")
+					dimensionNameFilter := cloudwatch.Dimension{
+						Name:  aws.String("BucketName"),
+						Value: bu.Name,
+					}
+					dimensionBucketSizeFilter := cloudwatch.Dimension{
+						Name:  aws.String("StorageType"),
+						Value: aws.String("StandardStorage"),
+					}
+					input.Dimensions = []*cloudwatch.Dimension{
+						&dimensionNameFilter, &dimensionBucketSizeFilter,
+					}
+					bucketSizeMetrics, err := cw.GetMetricStatistics(&input)
+					if err != nil {
+						fmt.Println("Error", err)
+					}
+					if bucketSizeMetrics != nil {
+						var minimumTimeDifference float64
+						var timeDifference float64
+						var averageValue *float64
+						minimumTimeDifference = -1
+						for _, datapoint := range bucketSizeMetrics.Datapoints {
+							timeDifference = time.Since(*datapoint.Timestamp).Seconds()
+							if minimumTimeDifference == -1 {
+								minimumTimeDifference = timeDifference
+								averageValue = datapoint.Average
+							} else if timeDifference < minimumTimeDifference {
+								minimumTimeDifference = timeDifference
+								averageValue = datapoint.Average
+							}
+						}
+						if averageValue != nil {
+							size = int(*averageValue)
+						}
+					}
+
+					// Update input to get numberOfObjects instead
+					input.MetricName = aws.String("NumberOfObjects")
+					dimensionNumberOfObjectsFilter := cloudwatch.Dimension{
+						Name:  aws.String("StorageType"),
+						Value: aws.String("AllStorageTypes"),
+					}
+					input.Dimensions = []*cloudwatch.Dimension{
+						&dimensionNameFilter, &dimensionNumberOfObjectsFilter,
+					}
+					input.Unit = aws.String("Count")
+					numberOfObjectsMetrics, err := cw.GetMetricStatistics(&input)
+					if err != nil {
+						fmt.Println("Error", err)
+					}
+					if numberOfObjectsMetrics != nil {
+						var minimumTimeDifference float64
+						var timeDifference float64
+						var averageValue *float64
+						minimumTimeDifference = -1
+						for _, datapoint := range numberOfObjectsMetrics.Datapoints {
+							timeDifference = time.Since(*datapoint.Timestamp).Seconds()
+							if minimumTimeDifference == -1 {
+								minimumTimeDifference = timeDifference
+								averageValue = datapoint.Average
+							} else if timeDifference < minimumTimeDifference {
+								minimumTimeDifference = timeDifference
+								averageValue = datapoint.Average
+							}
+						}
+						if averageValue != nil {
+							numberOfObjects = int64(*averageValue)
+						}
+					}
+
+					// TODO: this should be configurable instead of hardcoded to 6 + 1 months
+					lastMod := time.Now().AddDate(0, -7, 0)
 					err = bucketClient.ListObjectsV2Pages(&s3.ListObjectsV2Input{
-						Bucket: bu.Name,
+						Bucket: bu.Name, EncodingType: aws.String("url"),
 					}, func(output *s3.ListObjectsV2Output, lastPage bool) bool {
-						for _, obj := range output.Contents {
-							count++
-							size += *obj.Size
-							if (*obj.LastModified).After(lastMod) {
-								lastMod = *obj.LastModified
+						for _, object := range output.Contents {
+							// if object has been modified in the last 6 months
+							if time.Now().Before(object.LastModified.AddDate(0, 6, 0)) {
+								lastMod = time.Now().AddDate(0, -5, 0)
+								// exit early
+								return false
 							}
 						}
 						return !lastPage
@@ -260,7 +342,7 @@ func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
 							tags:         tags,
 						},
 						lastModified: lastMod,
-						objectCount:  count,
+						objectCount:  numberOfObjects,
 						totalSizeGB:  float64(size) / gbDivider,
 					}}
 					buckChan <- &buck
