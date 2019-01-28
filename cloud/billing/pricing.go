@@ -42,9 +42,9 @@ var awsRegionNameToIDMap = map[string]string{
 	"EU (Paris)":                 "eu-west-3",
 	"EU (Stockholm)":             "eu-north-1",
 	"South America (Sao Paulo)":  "sa-east-1",
-	"AWS GovCloud (US-East)":     "unknown",
-	"AWS GovCloud (US-West)":     "unknown",
-	"AWS GovCloud (US)":          "unknown",
+	"AWS GovCloud (US-East)":     "us-gov-east-1",
+	"AWS GovCloud (US-West)":     "us-gov-west-1",
+	"AWS GovCloud (US)":          "us-gov-west-1",
 }
 
 // Storage cost per GB per day
