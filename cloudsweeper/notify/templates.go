@@ -31,7 +31,7 @@ whitelist it: add a tag with the key "cloudsweeper-whitelisted" to it.
 </p>
 
 <p>
-To schedule automated clean up, please add one of the following two types of tags (key: value) to your resource: 
+To schedule automated clean up, please add one of the following two types of tags (key: value) to your resource:
 <br />
 "<b>cloudsweeper-lifetime</b>: days-x", where x is the amount of days to keep the resource
 <br />
@@ -157,7 +157,7 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
 			<th><strong>Files</strong></th>
-			<th><strong>Last modified</strong></th>
+			<th><strong>Modified in < 6 months</strong></th>
 			<th><strong>Monthly cost</strong></th>
 		</tr>
 	{{ range $i, $bucket := .Buckets }}
@@ -166,7 +166,7 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 			<td>{{ $bucket.ID }}</td>
 			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
 			<td>{{ $bucket.ObjectCount }}</td>
-			<td>{{ fdate $bucket.LastModified "2006-01-02" }} ({{ daysrunning $bucket.LastModified }})</td>
+			<td>{{ modifiedInTheLast6Months $bucket.LastModified }}</td>
 			<td>{{ printf "$%.3f" (bucketcost $bucket) }}</td>
 		</tr>
 	{{ end }}
@@ -299,7 +299,7 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
 			<th><strong>Files</strong></th>
-			<th><strong>Last modified</strong></th>
+			<th><strong>Modified in < 6 months</strong></th>
 			<th><strong>Monthly cost</strong></th>
 		</tr>
 	{{ range $i, $bucket := .Buckets }}
@@ -308,7 +308,7 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 			<td>{{ $bucket.ID }}</td>
 			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
 			<td>{{ $bucket.ObjectCount }}</td>
-			<td>{{ fdate $bucket.LastModified "2006-01-02" }} ({{ daysrunning $bucket.LastModified }})</td>
+			<td>{{ modifiedInTheLast6Months $bucket.LastModified }}</td>
 			<td>{{ printf "$%.3f" (bucketcost $bucket) }}</td>
 		</tr>
 	{{ end }}
@@ -441,7 +441,7 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
 			<th><strong>Files</strong></th>
-			<th><strong>Last modified</strong></th>
+			<th><strong>Modified in < 6 months</strong></th>
 			<th><strong>Monthly cost</strong></th>
 		</tr>
 	{{ range $i, $bucket := .Buckets }}
@@ -450,7 +450,7 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 			<td>{{ $bucket.ID }}</td>
 			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
 			<td>{{ $bucket.ObjectCount }}</td>
-			<td>{{ fdate $bucket.LastModified "2006-01-02" }} ({{ daysrunning $bucket.LastModified }})</td>
+			<td>{{ modifiedInTheLast6Months $bucket.LastModified }}</td>
 			<td>{{ printf "$%.3f" (bucketcost $bucket) }}</td>
 		</tr>
 	{{ end }}
@@ -467,7 +467,7 @@ const deletionWarningTemplate = `<h1>Hello {{ .Owner -}},</h1>
 
 <h2>Resources will be cleaned up within {{ .HoursInAdvance }} hours</h2>
 <p>
-Unless you take action, the resources listed below will be cleaned up 
+Unless you take action, the resources listed below will be cleaned up
 from your account within the next {{ .HoursInAdvance }} hours. <b>Make sure
 you don't need to keep any of these resources</b>
 </p>
@@ -592,7 +592,7 @@ Read more about how Cloudsweeper works and how to better tag your resources at
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
 			<th><strong>Files</strong></th>
-			<th><strong>Last modified</strong></th>
+			<th><strong>Modified in < 6 months</strong></th>
 			<th><strong>Monthly cost</strong></th>
 		</tr>
 	{{ range $i, $bucket := .Buckets }}
@@ -601,7 +601,7 @@ Read more about how Cloudsweeper works and how to better tag your resources at
 			<td>{{ $bucket.ID }}</td>
 			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
 			<td>{{ $bucket.ObjectCount }}</td>
-			<td>{{ fdate $bucket.LastModified "2006-01-02" }} ({{ daysrunning $bucket.LastModified }})</td>
+			<td>{{ modifiedInTheLast6Months $bucket.LastModified }}</td>
 			<td>{{ printf "$%.3f" (bucketcost $bucket) }}</td>
 		</tr>
 	{{ end }}

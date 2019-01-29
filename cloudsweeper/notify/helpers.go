@@ -69,6 +69,14 @@ func extraTemplateFunctions() template.FuncMap {
 				return fmt.Sprintf("%d days ago", days)
 			}
 		},
+		// TODO: this should be configurable
+		"modifiedInTheLast6Months": func(t time.Time) string {
+			if time.Now().Before(t.AddDate(0, 6, 0)) {
+				return "true"
+			}
+			return "false"
+		},
+
 		"even": func(num int) bool { return num%2 == 0 },
 		"yesno": func(b bool) string {
 			if b {

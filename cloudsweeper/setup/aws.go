@@ -55,7 +55,7 @@ const (
 
 var (
 	monitorEC2 = []string{"ec2:DescribeInstances", "ec2:DescribeInstanceAttribute", "ec2:DescribeSnapshots", "ec2:DescribeVolumeStatus", "ec2:DescribeVolumes", "ec2:DescribeInstanceStatus", "ec2:DescribeTags", "ec2:DescribeVolumeAttribute", "ec2:DescribeImages", "ec2:DescribeSnapshotAttribute"}
-	monitorS3  = []string{"s3:GetBucketTagging", "s3:ListBucket", "s3:GetObject", "s3:ListAllMyBuckets", "s3:GetBucketLocation"}
+	monitorS3  = []string{"s3:GetBucketTagging", "s3:ListBucket", "s3:GetObject", "s3:ListAllMyBuckets", "s3:GetBucketLocation", "cloudwatch:GetMetricStatistics"}
 
 	cleanupEC2 = []string{"ec2:DeregisterImage", "ec2:DeleteSnapshot", "ec2:DeleteTags", "ec2:ModifyImageAttribute", "ec2:DeleteVolume", "ec2:TerminateInstances", "ec2:CreateTags", "ec2:StopInstances"}
 	cleanupS3  = []string{"s3:PutBucketTagging", "s3:DeleteObject", "s3:DeleteBucket"}
