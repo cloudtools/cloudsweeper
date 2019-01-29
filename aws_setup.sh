@@ -34,7 +34,8 @@ CLOUDSWEEPER_POLICY='{
                 "s3:GetBucketLocation",
                 "s3:PutBucketTagging",
                 "s3:DeleteObject",
-                "s3:DeleteBucket"
+                "s3:DeleteBucket",
+                "cloudwatch:GetMetricStatistics"
             ],
             "Resource": [
                 "*"

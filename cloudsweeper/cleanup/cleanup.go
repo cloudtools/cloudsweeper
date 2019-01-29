@@ -22,7 +22,7 @@ const (
 // a tag that will delete the resources 4 days from now. The rules
 // for marking a resource for cleanup are the following:
 // 		- unattached volumes > 30 days old
-//		- unused/unaccessed buckets > 120 days old
+//		- unused/unaccessed buckets > 6 months (182 days)
 // 		- non-whitelisted AMIs > 6 months
 // 		- non-whitelisted snapshots > 6 months
 // 		- non-whitelisted volumes > 6 months
@@ -56,7 +56,7 @@ func MarkForCleanup(mngr cloud.ResourceManager) {
 		unattachedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		bucketFilter := filter.New()
-		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(120))
+		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(182))
 		bucketFilter.AddGeneralRule(filter.OlderThanXDays(7))
 		bucketFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		bucketFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
