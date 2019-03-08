@@ -24,7 +24,9 @@ The recommended way of using Cloudsweeper is through Docker. For the most common
 Below are the different modes that Cloudsweeper runs in.
 
 ### Review - `make review`
-The review target will look for really old resources that Cloudsweeper is too unsure about to automatically cleanup. These resources are filtered based on some rules:
+The review target will look for really old resources that Cloudsweeper is too unsure about to automatically cleanup. These resources are filtered based on some rules
+The defaults are:
+
 - Resource is older than 30 days
 - A whitelisted resource is older than 6 months
 - An instance marked with do-not-delete is older than a week
@@ -51,7 +53,9 @@ The resources will be marked with a tag with key `cloudsweeper-delete-at` and th
 Cloudsweeper can be used to find out more details about a specified resource in AWS. This is useful to quickly get some more details if all you have is a resource ID. If using the make target, the `RESOURCE_ID` variable must be set. If running the command directly, use the `--resource-id` flag.
 
 ### Cleanup - `make cleanup`
-The cleanup target will look through resources and delete those that should be cleaned up. This is determined by looking at tags of the resources. There are three requirements for this deletion:
+The cleanup target will look through resources and delete those that should be cleaned up. This is determined by looking at tags of the resources. 
+There are certain thresholds that can be configured for this target. You can get more information on what those are by looking at the `--help` flag in the executable or by looking at the `config.conf` file
+There are three requirements for this deletion:
 #### Lifetime
 A resource can have a lifetime. This is specified with the tag `Key: cloudsweeper-lifetime, Value: days-X`, where `X` is the number of days to keep the resource after its creation date. If the current date is after a resource's creation date + the lifetime it will get cleaned up.
 #### Expiry
