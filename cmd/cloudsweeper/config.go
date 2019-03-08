@@ -46,6 +46,18 @@ var configMapping = map[string]lookup{
 
 	// Setup variables
 	"aws-master-arn": lookup{"CS_MASTER_ARN", ""},
+
+	// Clean thresholds
+	"clean-untagged-older-than-days":    lookup{"CLEAN_UNTAGGED_OLDER_THAN_DAYS", "30"},
+	"clean-general-older-than-months":   lookup{"CLEAN_GENERAL_OLDER_THAN_MONTHS", "6"},
+	"clean-unattatched-older-than-days": lookup{"CLEAN_UNATTATCHED_OLDER_THAN_DAYS", "30"},
+	"clean-bucket-not-modified-days":    lookup{"CLEAN_BUCKET_NOT_MODIFIED_DAYS", "182"},
+	"clean-bucket-older-than-days":      lookup{"CLEAN_BUCKET_OLDER_THAN_DAYS", "7"},
+
+	//  Notify thresholds
+	"notify-general-older-than-days":     lookup{"NOTIFY_GENERAL_OLDER_THAN_DAYS", "30"},
+	"notify-whitelist-older-than-months": lookup{"NOTIFY_WHITELIST_OLDER_THAN_MONTHS", "6"},
+	"notify-dnd-older-than-days":         lookup{"NOTIFY_DND_OLDER_THAN_DAYS", "7"},
 }
 
 func loadConfig() {
@@ -53,6 +65,12 @@ func loadConfig() {
 	config, err = godotenv.Read(configFileName)
 	if err != nil {
 		log.Fatalf("Could not load config file '%s': %s", configFileName, err)
+	}
+}
+
+func loadThresholds() {
+	for _, v := range thnames {
+		thresholds[v] = findConfigInt(v)
 	}
 }
 

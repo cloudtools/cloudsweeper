@@ -53,6 +53,31 @@ var (
 	setupARN = flag.String("aws-master-arn", "", "AWS ARN of role in account used by Cloudsweeper to assume roles")
 
 	findResourceID = flag.String("resource-id", "", "ID of resource to find with find-resource command")
+
+	// Thresholds
+	thresholds = make(map[string]int)
+	thnames    = []string{
+		"clean-untagged-older-than-days",
+		"clean-general-older-than-months",
+		"clean-unattatched-older-than-days",
+		"clean-bucket-not-modified-days",
+		"clean-bucket-older-than-days",
+		"notify-general-older-than-days",
+		"notify-whitelist-older-than-months",
+		"notify-dnd-older-than-days",
+	}
+
+	// Clean thresholds
+	cleanUntaggedOlderThanDays    = flag.String("clean-untagged-older-than-days", "", "Clean untagged instances if older than X days (default: 30)")
+	cleanGeneralOlderThanMonths   = flag.String("clean-general-older-than-months", "", "Clean if older than X days (default: 6)")
+	cleanUnattatchedOlderThanDays = flag.String("clean-unattatched-older-than-days", "", "Clean unattached volumes older than X days (default: 30)")
+	cleanBucketNotModifiedDays    = flag.String("clean-bucket-not-modified-days", "", "Clean s3 bucket if not modified for more than X days (default: 182)")
+	cleanBucketOlderThanDays      = flag.String("clean-bucket-older-than-days", "", "Clean s3 bucket if older than X days (default: 7)")
+
+	//  Notify thresholds
+	notifyGeneralOlderThanDays     = flag.String("notify-general-older-than-days", "", "Notify if older than X days (default: 30)")
+	notifyWhitelistOlderThanMonths = flag.String("notify-whitelist-older-than-months", "", "Notify if whitelisted is older than X months (default: 6)")
+	notifyDndOlderThanDays         = flag.String("notify-dnd-older-than-days", "", "Do not delete older than X days (default: 7)")
 )
 
 const banner = `
@@ -68,6 +93,7 @@ func main() {
 	fmt.Println(banner)
 	loadConfig()
 	flag.Parse()
+	loadThresholds()
 	csp := cspFromConfig(findConfig("csp"))
 	log.Printf("Running against %s...\n", csp)
 	switch getPositionalCmd() {
@@ -85,13 +111,13 @@ func main() {
 		log.Println("Marking old resources for cleanup")
 		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
-		cleanup.MarkForCleanup(mngr)
+		cleanup.MarkForCleanup(mngr, thresholds)
 	case "review":
 		log.Println("Sending out old resource review")
 		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		client := initNotifyClient()
-		client.OldResourceReview(mngr, org, csp)
+		client.OldResourceReview(mngr, org, csp, thresholds)
 	case "warn":
 		log.Println("Sending out cleanup warning")
 		org := parseOrganization(findConfig("org-file"))
