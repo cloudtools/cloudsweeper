@@ -27,7 +27,7 @@ const (
 // 		- non-whitelisted snapshots > 6 months
 // 		- non-whitelisted volumes > 6 months
 //		- untagged resources > 30 days (this should take care of instances)
-func MarkForCleanup(mngr cloud.ResourceManager) {
+func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int) {
 	allResources := mngr.AllResourcesPerAccount()
 	allBuckets := mngr.BucketsPerAccount()
 
@@ -37,12 +37,12 @@ func MarkForCleanup(mngr cloud.ResourceManager) {
 		untaggedFilter.AddGeneralRule(func(r cloud.Resource) bool {
 			return len(r.Tags()) == 0
 		})
-		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(30))
+		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-untagged-older-than-days"]))
 		untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
 		untaggedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		oldFilter := filter.New()
-		oldFilter.AddGeneralRule(filter.OlderThanXMonths(6))
+		oldFilter.AddGeneralRule(filter.OlderThanXMonths(thresholds["clean-general-older-than-months"]))
 		// Don't cleanup resources tagged for release
 		oldFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		oldFilter.AddSnapshotRule(filter.IsNotInUse())
@@ -51,13 +51,13 @@ func MarkForCleanup(mngr cloud.ResourceManager) {
 
 		unattachedFilter := filter.New()
 		unattachedFilter.AddVolumeRule(filter.IsUnattached())
-		unattachedFilter.AddGeneralRule(filter.OlderThanXDays(30))
+		unattachedFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-unattatched-older-than-days"]))
 		unattachedFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		unattachedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		bucketFilter := filter.New()
-		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(182))
-		bucketFilter.AddGeneralRule(filter.OlderThanXDays(7))
+		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(thresholds["clean-bucket-not-modified-days"]))
+		bucketFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-bucket-older-than-days"]))
 		bucketFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		bucketFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
