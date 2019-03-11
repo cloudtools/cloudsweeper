@@ -124,7 +124,7 @@ func initManagerToMailDataMapping(managers cs.Employees) map[string]*resourceMai
 //		- Resource is older than 30 days
 //		- A whitelisted resource is older than 6 months
 //		- An instance marked with do-not-delete is older than a week
-func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organization, csp cloud.CSP) {
+func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organization, csp cloud.CSP, thresholds map[string]int) {
 	allCompute := mngr.AllResourcesPerAccount()
 	allBuckets := mngr.BucketsPerAccount()
 	accountUserMapping := org.AccountToUserMapping(csp)
@@ -134,20 +134,20 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 
 	// Create filters
 	generalFilter := filter.New()
-	generalFilter.AddGeneralRule(filter.OlderThanXDays(30))
+	generalFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["GeneralOlderThanDays"]))
 
 	whitelistFilter := filter.New()
 	whitelistFilter.OverrideWhitelist = true
-	whitelistFilter.AddGeneralRule(filter.OlderThanXMonths(6))
+	whitelistFilter.AddGeneralRule(filter.OlderThanXMonths(thresholds["WhitelistOlderThanMonths"]))
 
 	// These only apply to instances
 	dndFilter := filter.New()
 	dndFilter.AddGeneralRule(filter.HasTag("no-not-delete"))
-	dndFilter.AddGeneralRule(filter.OlderThanXDays(7))
+	dndFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["DndOlderThanDays"]))
 
 	dndFilter2 := filter.New()
 	dndFilter2.AddGeneralRule(filter.NameContains("do-not-delete"))
-	dndFilter2.AddGeneralRule(filter.OlderThanXDays(7))
+	dndFilter2.AddGeneralRule(filter.OlderThanXDays(thresholds["DndOlderThanDays"]))
 
 	for account, resources := range allCompute {
 		log.Println("Performing old resource review in", account)
