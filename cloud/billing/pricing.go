@@ -240,7 +240,7 @@ func awsInstancePricePerHour(instance cloud.Instance) float64 {
 
 	sess := session.Must(session.NewSession())
 	creds := stscreds.NewCredentials(sess, fmt.Sprintf(assumeRoleARNTemplate, instance.Owner()))
-	svc := pricing.New(session.New(), &aws.Config{
+	svc := pricing.New(sess, &aws.Config{
 		Credentials: creds,
 		Region:      aws.String("us-east-1"), // pricing API is only available here
 	})
