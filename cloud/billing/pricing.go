@@ -271,11 +271,11 @@ func awsInstancePricePerHour(instance cloud.Instance) float64 {
 	var listPrice rawAWSPrice
 	rawListPriceJSON, err := protocol.EncodeJSONValue(result.PriceList[0], protocol.NoEscape)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Fatalln(err.Error())
 	}
 	err = json.Unmarshal([]byte(rawListPriceJSON), &listPrice)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Fatalln(err.Error())
 	}
 
 	for _, term := range listPrice.Terms.OnDemand {
@@ -286,7 +286,7 @@ func awsInstancePricePerHour(instance cloud.Instance) float64 {
 			}
 			usd, err := strconv.ParseFloat(price.PricePerUnit.USD, 64)
 			if err != nil {
-				log.Println("Could not convert price from AWS JSON", err)
+				log.Fatalln("Could not convert price from AWS JSON", err)
 			}
 			if usd == 0.00 {
 				log.Println("Price for", instance.InstanceType(), "in", instance.Location(), "is $0.00. Needs investigation!")
