@@ -237,7 +237,7 @@ func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
 					var input cloudwatch.GetMetricStatisticsInput
 					input.Namespace = aws.String("AWS/S3")
 					input.MetricName = aws.String("BucketSizeBytes")
-					input.StartTime = aws.Time(time.Now().Add(time.Duration(-24*60) * time.Minute))
+					input.StartTime = aws.Time(time.Now().Add(time.Duration(-48*60) * time.Minute))
 					input.EndTime = aws.Time(time.Now())
 					input.Period = aws.Int64(24 * 60 * 60)
 					input.Statistics = []*string{aws.String("Average")}
@@ -290,6 +290,9 @@ func (m *awsResourceManager) BucketsPerAccount() map[string][]Bucket {
 					numberOfObjectsMetrics, err := cw.GetMetricStatistics(&input)
 					if err != nil {
 						fmt.Println("Error", err)
+					}
+					if len(bucketSizeMetrics.Datapoints) == 0 && len(numberOfObjectsMetrics.Datapoints) != 0 {
+						fmt.Println("Warning: Got 0 datapoints from: ", *bu.Name)
 					}
 					if numberOfObjectsMetrics != nil {
 						var minimumTimeDifference float64
