@@ -40,7 +40,7 @@ To schedule automated clean up, please add one of the following two types of tag
 
 <p>
 Read more about how Cloudsweeper works and how to better tag your resources at
-<a href="#">this Wiki page</a>.
+<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">this Wiki page</a>.
 </p>
 
 <h2>Old resources:</h2>
@@ -478,7 +478,7 @@ If you want to save any of these resources, add a tag with the key <b>whiteliste
 
 <p>
 Read more about how Cloudsweeper works and how to better tag your resources at
-<a href="#">this Wiki page</a>.
+<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">this Wiki page</a>.
 </p>
 
 <h2>Old resources:</h2>
@@ -792,7 +792,7 @@ Please tag these resources appropriately.
 
 <p>
 Read more about how Cloudsweeper works and how to better tag your resources at
-<a href="#">this Wiki page</a>.
+<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">this Wiki page</a>.
 </p>
 
 <h2>Untagged resources:</h2>
