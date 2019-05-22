@@ -4,8 +4,20 @@
 package filter
 
 import (
+	"strings"
+
 	"github.com/cloudtools/cloudsweeper/cloud"
 )
+
+// IsWhitelisted checks if the given resource has a whitelisting tag
+func IsWhitelisted(resource cloud.Resource) bool {
+	for key := range resource.Tags() {
+		if strings.Replace(strings.ToLower(key), "_", "-", -1) == WhitelistTagKey {
+			return true
+		}
+	}
+	return false
+}
 
 func (f *ResourceFilter) includeResource(resource cloud.Resource) bool {
 	for i := range f.generalRules {
@@ -25,8 +37,7 @@ func (f *ResourceFilter) includeInstance(instance cloud.Instance) bool {
 			return false
 		}
 	}
-	_, isWhitelisted := instance.Tags()[WhitelistTagKey]
-	return !isWhitelisted || f.OverrideWhitelist
+	return !IsWhitelisted(instance) || f.OverrideWhitelist
 }
 
 func (f *ResourceFilter) includeVolume(volume cloud.Volume) bool {
@@ -38,8 +49,7 @@ func (f *ResourceFilter) includeVolume(volume cloud.Volume) bool {
 			return false
 		}
 	}
-	_, isWhitelisted := volume.Tags()[WhitelistTagKey]
-	return !isWhitelisted || f.OverrideWhitelist
+	return !IsWhitelisted(volume) || f.OverrideWhitelist
 }
 
 func (f *ResourceFilter) includeImage(image cloud.Image) bool {
@@ -51,8 +61,7 @@ func (f *ResourceFilter) includeImage(image cloud.Image) bool {
 			return false
 		}
 	}
-	_, isWhitelisted := image.Tags()[WhitelistTagKey]
-	return !isWhitelisted || f.OverrideWhitelist
+	return !IsWhitelisted(image) || f.OverrideWhitelist
 }
 
 func (f *ResourceFilter) includeSnapshot(snapshot cloud.Snapshot) bool {
@@ -64,8 +73,7 @@ func (f *ResourceFilter) includeSnapshot(snapshot cloud.Snapshot) bool {
 			return false
 		}
 	}
-	_, isWhitelisted := snapshot.Tags()[WhitelistTagKey]
-	return !isWhitelisted || f.OverrideWhitelist
+	return !IsWhitelisted(snapshot) || f.OverrideWhitelist
 }
 
 func (f *ResourceFilter) includeBucket(bucket cloud.Bucket) bool {
@@ -77,8 +85,7 @@ func (f *ResourceFilter) includeBucket(bucket cloud.Bucket) bool {
 			return false
 		}
 	}
-	_, isWhitelisted := bucket.Tags()[WhitelistTagKey]
-	return !isWhitelisted || f.OverrideWhitelist
+	return !IsWhitelisted(bucket) || f.OverrideWhitelist
 }
 
 func or(resource cloud.Resource, filters []*ResourceFilter) bool {
