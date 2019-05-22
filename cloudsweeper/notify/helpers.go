@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
-	"strings"
 	"time"
 
 	"github.com/cloudtools/cloudsweeper/cloud"
@@ -85,12 +84,7 @@ func extraTemplateFunctions() template.FuncMap {
 			return "No"
 		},
 		"whitelisted": func(res cloud.Resource) bool {
-			for key := range res.Tags() {
-				if strings.ToLower(key) == strings.ToLower(filter.WhitelistTagKey) {
-					return true
-				}
-			}
-			return false
+			return filter.IsWhitelisted(res)
 		},
 		"accucost": func(res cloud.Resource) string {
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
