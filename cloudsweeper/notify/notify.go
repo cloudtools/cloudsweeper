@@ -133,21 +133,34 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 	managerToMailDataMapping := initManagerToMailDataMapping(org.Managers)
 
 	// Create filters
-	generalFilter := filter.New()
-	generalFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["GeneralOlderThanDays"]))
+	instanceFilter := filter.New()
+	instanceFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-instances-older-than-days"]))
+
+	imageFilter := filter.New()
+	imageFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-images-older-than-days"]))
+
+	volumeFilter := filter.New()
+	volumeFilter.AddVolumeRule(filter.IsUnattached())
+	volumeFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-unattached-older-than-days"]))
+
+	snapshotFilter := filter.New()
+	snapshotFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-snapshots-older-than-days"]))
+
+	bucketFilter := filter.New()
+	bucketFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-buckets-older-than-days"]))
 
 	whitelistFilter := filter.New()
 	whitelistFilter.OverrideWhitelist = true
-	whitelistFilter.AddGeneralRule(filter.OlderThanXMonths(thresholds["WhitelistOlderThanMonths"]))
+	whitelistFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-whitelist-older-than-days"]))
 
 	// These only apply to instances
 	dndFilter := filter.New()
 	dndFilter.AddGeneralRule(filter.HasTag("no-not-delete"))
-	dndFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["DndOlderThanDays"]))
+	dndFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-dnd-older-than-days"]))
 
 	dndFilter2 := filter.New()
 	dndFilter2.AddGeneralRule(filter.NameContains("do-not-delete"))
-	dndFilter2.AddGeneralRule(filter.OlderThanXDays(thresholds["DndOlderThanDays"]))
+	dndFilter2.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-dnd-older-than-days"]))
 
 	for account, resources := range allCompute {
 		log.Println("Performing old resource review in", account)
@@ -157,14 +170,14 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 		// Apply filters
 		userMailData := resourceMailData{
 			Owner:     username,
-			Instances: filter.Instances(resources.Instances, generalFilter, whitelistFilter, dndFilter, dndFilter2),
-			Images:    filter.Images(resources.Images, generalFilter, whitelistFilter),
-			Volumes:   filter.Volumes(resources.Volumes, generalFilter, whitelistFilter),
-			Snapshots: filter.Snapshots(resources.Snapshots, generalFilter, whitelistFilter),
+			Instances: filter.Instances(resources.Instances, instanceFilter, whitelistFilter, dndFilter, dndFilter2),
+			Images:    filter.Images(resources.Images, imageFilter, whitelistFilter),
+			Volumes:   filter.Volumes(resources.Volumes, volumeFilter, whitelistFilter),
+			Snapshots: filter.Snapshots(resources.Snapshots, snapshotFilter, whitelistFilter),
 			Buckets:   []cloud.Bucket{},
 		}
 		if buckets, ok := allBuckets[account]; ok {
-			userMailData.Buckets = filter.Buckets(buckets, generalFilter, whitelistFilter)
+			userMailData.Buckets = filter.Buckets(buckets, bucketFilter, whitelistFilter)
 		}
 
 		// Add to the manager summary
