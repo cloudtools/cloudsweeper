@@ -41,19 +41,27 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int) {
 		untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
 		untaggedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
-		oldFilter := filter.New()
-		oldFilter.AddGeneralRule(filter.OlderThanXMonths(thresholds["clean-general-older-than-months"]))
-		// Don't cleanup resources tagged for release
-		oldFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
-		oldFilter.AddSnapshotRule(filter.IsNotInUse())
-		oldFilter.AddVolumeRule(filter.IsUnattached())
-		oldFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+		instanceFilter := filter.New()
+		instanceFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-instances-older-than-days"]))
+		instanceFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
+		instanceFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
-		unattachedFilter := filter.New()
-		unattachedFilter.AddVolumeRule(filter.IsUnattached())
-		unattachedFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-unattatched-older-than-days"]))
-		unattachedFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
-		unattachedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+		snapshotFilter := filter.New()
+		instanceFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-snapshots-older-than-days"]))
+		snapshotFilter.AddSnapshotRule(filter.IsNotInUse())
+		snapshotFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
+		snapshotFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+
+		imageFilter := filter.New()
+		imageFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-images-older-than-days"]))
+		imageFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
+		imageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+
+		volumeFilter := filter.New()
+		volumeFilter.AddVolumeRule(filter.IsUnattached())
+		volumeFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-unattatched-older-than-days"]))
+		volumeFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
+		volumeFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		bucketFilter := filter.New()
 		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(thresholds["clean-bucket-not-modified-days"]))
@@ -67,7 +75,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int) {
 		totalCost := 0.0
 
 		// Tag instances
-		for _, res := range filter.Instances(res.Instances, untaggedFilter) {
+		for _, res := range filter.Instances(res.Instances, instanceFilter, untaggedFilter) {
 			resourcesToTag = append(resourcesToTag, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
@@ -75,7 +83,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int) {
 		}
 
 		// Tag volumes
-		for _, res := range filter.Volumes(res.Volumes, oldFilter, unattachedFilter) {
+		for _, res := range filter.Volumes(res.Volumes, volumeFilter) {
 			resourcesToTag = append(resourcesToTag, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
@@ -83,7 +91,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int) {
 		}
 
 		// Tag snapshots
-		for _, res := range filter.Snapshots(res.Snapshots, oldFilter, untaggedFilter) {
+		for _, res := range filter.Snapshots(res.Snapshots, snapshotFilter, untaggedFilter) {
 			resourcesToTag = append(resourcesToTag, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
@@ -91,7 +99,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int) {
 		}
 
 		// Tag images
-		for _, res := range filter.Images(res.Images, oldFilter, untaggedFilter) {
+		for _, res := range filter.Images(res.Images, imageFilter, untaggedFilter) {
 			resourcesToTag = append(resourcesToTag, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)

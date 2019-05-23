@@ -58,26 +58,38 @@ var (
 	thresholds = make(map[string]int)
 	thnames    = []string{
 		"clean-untagged-older-than-days",
-		"clean-general-older-than-months",
+		"clean-instances-older-than-days",
+		"clean-images-older-than-days",
+		"clean-snapshots-older-than-days",
 		"clean-unattatched-older-than-days",
 		"clean-bucket-not-modified-days",
 		"clean-bucket-older-than-days",
-		"notify-general-older-than-days",
-		"notify-whitelist-older-than-months",
+		"notify-instances-older-than-days",
+		"notify-images-older-than-days",
+		"notify-unattached-older-than-days",
+		"notify-snapshots-older-than-days",
+		"notify-buckets-older-than-days",
+		"notify-whitelist-older-than-days",
 		"notify-dnd-older-than-days",
 	}
 
 	// Clean thresholds
 	cleanUntaggedOlderThanDays    = flag.String("clean-untagged-older-than-days", "", "Clean untagged instances if older than X days (default: 30)")
-	cleanGeneralOlderThanMonths   = flag.String("clean-general-older-than-months", "", "Clean if older than X days (default: 6)")
+	cleanInstancesOlderThanDays   = flag.String("clean-instances-older-than-days", "", "Clean if instance is older than X days (default: 182)")
+	cleanImagesOlderThanDays      = flag.String("clean-images-older-than-days", "", "Clean if image is older than X days (default: 182)")
+	cleanSnapshotsOlderThanDays   = flag.String("clean-snapshots-older-than-days", "", "Clean if snapshot is older than X days (default: 182)")
 	cleanUnattatchedOlderThanDays = flag.String("clean-unattatched-older-than-days", "", "Clean unattached volumes older than X days (default: 30)")
 	cleanBucketNotModifiedDays    = flag.String("clean-bucket-not-modified-days", "", "Clean s3 bucket if not modified for more than X days (default: 182)")
 	cleanBucketOlderThanDays      = flag.String("clean-bucket-older-than-days", "", "Clean s3 bucket if older than X days (default: 7)")
 
 	//  Notify thresholds
-	notifyGeneralOlderThanDays     = flag.String("notify-general-older-than-days", "", "Notify if older than X days (default: 30)")
-	notifyWhitelistOlderThanMonths = flag.String("notify-whitelist-older-than-months", "", "Notify if whitelisted is older than X months (default: 6)")
-	notifyDndOlderThanDays         = flag.String("notify-dnd-older-than-days", "", "Do not delete older than X days (default: 7)")
+	notifyInstancesOlderThanDays = flag.String("notify-instances-older-than-days", "", "Notify if instances is older than X days (default: 30)")
+	notifyImagesOlderThanDays    = flag.String("notify-images-older-than-days", "", "Notify if image is older than X days (default: 30)")
+	notifyVolumesOlderThanDays   = flag.String("notify-unattached-older-than-days", "", "Notify if volume is older than X days (default: 30)")
+	notifySnapshotsOlderThanDays = flag.String("notify-snapshots-older-than-days", "", "Notify if snapshot is older than X days (default: 30)")
+	notifyBucketsOlderThanDays   = flag.String("notify-buckets-older-than-days", "", "Notify if bucket is older than X days (default: 30)")
+	notifyWhitelistOlderThanDays = flag.String("notify-whitelist-older-than-days", "", "Notify if whitelisted is older than X days (default: 182)")
+	notifyDndOlderThanDays       = flag.String("notify-dnd-older-than-days", "", "Do not delete older than X days (default: 7)")
 )
 
 const banner = `
