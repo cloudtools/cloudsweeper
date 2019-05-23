@@ -12,7 +12,7 @@ import (
 // IsWhitelisted checks if the given resource has a whitelisting tag
 func IsWhitelisted(resource cloud.Resource) bool {
 	for key := range resource.Tags() {
-		if strings.ReplaceAll(strings.ToLower(key), "_", "-") == WhitelistTagKey {
+		if strings.Replace(strings.ToLower(key), "_", "-", -1) == WhitelistTagKey {
 			return true
 		}
 	}
