@@ -19,7 +19,6 @@ import (
 )
 
 const (
-	s3BucketPerGBMonth  = 0.023
 	gcpBucketPerGBMonth = 0.026
 
 	assumeRoleARNTemplate = "arn:aws:iam::%s:role/Cloudsweeper"
@@ -80,6 +79,16 @@ var awsRegionIDToNameMap = map[string]string{
 	"sa-east-1":      "South America (Sao Paulo)",
 	"us-gov-east-1":  "AWS GovCloud (US-East)",
 	"us-gov-west-1":  "AWS GovCloud (US-West)",
+}
+
+var awsS3StorageCostMap = map[string]float64{
+	"StandardStorage":             0.023,
+	"IntelligentTieringFAStorage": 0.023,
+	"IntelligentTieringIAStorage": 0.0125,
+	"StandardIAStorage":           0.0125,
+	"OneZoneIAStorage":            0.01,
+	"ReducedRedundancyStorage":    0.023, // TODO: double check this
+	"GlacierStorage":              0.004,
 }
 
 // Storage cost per GB per day
@@ -218,7 +227,11 @@ func InstancePricePerHour(instance cloud.Instance) float64 {
 // storage every month.
 func BucketPricePerMonth(bucket cloud.Bucket) float64 {
 	if bucket.CSP() == cloud.AWS {
-		return s3BucketPerGBMonth * bucket.TotalSizeGB()
+		price := 0.0
+		for storageType, size := range bucket.StorageTypeSizesGB() {
+			price += awsS3StorageCostMap[storageType] * size
+		}
+		return price
 	} else if bucket.CSP() == cloud.GCP {
 		return gcpBucketPerGBMonth * bucket.TotalSizeGB()
 	}

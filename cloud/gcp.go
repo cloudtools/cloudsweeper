@@ -454,9 +454,10 @@ func (m *gcpResourceManager) getBuckets(project string) ([]Bucket, error) {
 					public:       false,
 					location:     buck.Location,
 				},
-				lastModified: lastModified,
-				objectCount:  count,
-				totalSizeGB:  size,
+				lastModified:       lastModified,
+				objectCount:        count,
+				totalSizeGB:        size,
+				storageTypeSizesGB: make(map[string]float64),
 			},
 			storage: m.storage,
 		})

@@ -121,6 +121,7 @@ type Bucket interface {
 	LastModified() time.Time
 	ObjectCount() int64
 	TotalSizeGB() float64
+	StorageTypeSizesGB() map[string]float64
 }
 
 // ResourceCollection encapsulates collections of multiple resources. Does not

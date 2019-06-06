@@ -18,9 +18,10 @@ import (
 
 type baseBucket struct {
 	baseResource
-	lastModified time.Time
-	objectCount  int64
-	totalSizeGB  float64
+	lastModified       time.Time
+	objectCount        int64
+	totalSizeGB        float64
+	storageTypeSizesGB map[string]float64
 }
 
 func (b *baseBucket) LastModified() time.Time {
@@ -33,6 +34,10 @@ func (b *baseBucket) ObjectCount() int64 {
 
 func (b *baseBucket) TotalSizeGB() float64 {
 	return b.totalSizeGB
+}
+
+func (b *baseBucket) StorageTypeSizesGB() map[string]float64 {
+	return b.storageTypeSizesGB
 }
 
 func cleanupBuckets(buckets []Bucket) error {
