@@ -327,9 +327,10 @@ type testBucket struct {
 	lastModified time.Time
 }
 
-func (b *testBucket) LastModified() time.Time { return b.lastModified }
-func (b *testBucket) ObjectCount() int64      { return 10 }
-func (b *testBucket) TotalSizeGB() float64    { return 5.13 }
+func (b *testBucket) LastModified() time.Time                { return b.lastModified }
+func (b *testBucket) ObjectCount() int64                     { return 10 }
+func (b *testBucket) TotalSizeGB() float64                   { return 5.13 }
+func (b *testBucket) StorageTypeSizesGB() map[string]float64 { return make(map[string]float64) }
 
 func TestNotModified(t *testing.T) {
 	foo := &testBucket{
