@@ -52,20 +52,24 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Name</strong></th>
 			<th><strong>Instance type</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $instance := .Instances }}
 		<tr {{ if and (even $i) (not (whitelisted $instance)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $instance }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $instance.Owner }}</td>
-			<td>{{ $instance.Location }}</td>
+			<td>{{ productname $instance }}</td>
+			<td>{{ rolename $instance }}</td>
 			<td>{{ $instance.ID }}</td>
 			<td>{{ instname $instance }}</td>
 			<td>{{ $instance.InstanceType }}</td>
+			<td>{{ $instance.Location }}</td>
 			<td>{{ fdate $instance.CreationTime "2006-01-02" }} ({{ daysrunning $instance.CreationTime }})</td>
 			<td>{{ accucost $instance }}</td>
 		</tr>
@@ -78,18 +82,22 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Name</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $image := .Images }}
 	<tr {{ if and (even $i) (not (whitelisted $image)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $image }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $image.Owner }}</td>
-			<td>{{ $image.Location }}</td>
+			<td>{{ productname $image }}</td>
+			<td>{{ rolename $image }}</td>
 			<td>{{ $image.ID }}</td>
 			<td>{{ $image.Name }}</td>
+			<td>{{ $image.Location }}</td>
 			<td>{{ fdate $image.CreationTime "2006-01-02" }} ({{ daysrunning $image.CreationTime }})</td>
 			<td>{{ accucost $image }}</td>
 		</tr>
@@ -102,9 +110,11 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Attached to instance</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Volume type</strong></th>
@@ -113,9 +123,11 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	{{ range $i, $volume := .Volumes }}
 	<tr {{ if and (even $i) (not (whitelisted $volume)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $volume }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $volume.Owner }}</td>
-			<td>{{ $volume.Location }}</td>
+			<td>{{ productname $volume }}</td>
+			<td>{{ rolename $volume }}</td>
 			<td>{{ $volume.ID }}</td>
 			<td>{{ $volume.SizeGB }} GB</td>
+			<td>{{ $volume.Location }}</td>
 			<td>{{ yesno $volume.Attached }}</td>
 			<td>{{ fdate $volume.CreationTime "2006-01-02" }} ({{ daysrunning $volume.CreationTime }})</td>
 			<td>{{ $volume.VolumeType }}</td>
@@ -130,18 +142,22 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $snapshot := .Snapshots }}
 	<tr {{ if and (even $i) (not (whitelisted $snapshot)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $snapshot }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $snapshot.Owner }}</td>
-			<td>{{ $snapshot.Location }}</td>
+			<td>{{ productname $snapshot }}</td>
+			<td>{{ rolename $snapshot }}</td>
 			<td>{{ $snapshot.ID }}</td>
 			<td>{{ $snapshot.SizeGB }} GB</td>
+			<td>{{ $snapshot.Location }}</td>
 			<td>{{ fdate $snapshot.CreationTime "2006-01-02" }} ({{ daysrunning $snapshot.CreationTime }})</td>
 			<td>{{ accucost $snapshot }}</td>
 		</tr>
@@ -154,6 +170,8 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
 			<th><strong>Files</strong></th>
@@ -163,6 +181,8 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	{{ range $i, $bucket := .Buckets }}
 	<tr {{ if and (even $i) (not (whitelisted $bucket)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $bucket }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $bucket.Owner }}</td>
+			<td>{{ productname $bucket }}</td>
+			<td>{{ rolename $bucket }}</td>
 			<td>{{ $bucket.ID }}</td>
 			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
 			<td>{{ $bucket.ObjectCount }}</td>
@@ -194,20 +214,24 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Name</strong></th>
 			<th><strong>Instance type</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $instance := .Instances }}
 		<tr {{ if and (even $i) (not (whitelisted $instance)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $instance }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $instance.Owner }}</td>
-			<td>{{ $instance.Location }}</td>
+			<td>{{ productname $instance }}</td>
+			<td>{{ rolename $instance }}</td>
 			<td>{{ $instance.ID }}</td>
 			<td>{{ instname $instance }}</td>
 			<td>{{ $instance.InstanceType }}</td>
+			<td>{{ $instance.Location }}</td>
 			<td>{{ fdate $instance.CreationTime "2006-01-02" }} ({{ daysrunning $instance.CreationTime }})</td>
 			<td>{{ accucost $instance }}</td>
 		</tr>
@@ -220,18 +244,22 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Name</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $image := .Images }}
 	<tr {{ if and (even $i) (not (whitelisted $image)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $image }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $image.Owner }}</td>
-			<td>{{ $image.Location }}</td>
+			<td>{{ productname $image }}</td>
+			<td>{{ rolename $image }}</td>
 			<td>{{ $image.ID }}</td>
 			<td>{{ $image.Name }}</td>
+			<td>{{ $image.Location }}</td>
 			<td>{{ fdate $image.CreationTime "2006-01-02" }} ({{ daysrunning $image.CreationTime }})</td>
 			<td>{{ accucost $image }}</td>
 		</tr>
@@ -244,9 +272,11 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Attached to instance</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Volume type</strong></th>
@@ -255,9 +285,11 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	{{ range $i, $volume := .Volumes }}
 	<tr {{ if and (even $i) (not (whitelisted $volume)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $volume }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $volume.Owner }}</td>
-			<td>{{ $volume.Location }}</td>
+			<td>{{ productname $volume }}</td>
+			<td>{{ rolename $volume }}</td>
 			<td>{{ $volume.ID }}</td>
 			<td>{{ $volume.SizeGB }} GB</td>
+			<td>{{ $volume.Location }}</td>
 			<td>{{ yesno $volume.Attached }}</td>
 			<td>{{ fdate $volume.CreationTime "2006-01-02" }} ({{ daysrunning $volume.CreationTime }})</td>
 			<td>{{ $volume.VolumeType }}</td>
@@ -272,18 +304,22 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $snapshot := .Snapshots }}
 	<tr {{ if and (even $i) (not (whitelisted $snapshot)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $snapshot }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $snapshot.Owner }}</td>
-			<td>{{ $snapshot.Location }}</td>
+			<td>{{ productname $snapshot }}</td>
+			<td>{{ rolename $snapshot }}</td>
 			<td>{{ $snapshot.ID }}</td>
 			<td>{{ $snapshot.SizeGB }} GB</td>
+			<td>{{ $snapshot.Location }}</td>
 			<td>{{ fdate $snapshot.CreationTime "2006-01-02" }} ({{ daysrunning $snapshot.CreationTime }})</td>
 			<td>{{ accucost $snapshot }}</td>
 		</tr>
@@ -296,6 +332,8 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
 			<th><strong>Files</strong></th>
@@ -305,6 +343,8 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	{{ range $i, $bucket := .Buckets }}
 	<tr {{ if and (even $i) (not (whitelisted $bucket)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $bucket }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $bucket.Owner }}</td>
+			<td>{{ productname $bucket }}</td>
+			<td>{{ rolename $bucket }}</td>
 			<td>{{ $bucket.ID }}</td>
 			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
 			<td>{{ $bucket.ObjectCount }}</td>
@@ -336,20 +376,24 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Name</strong></th>
 			<th><strong>Instance type</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $instance := .Instances }}
 		<tr {{ if and (even $i) (not (whitelisted $instance)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $instance }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $instance.Owner }}</td>
-			<td>{{ $instance.Location }}</td>
+			<td>{{ productname $instance }}</td>
+			<td>{{ rolename $instance }}</td>
 			<td>{{ $instance.ID }}</td>
 			<td>{{ instname $instance }}</td>
 			<td>{{ $instance.InstanceType }}</td>
+			<td>{{ $instance.Location }}</td>
 			<td>{{ fdate $instance.CreationTime "2006-01-02" }} ({{ daysrunning $instance.CreationTime }})</td>
 			<td>{{ accucost $instance }}</td>
 		</tr>
@@ -362,18 +406,22 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Name</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $image := .Images }}
 	<tr {{ if and (even $i) (not (whitelisted $image)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $image }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $image.Owner }}</td>
-			<td>{{ $image.Location }}</td>
+			<td>{{ productname $image }}</td>
+			<td>{{ rolename $image }}</td>
 			<td>{{ $image.ID }}</td>
 			<td>{{ $image.Name }}</td>
+			<td>{{ $image.Location }}</td>
 			<td>{{ fdate $image.CreationTime "2006-01-02" }} ({{ daysrunning $image.CreationTime }})</td>
 			<td>{{ accucost $image }}</td>
 		</tr>
@@ -386,9 +434,11 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Attached to instance</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Volume type</strong></th>
@@ -397,9 +447,11 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	{{ range $i, $volume := .Volumes }}
 	<tr {{ if and (even $i) (not (whitelisted $volume)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $volume }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $volume.Owner }}</td>
-			<td>{{ $volume.Location }}</td>
+			<td>{{ productname $volume }}</td>
+			<td>{{ rolename $volume }}</td>
 			<td>{{ $volume.ID }}</td>
 			<td>{{ $volume.SizeGB }} GB</td>
+			<td>{{ $volume.Location }}</td>
 			<td>{{ yesno $volume.Attached }}</td>
 			<td>{{ fdate $volume.CreationTime "2006-01-02" }} ({{ daysrunning $volume.CreationTime }})</td>
 			<td>{{ $volume.VolumeType }}</td>
@@ -414,18 +466,22 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $snapshot := .Snapshots }}
 	<tr {{ if and (even $i) (not (whitelisted $snapshot)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $snapshot }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $snapshot.Owner }}</td>
-			<td>{{ $snapshot.Location }}</td>
+			<td>{{ productname $snapshot }}</td>
+			<td>{{ rolename $snapshot }}</td>
 			<td>{{ $snapshot.ID }}</td>
 			<td>{{ $snapshot.SizeGB }} GB</td>
+			<td>{{ $snapshot.Location }}</td>
 			<td>{{ fdate $snapshot.CreationTime "2006-01-02" }} ({{ daysrunning $snapshot.CreationTime }})</td>
 			<td>{{ accucost $snapshot }}</td>
 		</tr>
@@ -438,6 +494,8 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
 			<th><strong>Files</strong></th>
@@ -447,6 +505,8 @@ Resources marked <span style="background-color: #c9fc99;">in green</span> are wh
 	{{ range $i, $bucket := .Buckets }}
 	<tr {{ if and (even $i) (not (whitelisted $bucket)) }}style="background-color: #f2f2f2;"{{ else if whitelisted $bucket }}style="background-color: #c9fc99;"{{ end }}>
 			<td>{{ $bucket.Owner }}</td>
+			<td>{{ productname $bucket }}</td>
+			<td>{{ rolename $bucket }}</td>
 			<td>{{ $bucket.ID }}</td>
 			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
 			<td>{{ $bucket.ObjectCount }}</td>
@@ -487,20 +547,24 @@ Read more about how Cloudsweeper works and how to better tag your resources at
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Name</strong></th>
 			<th><strong>Instance type</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $instance := .Instances }}
 		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
 			<td>{{ $instance.Owner }}</td>
-			<td>{{ $instance.Location }}</td>
+			<td>{{ productname $instance }}</td>
+			<td>{{ rolename $instance }}</td>
 			<td>{{ $instance.ID }}</td>
 			<td>{{ instname $instance }}</td>
 			<td>{{ $instance.InstanceType }}</td>
+			<td>{{ $instance.Location }}</td>
 			<td>{{ fdate $instance.CreationTime "2006-01-02" }} ({{ daysrunning $instance.CreationTime }})</td>
 			<td>{{ accucost $instance }}</td>
 		</tr>
@@ -513,18 +577,22 @@ Read more about how Cloudsweeper works and how to better tag your resources at
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Name</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $image := .Images }}
 		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
 			<td>{{ $image.Owner }}</td>
-			<td>{{ $image.Location }}</td>
+			<td>{{ productname $image }}</td>
+			<td>{{ rolename $image }}</td>
 			<td>{{ $image.ID }}</td>
 			<td>{{ $image.Name }}</td>
+			<td>{{ $image.Location }}</td>
 			<td>{{ fdate $image.CreationTime "2006-01-02" }} ({{ daysrunning $image.CreationTime }})</td>
 			<td>{{ accucost $image }}</td>
 		</tr>
@@ -537,9 +605,11 @@ Read more about how Cloudsweeper works and how to better tag your resources at
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Attached to instance</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Volume type</strong></th>
@@ -548,9 +618,11 @@ Read more about how Cloudsweeper works and how to better tag your resources at
 	{{ range $i, $volume := .Volumes }}
 		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
 			<td>{{ $volume.Owner }}</td>
-			<td>{{ $volume.Location }}</td>
+			<td>{{ productname $volume }}</td>
+			<td>{{ rolename $volume }}</td>
 			<td>{{ $volume.ID }}</td>
 			<td>{{ $volume.SizeGB }} GB</td>
+			<td>{{ $volume.Location }}</td>
 			<td>{{ yesno $volume.Attached }}</td>
 			<td>{{ fdate $volume.CreationTime "2006-01-02" }} ({{ daysrunning $volume.CreationTime }})</td>
 			<td>{{ $volume.VolumeType }}</td>
@@ -565,18 +637,22 @@ Read more about how Cloudsweeper works and how to better tag your resources at
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
-			<th><strong>Location</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
+			<th><strong>Location</strong></th>
 			<th><strong>Created</strong></th>
 			<th><strong>Total cost</strong></th>
 		</tr>
 	{{ range $i, $snapshot := .Snapshots }}
 		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
 			<td>{{ $snapshot.Owner }}</td>
-			<td>{{ $snapshot.Location }}</td>
+			<td>{{ productname $snapshot }}</td>
+			<td>{{ rolename $snapshot }}</td>
 			<td>{{ $snapshot.ID }}</td>
 			<td>{{ $snapshot.SizeGB }} GB</td>
+			<td>{{ $snapshot.Location }}</td>
 			<td>{{ fdate $snapshot.CreationTime "2006-01-02" }} ({{ daysrunning $snapshot.CreationTime }})</td>
 			<td>{{ accucost $snapshot }}</td>
 		</tr>
@@ -589,6 +665,8 @@ Read more about how Cloudsweeper works and how to better tag your resources at
 	<table style="width: 100%;">
 		<tr style="text-align:left;">
 			<th><strong>Account</strong></th>
+			<th><strong>Product</strong></th>
+			<th><strong>Role</strong></th>
 			<th><strong>ID</strong></th>
 			<th><strong>Size (GB)</strong></th>
 			<th><strong>Files</strong></th>
@@ -598,6 +676,8 @@ Read more about how Cloudsweeper works and how to better tag your resources at
 	{{ range $i, $bucket := .Buckets }}
 		<tr {{ if even $i }}style="background-color: #f2f2f2;"{{ end }}>
 			<td>{{ $bucket.Owner }}</td>
+			<td>{{ productname $bucket }}</td>
+			<td>{{ rolename $bucket }}</td>
 			<td>{{ $bucket.ID }}</td>
 			<td>{{ printf "%.3f GB" $bucket.TotalSizeGB }}</td>
 			<td>{{ $bucket.ObjectCount }}</td>
