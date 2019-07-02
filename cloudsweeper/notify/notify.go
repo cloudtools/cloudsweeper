@@ -17,6 +17,7 @@ package notify
 import (
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/cloudtools/cloudsweeper/mailer"
@@ -66,7 +67,28 @@ func (d *resourceMailData) ResourceCount() int {
 	return len(d.Images) + len(d.Instances) + len(d.Snapshots) + len(d.Volumes) + len(d.Buckets)
 }
 
+func (d *resourceMailData) SortByCost() {
+	sort.Slice(d.Instances, func(i, j int) bool {
+		return accumulatedCost(d.Instances[i]) > accumulatedCost(d.Instances[j])
+	})
+	sort.Slice(d.Images, func(i, j int) bool {
+		return accumulatedCost(d.Images[i]) > accumulatedCost(d.Images[j])
+	})
+	sort.Slice(d.Snapshots, func(i, j int) bool {
+		return accumulatedCost(d.Snapshots[i]) > accumulatedCost(d.Snapshots[j])
+	})
+	sort.Slice(d.Volumes, func(i, j int) bool {
+		return accumulatedCost(d.Volumes[i]) > accumulatedCost(d.Volumes[j])
+	})
+	sort.Slice(d.Buckets, func(i, j int) bool {
+		return billing.BucketPricePerMonth(d.Buckets[i]) > billing.BucketPricePerMonth(d.Buckets[j])
+	})
+}
+
 func (d *resourceMailData) SendEmail(client mailer.Client, domain, mailTemplate, title string, debugAddressees ...string) {
+	// Always sort by cost
+	d.SortByCost()
+
 	mailContent, err := generateMail(d, mailTemplate)
 	if err != nil {
 		log.Fatalln("Could not generate email:", err)

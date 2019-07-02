@@ -51,6 +51,12 @@ func getMailClient(notifyClient *Client) mailer.Client {
 	return mailer.NewClient(username, password, displayName, from, server, port)
 }
 
+func accumulatedCost(res cloud.Resource) float64 {
+	days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
+	costPerDay := billing.ResourceCostPerDay(res)
+	return days * costPerDay
+}
+
 func extraTemplateFunctions() template.FuncMap {
 	return template.FuncMap{
 		"fdate": func(t time.Time, format string) string { return t.Format(format) },
@@ -87,9 +93,8 @@ func extraTemplateFunctions() template.FuncMap {
 			return filter.IsWhitelisted(res)
 		},
 		"accucost": func(res cloud.Resource) string {
-			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
-			costPerDay := billing.ResourceCostPerDay(res)
-			return fmt.Sprintf("$%.2f", days*costPerDay)
+			totalCost := accumulatedCost(res)
+			return fmt.Sprintf("$%.2f", totalCost)
 		},
 		"bucketcost": func(res cloud.Bucket) float64 {
 			return billing.BucketPricePerMonth(res)
