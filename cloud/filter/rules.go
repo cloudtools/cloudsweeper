@@ -112,6 +112,18 @@ func HasTag(tagKey string) func(cloud.Resource) bool {
 	}
 }
 
+// IsUntaggedWithException checks if a resource is untagged with the exception of a specific tag
+func IsUntaggedWithException(exceptionTag string) func(cloud.Resource) bool {
+	return func(r cloud.Resource) bool {
+		if len(r.Tags()) == 0 {
+			return true
+		} else if len(r.Tags()) == 1 {
+			return HasTag(exceptionTag)(r)
+		}
+		return false
+	}
+}
+
 // IsPublic checks if a resource is public
 func IsPublic() func(cloud.Resource) bool {
 	return func(r cloud.Resource) bool {

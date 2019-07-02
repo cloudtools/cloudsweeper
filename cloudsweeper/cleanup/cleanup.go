@@ -39,9 +39,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 	for owner, res := range allResources {
 		log.Println("Marking resources for cleanup in", owner)
 		untaggedFilter := filter.New()
-		untaggedFilter.AddGeneralRule(func(r cloud.Resource) bool {
-			return len(r.Tags()) == 0
-		})
+		untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException("Name"))
 		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-untagged-older-than-days"]))
 		untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
 		untaggedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
