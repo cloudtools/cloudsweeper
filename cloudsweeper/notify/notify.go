@@ -334,3 +334,25 @@ func (c *Client) MonthToDateReport(report billing.Report, accountUserMapping map
 		log.Printf("Failed to email %s: %s\n", recipientMail, err)
 	}
 }
+
+// MarkingDryRunReport will send an email with all the resources that were marked for deletion
+func (c *Client) MarkingDryRunReport(taggedResources map[string]*cloud.AllResourceCollection, accountUserMapping map[string]string) {
+	for account, resources := range taggedResources {
+		// Use a debug user here
+		mailData := resourceMailData{
+			Owner:     "cloudsweeper-test",
+			OwnerID:   account,
+			Instances: resources.Instances,
+			Images:    resources.Images,
+			Snapshots: resources.Snapshots,
+			Volumes:   resources.Volumes,
+			Buckets:   resources.Buckets,
+		}
+
+		if mailData.ResourceCount() > 0 {
+			// Send email
+			title := fmt.Sprintf("Marking Dry Run Warning. The following resources would have been marked for deletion:")
+			mailData.SendEmail(getMailClient(c), c.config.EmailDomain, markingDryRunTemplate, title)
+		}
+	}
+}

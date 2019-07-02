@@ -31,9 +31,10 @@ const (
 // 		- non-whitelisted snapshots > 6 months
 // 		- non-whitelisted volumes > 6 months
 //		- untagged resources > 30 days (this should take care of instances)
-func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int) {
+func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRun bool) map[string]*cloud.AllResourceCollection {
 	allResources := mngr.AllResourcesPerAccount()
 	allBuckets := mngr.BucketsPerAccount()
+	allResourcesToTag := make(map[string]*cloud.AllResourceCollection)
 
 	for owner, res := range allResources {
 		log.Println("Marking resources for cleanup in", owner)
@@ -75,12 +76,17 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int) {
 
 		timeToDelete := time.Now().AddDate(0, 0, 4)
 
-		resourcesToTag := []cloud.Resource{}
+		resourcesToTag := cloud.AllResourceCollection{}
+		resourcesToTag.Owner = owner
+		// Store a separate list of all resources since I couldn't for the life of me figure out how to
+		// pass a []Image to a function that takes []Resource without explicitly converting everything...
+		tagList := []cloud.Resource{}
 		totalCost := 0.0
 
 		// Tag instances
 		for _, res := range filter.Instances(res.Instances, instanceFilter, untaggedFilter) {
-			resourcesToTag = append(resourcesToTag, res)
+			resourcesToTag.Instances = append(resourcesToTag.Instances, res)
+			tagList = append(tagList, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
 			totalCost += days * costPerDay
@@ -88,7 +94,8 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int) {
 
 		// Tag volumes
 		for _, res := range filter.Volumes(res.Volumes, volumeFilter) {
-			resourcesToTag = append(resourcesToTag, res)
+			resourcesToTag.Volumes = append(resourcesToTag.Volumes, res)
+			tagList = append(tagList, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
 			totalCost += days * costPerDay
@@ -96,7 +103,8 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int) {
 
 		// Tag snapshots
 		for _, res := range filter.Snapshots(res.Snapshots, snapshotFilter, untaggedFilter) {
-			resourcesToTag = append(resourcesToTag, res)
+			resourcesToTag.Snapshots = append(resourcesToTag.Snapshots, res)
+			tagList = append(tagList, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
 			totalCost += days * costPerDay
@@ -104,15 +112,18 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int) {
 
 		// Tag images
 		for _, res := range filter.Images(res.Images, imageFilter, untaggedFilter) {
-			resourcesToTag = append(resourcesToTag, res)
+			resourcesToTag.Images = append(resourcesToTag.Images, res)
+			tagList = append(tagList, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
 			totalCost += days * costPerDay
 		}
 
+		// Tag buckets
 		if buck, ok := allBuckets[owner]; ok {
-			for _, res := range filter.Buckets(buck, bucketFilter) {
-				resourcesToTag = append(resourcesToTag, res)
+			for _, res := range filter.Buckets(buck, bucketFilter, untaggedFilter) {
+				resourcesToTag.Buckets = append(resourcesToTag.Buckets, res)
+				tagList = append(tagList, res)
 				totalCost += billing.BucketPricePerMonth(res)
 			}
 		}

@@ -134,6 +134,17 @@ type ResourceCollection struct {
 	Snapshots []Snapshot
 }
 
+// AllResourceCollection encapsulates collections of all resources,
+// including buckets
+type AllResourceCollection struct {
+	Owner     string
+	Instances []Instance
+	Images    []Image
+	Volumes   []Volume
+	Snapshots []Snapshot
+	Buckets   []Bucket
+}
+
 // CSP represent a cloud service provider, such as AWS
 type CSP string
 
