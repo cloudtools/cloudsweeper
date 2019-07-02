@@ -55,6 +55,7 @@ var configMapping = map[string]lookup{
 	"clean-unattatched-older-than-days": lookup{"CLEAN_UNATTATCHED_OLDER_THAN_DAYS", "30"},
 	"clean-bucket-not-modified-days":    lookup{"CLEAN_BUCKET_NOT_MODIFIED_DAYS", "182"},
 	"clean-bucket-older-than-days":      lookup{"CLEAN_BUCKET_OLDER_THAN_DAYS", "7"},
+	"clean-keep-n-component-images":     lookup{"CLEAN_KEEP_N_COMPONENT_IMAGES", "2"},
 
 	//  Notify thresholds
 	"notify-instances-older-than-days":  lookup{"NOTIFY_INSTANCES_OLDER_THAN_DAYS", "30"},

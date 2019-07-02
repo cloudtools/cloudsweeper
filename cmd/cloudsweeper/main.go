@@ -66,6 +66,7 @@ var (
 		"clean-unattatched-older-than-days",
 		"clean-bucket-not-modified-days",
 		"clean-bucket-older-than-days",
+		"clean-keep-n-component-images",
 		"notify-instances-older-than-days",
 		"notify-images-older-than-days",
 		"notify-unattached-older-than-days",
@@ -83,6 +84,7 @@ var (
 	cleanUnattatchedOlderThanDays = flag.String("clean-unattatched-older-than-days", "", "Clean unattached volumes older than X days (default: 30)")
 	cleanBucketNotModifiedDays    = flag.String("clean-bucket-not-modified-days", "", "Clean s3 bucket if not modified for more than X days (default: 182)")
 	cleanBucketOlderThanDays      = flag.String("clean-bucket-older-than-days", "", "Clean s3 bucket if older than X days (default: 7)")
+	cleanKeepNComponentImages     = flag.String("clean-keep-n-component-images", "", "Clean images with component-date naming that are older than the N most recent ones (default: 2)")
 
 	//  Notify thresholds
 	notifyInstancesOlderThanDays = flag.String("notify-instances-older-than-days", "", "Notify if instances is older than X days (default: 30)")
