@@ -54,6 +54,8 @@ var (
 
 	findResourceID = flag.String("resource-id", "", "ID of resource to find with find-resource command")
 
+	dryRun = flag.Bool("marking-dry-run", false, "Whether to perform a dry run for mark and delete (nothing will actually be marked)")
+
 	// Thresholds
 	thresholds = make(map[string]int)
 	thnames    = []string{
@@ -123,7 +125,13 @@ func main() {
 		log.Println("Marking old resources for cleanup")
 		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
-		cleanup.MarkForCleanup(mngr, thresholds)
+		taggedResources := cleanup.MarkForCleanup(mngr, thresholds, *dryRun)
+		if *dryRun {
+			client := initNotifyClient()
+			client.MarkingDryRunReport(taggedResources, org.AccountToUserMapping(csp))
+		} else {
+			log.Println("Not sending marking report since this was not a dry run")
+		}
 	case "review":
 		log.Println("Sending out old resource review")
 		org := parseOrganization(findConfig("org-file"))
