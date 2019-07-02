@@ -50,7 +50,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		instanceFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		snapshotFilter := filter.New()
-		instanceFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-snapshots-older-than-days"]))
+		snapshotFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-snapshots-older-than-days"]))
 		snapshotFilter.AddSnapshotRule(filter.IsNotInUse())
 		snapshotFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		snapshotFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
