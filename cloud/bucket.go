@@ -138,10 +138,41 @@ func (b *awsBucket) SetTag(key, value string, overwrite bool) error {
 	return err
 }
 
-func (b *awsBucket) RemoveTag(key string) error {
-	// TODO: Implement
-	log.Fatalln("Not implemented for buckets")
-	return errors.New("Not implemented for buckets")
+// RemoveTag removes the specified tag from the bucket by first deleting all tags
+// and then adding back all the other tags. Note that this is potentially unsafe if
+// the program crashes in the middle of the function. Unfortunately there doesn't seem
+// to be an API call for removing a specific tag from a bucket...
+func (b *awsBucket) RemoveTag(tagToRemove string) error {
+	sess := session.Must(session.NewSession())
+	creds := stscreds.NewCredentials(sess, fmt.Sprintf(assumeRoleARNTemplate, b.Owner()))
+	s3Client := s3.New(sess, &aws.Config{
+		Credentials: creds,
+		Region:      aws.String(b.Location()),
+	})
+	_, err := s3Client.DeleteBucketTagging(&s3.DeleteBucketTaggingInput{
+		Bucket: aws.String(b.ID()),
+	})
+	if err != nil {
+		return err
+	}
+	tagging := &s3.Tagging{
+		TagSet: []*s3.Tag{},
+	}
+	for k, v := range b.Tags() {
+		if k == tagToRemove {
+			continue
+		}
+		tagging.TagSet = append(tagging.TagSet, &s3.Tag{
+			Key:   aws.String(k),
+			Value: aws.String(v),
+		})
+	}
+	input := &s3.PutBucketTaggingInput{
+		Bucket:  aws.String(b.ID()),
+		Tagging: tagging,
+	}
+	_, err = s3Client.PutBucketTagging(input)
+	return err
 }
 
 // GCP
