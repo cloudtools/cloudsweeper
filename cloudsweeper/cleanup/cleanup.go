@@ -271,50 +271,47 @@ func cleanupLifetimePassed(mngr cloud.ResourceManager) {
 // associated with the provided resource manager
 func ResetCloudsweeper(mngr cloud.ResourceManager) {
 	allResources := mngr.AllResourcesPerAccount()
+	allBuckets := mngr.BucketsPerAccount()
 
 	for owner, res := range allResources {
 		log.Println("Resetting Cloudsweeper tags in", owner)
 		taggedFilter := filter.New()
 		taggedFilter.AddGeneralRule(filter.HasTag(filter.DeleteTagKey))
 
-		// Un-Tag instances
-		for _, res := range filter.Instances(res.Instances, taggedFilter) {
-			err := res.RemoveTag(filter.DeleteTagKey)
+		handleError := func(res cloud.Resource, err error) {
 			if err != nil {
 				log.Printf("Failed to remove tag on %s: %s\n", res.ID(), err)
 			} else {
 				log.Printf("Removed cleanup tag on %s\n", res.ID())
 			}
+		}
+
+		// Un-Tag instances
+		for _, res := range filter.Instances(res.Instances, taggedFilter) {
+			handleError(res, res.RemoveTag(filter.DeleteTagKey))
 		}
 
 		// Un-Tag volumes
 		for _, res := range filter.Volumes(res.Volumes, taggedFilter) {
-			err := res.RemoveTag(filter.DeleteTagKey)
-			if err != nil {
-				log.Printf("Failed to remove tag on %s: %s\n", res.ID(), err)
-			} else {
-				log.Printf("Removed cleanup tag on %s\n", res.ID())
-			}
+			handleError(res, res.RemoveTag(filter.DeleteTagKey))
 		}
 
 		// Un-Tag snapshots
 		for _, res := range filter.Snapshots(res.Snapshots, taggedFilter) {
-			err := res.RemoveTag(filter.DeleteTagKey)
-			if err != nil {
-				log.Printf("Failed to remove tag on %s: %s\n", res.ID(), err)
-			} else {
-				log.Printf("Removed cleanup tag on %s\n", res.ID())
-			}
+			handleError(res, res.RemoveTag(filter.DeleteTagKey))
 		}
 
 		// Un-Tag images
 		for _, res := range filter.Images(res.Images, taggedFilter) {
-			err := res.RemoveTag(filter.DeleteTagKey)
-			if err != nil {
-				log.Printf("Failed to remove tag on %s: %s\n", res.ID(), err)
-			} else {
-				log.Printf("Removed cleanup tag on %s\n", res.ID())
+			handleError(res, res.RemoveTag(filter.DeleteTagKey))
+		}
+
+		// Un-Tag buckets
+		if buck, ok := allBuckets[owner]; ok {
+			for _, res := range filter.Buckets(buck, taggedFilter) {
+				handleError(res, res.RemoveTag(filter.DeleteTagKey))
 			}
 		}
+
 	}
 }
