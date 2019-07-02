@@ -335,7 +335,7 @@ func (c *Client) MonthToDateReport(report billing.Report, accountUserMapping map
 	}
 }
 
-// MarkingDryRunReport will send an email with all the resources that were marked for deletion
+// MarkingDryRunReport will send an email with all the resources that would have been marked for deletion
 func (c *Client) MarkingDryRunReport(taggedResources map[string]*cloud.AllResourceCollection, accountUserMapping map[string]string) {
 	for account, resources := range taggedResources {
 		// Use a debug user here
