@@ -705,11 +705,6 @@ look over these and make sure everything is in order. </p>
 If you want to save any of these resources, add a tag with the key <b>whitelisted</b>
 </p>
 
-<p>
-Read more about how Cloudsweeper works and how to better tag your resources at
-<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">this Wiki page</a>.
-</p>
-
 <h2>Old resources:</h2>
 {{ if gt (len .Instances) 0 }}
 	<h3>Instances</h3>
