@@ -126,9 +126,20 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 			}
 		}
 
+		// Helper map to avoid duplicated images
+		alreadySelectedImages := map[string]bool{}
+		for _, image := range resourcesToTag.Images {
+			alreadySelectedImages[image.ID()] = true
+		}
+
 		// Tag old AMIs using the component-date pattern
 		componentImagesToTag := getAllButNLatestComponents(res.Images, thresholds["clean-keep-n-component-images"])
-		resourcesToTag.Images = append(resourcesToTag.Images, componentImagesToTag...)
+		for _, image := range componentImagesToTag {
+			if _, found := alreadySelectedImages[image.ID()]; !found {
+				resourcesToTag.Images = append(resourcesToTag.Images, image)
+				tagList = append(tagList, image)
+			}
+		}
 
 		if dryRun {
 			log.Printf("Not tagging resources since this is a dry run")
