@@ -861,9 +861,11 @@ Your loyal Cloudsweeper
 const untaggedMailTemplate = `<h1>Hello {{ .Owner -}},</h1>
 
 <p>
-The following listed resources are missing <strong>Name</strong> tags. <strong>Name</strong>
-tags are important to help us track resource purpose and cost.  You can always add other tags to
-resources, but should always include a <strong>Name</strong> tag.
+The following listed resources are missing proper <strong>env/product/role</strong> tags.
+These tags are important to help us track resource purpose and cost.
+You can always add other tags to resources, but should always include a <strong>env/product/role</strong> tag.
+You can read more about tagging rules in
+<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/4325488/Resource+Naming+and+Tagging+Requirements">this wiki</a>.
 </p>
 
 <p>
