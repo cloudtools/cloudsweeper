@@ -133,8 +133,12 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		}
 
 		// Tag old AMIs using the component-date pattern
-		componentImagesToTag := getAllButNLatestComponents(res.Images, thresholds["clean-keep-n-component-images"])
-		for _, image := range componentImagesToTag {
+		componentImageFilter := filter.New()
+		componentImageFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
+		componentImageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+
+		componentImages := getAllButNLatestComponents(res.Images, thresholds["clean-keep-n-component-images"])
+		for _, image := range filter.Images(componentImages, componentImageFilter) {
 			if _, found := alreadySelectedImages[image.ID()]; !found {
 				resourcesToTag.Images = append(resourcesToTag.Images, image)
 				tagList = append(tagList, image)
