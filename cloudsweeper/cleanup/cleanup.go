@@ -43,6 +43,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-untagged-older-than-days"]))
 		untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
 		untaggedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+		untaggedFilter.AddVolumeRule(filter.IsUnattached())
 
 		instanceFilter := filter.New()
 		instanceFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-instances-older-than-days"]))
@@ -91,7 +92,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		}
 
 		// Tag volumes
-		for _, res := range filter.Volumes(res.Volumes, volumeFilter) {
+		for _, res := range filter.Volumes(res.Volumes, volumeFilter, untaggedFilter) {
 			resourcesToTag.Volumes = append(resourcesToTag.Volumes, res)
 			tagList = append(tagList, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0

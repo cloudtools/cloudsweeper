@@ -175,6 +175,12 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 	whitelistFilter.OverrideWhitelist = true
 	whitelistFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-whitelist-older-than-days"]))
 
+	untaggedFilter := filter.New()
+	untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException("Name"))
+	untaggedFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-untagged-older-than-days"]))
+	untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
+	untaggedFilter.AddVolumeRule(filter.IsUnattached())
+
 	// These only apply to instances
 	dndFilter := filter.New()
 	dndFilter.AddGeneralRule(filter.HasTag("no-not-delete"))
@@ -192,14 +198,14 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 		// Apply filters
 		userMailData := resourceMailData{
 			Owner:     username,
-			Instances: filter.Instances(resources.Instances, instanceFilter, whitelistFilter, dndFilter, dndFilter2),
-			Images:    filter.Images(resources.Images, imageFilter, whitelistFilter),
-			Volumes:   filter.Volumes(resources.Volumes, volumeFilter, whitelistFilter),
-			Snapshots: filter.Snapshots(resources.Snapshots, snapshotFilter, whitelistFilter),
+			Instances: filter.Instances(resources.Instances, instanceFilter, whitelistFilter, dndFilter, dndFilter2, untaggedFilter),
+			Images:    filter.Images(resources.Images, imageFilter, whitelistFilter, untaggedFilter),
+			Volumes:   filter.Volumes(resources.Volumes, volumeFilter, whitelistFilter, untaggedFilter),
+			Snapshots: filter.Snapshots(resources.Snapshots, snapshotFilter, whitelistFilter, untaggedFilter),
 			Buckets:   []cloud.Bucket{},
 		}
 		if buckets, ok := allBuckets[account]; ok {
-			userMailData.Buckets = filter.Buckets(buckets, bucketFilter, whitelistFilter)
+			userMailData.Buckets = filter.Buckets(buckets, bucketFilter, whitelistFilter, untaggedFilter)
 		}
 
 		// Add to the manager summary
