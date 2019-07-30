@@ -5,46 +5,90 @@ package billing
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
-	"net/http"
 	"strconv"
 
+	"github.com/aws/aws-sdk-go/private/protocol"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/pricing"
 	"github.com/cloudtools/cloudsweeper/cloud"
 )
 
 const (
-	awsPricingURL       = "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/index.json"
-	s3BucketPerGBMonth  = 0.023
 	gcpBucketPerGBMonth = 0.026
+
+	assumeRoleARNTemplate = "arn:aws:iam::%s:role/Cloudsweeper"
 )
+
+type instanceKeyPair struct {
+	Region, InstanceType string
+}
+
+type priceMap map[instanceKeyPair]float64
 
 var (
 	awsPrices priceMap
 )
 
-var awsRegionNameToIDMap = map[string]string{
-	"US East (Ohio)":             "us-east-2",
-	"US East (N. Virginia)":      "us-east-1",
-	"US West (N. California)":    "us-west-1",
-	"US West (Oregon)":           "us-west-2",
-	"Asia Pacific (Tokyo)":       "ap-northeast-1",
-	"Asia Pacific (Seoul)":       "ap-northeast-2",
-	"Asia Pacific (Osaka-Local)": "ap-northeast-3",
-	"Asia Pacific (Mumbai)":      "ap-south-1",
-	"Asia Pacific (Singapore)":   "ap-southeast-1",
-	"Asia Pacific (Sydney)":      "ap-southeast-2",
-	"Canada (Central)":           "ca-central-1",
-	"China (Beijing)":            "cn-north-1",
-	"China (Ningxia)":            "cn-northwest-1",
-	"EU (Frankfurt)":             "eu-central-1",
-	"EU (Ireland)":               "eu-west-1",
-	"EU (London)":                "eu-west-2",
-	"EU (Paris)":                 "eu-west-3",
-	"EU (Stockholm)":             "eu-north-1",
-	"South America (Sao Paulo)":  "sa-east-1",
-	"AWS GovCloud (US-East)":     "us-gov-east-1",
-	"AWS GovCloud (US-West)":     "us-gov-west-1",
-	"AWS GovCloud (US)":          "us-gov-west-1",
+var generalInstanceFilters = []*pricing.Filter{
+	{
+		Field: aws.String("operatingSystem"),
+		Type:  aws.String("TERM_MATCH"),
+		Value: aws.String("Linux"),
+	},
+	{
+		Field: aws.String("operation"),
+		Type:  aws.String("TERM_MATCH"),
+		Value: aws.String("RunInstances"),
+	},
+	{
+		Field: aws.String("capacitystatus"),
+		Type:  aws.String("TERM_MATCH"),
+		Value: aws.String("Used"),
+	},
+	{
+		Field: aws.String("tenancy"),
+		Type:  aws.String("TERM_MATCH"),
+		Value: aws.String("Shared"),
+	},
+}
+
+var awsRegionIDToNameMap = map[string]string{
+	"us-east-2":      "US East (Ohio)",
+	"us-east-1":      "US East (N. Virginia)",
+	"us-west-1":      "US West (N. California)",
+	"us-west-2":      "US West (Oregon)",
+	"ap-northeast-1": "Asia Pacific (Tokyo)",
+	"ap-northeast-2": "Asia Pacific (Seoul)",
+	"ap-northeast-3": "Asia Pacific (Osaka-Local)",
+	"ap-south-1":     "Asia Pacific (Mumbai)",
+	"ap-southeast-1": "Asia Pacific (Singapore)",
+	"ap-southeast-2": "Asia Pacific (Sydney)",
+	"ca-central-1":   "Canada (Central)",
+	"cn-north-1":     "China (Beijing)",
+	"cn-northwest-1": "China (Ningxia)",
+	"eu-central-1":   "EU (Frankfurt)",
+	"eu-west-1":      "EU (Ireland)",
+	"eu-west-2":      "EU (London)",
+	"eu-west-3":      "EU (Paris)",
+	"eu-north-1":     "EU (Stockholm)",
+	"sa-east-1":      "South America (Sao Paulo)",
+	"us-gov-east-1":  "AWS GovCloud (US-East)",
+	"us-gov-west-1":  "AWS GovCloud (US-West)",
+}
+
+var awsS3StorageCostMap = map[string]float64{
+	"StandardStorage":             0.023,
+	"IntelligentTieringFAStorage": 0.023,
+	"IntelligentTieringIAStorage": 0.0125,
+	"StandardIAStorage":           0.0125,
+	"OneZoneIAStorage":            0.01,
+	"ReducedRedundancyStorage":    0.023, // TODO: double check this
+	"GlacierStorage":              0.004,
 }
 
 // Storage cost per GB per day
@@ -164,7 +208,7 @@ func ImageCostPerDay(image cloud.Image) float64 {
 // specified instance.
 func InstancePricePerHour(instance cloud.Instance) float64 {
 	if instance.CSP() == cloud.AWS {
-		return awsInstancePricePerHour(instance.Location(), instance.InstanceType())
+		return awsInstancePricePerHour(instance)
 	} else if instance.CSP() == cloud.GCP {
 		price, ok := gcpInstanceCostPerHourMap[instance.InstanceType()]
 		if !ok {
@@ -183,7 +227,11 @@ func InstancePricePerHour(instance cloud.Instance) float64 {
 // storage every month.
 func BucketPricePerMonth(bucket cloud.Bucket) float64 {
 	if bucket.CSP() == cloud.AWS {
-		return s3BucketPerGBMonth * bucket.TotalSizeGB()
+		price := 0.0
+		for storageType, size := range bucket.StorageTypeSizesGB() {
+			price += awsS3StorageCostMap[storageType] * size
+		}
+		return price
 	} else if bucket.CSP() == cloud.GCP {
 		return gcpBucketPerGBMonth * bucket.TotalSizeGB()
 	}
@@ -192,118 +240,91 @@ func BucketPricePerMonth(bucket cloud.Bucket) float64 {
 }
 
 // awsInstancePricePerHour will return the hourly price in USD for a
-// specified instance type in a specified AWS region. If the specified
-// region/type pair does not exist, $0.0 will be returned.
-func awsInstancePricePerHour(region, instanceType string) float64 {
-	if awsPrices != nil {
-		// Prices have already been fetched before
-		price, exist := awsPrices[instanceKeyPair{region, instanceType}]
-		if !exist {
-			return 0.0
-		}
+// specified instance type in a specified AWS region.
+func awsInstancePricePerHour(instance cloud.Instance) float64 {
+	if awsPrices == nil {
+		awsPrices = make(priceMap)
+	}
+	// The price for this instance type/region has already been fetched before
+	price, exist := awsPrices[instanceKeyPair{instance.Location(), instance.InstanceType()}]
+	if exist {
 		return price
 	}
-	log.Println("Fetching current instance prices from AWS")
-	rawPrices := getRawAWSData()
-	filteredProducts := filterRelevantAWSProducts(&rawPrices)
-	awsPrices = make(priceMap)
 
-	for _, product := range filteredProducts {
-		for _, term := range rawPrices.Terms.OnDemand[product.SKU] {
-			for _, price := range term.PriceDimensions {
-				regionID, ok := awsRegionNameToIDMap[product.Region]
-				if !ok {
-					log.Fatalln("Got an unknown region from AWS:", product.Region)
-				}
-				key := instanceKeyPair{
-					Region:       regionID,
-					InstanceType: product.InstanceType,
-				}
-				usd, err := strconv.ParseFloat(price.PricePerUnit.USD, 64)
-				if err != nil {
-					log.Println("Could not convert price from AWS JSON", err)
-				}
-				awsPrices[key] = usd
-				continue
+	sess := session.Must(session.NewSession())
+	creds := stscreds.NewCredentials(sess, fmt.Sprintf(assumeRoleARNTemplate, instance.Owner()))
+	svc := pricing.New(sess, &aws.Config{
+		Credentials: creds,
+		Region:      aws.String("us-east-1"), // pricing API is only available here
+	})
+
+	specificFilters := []*pricing.Filter{
+		{
+			Field: aws.String("instanceType"),
+			Type:  aws.String("TERM_MATCH"),
+			Value: aws.String(instance.InstanceType()),
+		},
+		{
+			Field: aws.String("location"),
+			Type:  aws.String("TERM_MATCH"),
+			Value: aws.String(awsRegionIDToNameMap[instance.Location()]),
+		},
+	}
+	filters := append(generalInstanceFilters, specificFilters...)
+	input := &pricing.GetProductsInput{
+		ServiceCode:   aws.String("AmazonEC2"),
+		Filters:       filters,
+		FormatVersion: aws.String("aws_v1"),
+	}
+	result, err := svc.GetProducts(input)
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+
+	var listPrice rawAWSPrice
+	rawListPriceJSON, err := protocol.EncodeJSONValue(result.PriceList[0], protocol.NoEscape)
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+	err = json.Unmarshal([]byte(rawListPriceJSON), &listPrice)
+	if err != nil {
+		log.Fatalln(err.Error())
+	}
+
+	for _, term := range listPrice.Terms.OnDemand {
+		for _, price := range term.PriceDimensions {
+			key := instanceKeyPair{
+				Region:       instance.Location(),
+				InstanceType: instance.InstanceType(),
 			}
+			usd, err := strconv.ParseFloat(price.PricePerUnit.USD, 64)
+			if err != nil {
+				log.Fatalln("Could not convert price from AWS JSON", err)
+			}
+			if usd == 0.00 {
+				log.Println("Price for", instance.InstanceType(), "in", instance.Location(), "is $0.00. Needs investigation!")
+			}
+			awsPrices[key] = usd
+			continue
 		}
 	}
-	price, exist := awsPrices[instanceKeyPair{region, instanceType}]
+
+	price, exist = awsPrices[instanceKeyPair{instance.Location(), instance.InstanceType()}]
 	if !exist {
-		return 0.0
+		log.Fatalln("Could not fetch price for", instance.InstanceType(), "in", instance.Location())
 	}
 	return price
 }
 
 // Helper structs for parsing the JSON from AWS
-type rawAWSPricing struct {
-	Products map[string]rawAWSProduct `json:"products"`
-	Terms    struct {
-		OnDemand map[string]rawAWSTerm `json:"OnDemand"`
+type rawAWSPrice struct {
+	Terms struct {
+		OnDemand map[string]struct {
+			PriceDimensions map[string]struct {
+				PricePerUnit struct {
+					USD string `json:"USD"`
+				} `json:"pricePerUnit"`
+			} `json:"priceDimensions"`
+		} `json:"OnDemand"`
 	} `json:"terms"`
-}
-type rawAWSProduct struct {
-	Sku        string `json:"sku"`
-	Attributes struct {
-		Location        string `json:"location"`
-		LocationType    string `json:"locationType"`
-		InstanceType    string `json:"instanceType"`
-		Tenancy         string `json:"tenancy"`
-		OperatingSystem string `json:"operatingSystem"`
-	} `json:"attributes"`
-}
-
-type rawAWSTerm map[string]struct {
-	OfferTermCode   string `json:"offerTermCode"`
-	Sku             string `json:"sku"`
-	PriceDimensions map[string]struct {
-		PricePerUnit struct {
-			USD string `json:"USD"`
-		} `json:"pricePerUnit"`
-	} `json:"priceDimensions"`
-}
-
-type awsSimpleProduct struct {
-	SKU          string
-	Region       string
-	InstanceType string
-}
-
-type instanceKeyPair struct {
-	Region, InstanceType string
-}
-
-type priceMap map[instanceKeyPair]float64
-
-// Fetch raw pricing data from AWS and decode it
-func getRawAWSData() rawAWSPricing {
-	resp, err := http.Get(awsPricingURL)
-	if err != nil {
-		log.Fatalln("Could not download Pricing JSON", err)
-	}
-	decoder := json.NewDecoder(resp.Body)
-	res := rawAWSPricing{}
-
-	err = decoder.Decode(&res)
-	if err != nil {
-		log.Panicln("Could not decode JSON from AWS", err)
-	}
-	return res
-}
-
-// We're only interested in some of the prodcuts fetched from AWS
-func filterRelevantAWSProducts(raw *rawAWSPricing) []awsSimpleProduct {
-	filteredProducts := []awsSimpleProduct{}
-	for sku, product := range raw.Products {
-		attr := product.Attributes
-		if attr.Tenancy == "Shared" && attr.LocationType == "AWS Region" && attr.OperatingSystem == "Linux" {
-			simple := awsSimpleProduct{
-				SKU:          sku,
-				Region:       attr.Location,
-				InstanceType: attr.InstanceType,
-			}
-			filteredProducts = append(filteredProducts, simple)
-		}
-	}
-	return filteredProducts
 }

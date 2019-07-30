@@ -17,6 +17,7 @@ package notify
 import (
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/cloudtools/cloudsweeper/mailer"
@@ -66,7 +67,28 @@ func (d *resourceMailData) ResourceCount() int {
 	return len(d.Images) + len(d.Instances) + len(d.Snapshots) + len(d.Volumes) + len(d.Buckets)
 }
 
+func (d *resourceMailData) SortByCost() {
+	sort.Slice(d.Instances, func(i, j int) bool {
+		return accumulatedCost(d.Instances[i]) > accumulatedCost(d.Instances[j])
+	})
+	sort.Slice(d.Images, func(i, j int) bool {
+		return accumulatedCost(d.Images[i]) > accumulatedCost(d.Images[j])
+	})
+	sort.Slice(d.Snapshots, func(i, j int) bool {
+		return accumulatedCost(d.Snapshots[i]) > accumulatedCost(d.Snapshots[j])
+	})
+	sort.Slice(d.Volumes, func(i, j int) bool {
+		return accumulatedCost(d.Volumes[i]) > accumulatedCost(d.Volumes[j])
+	})
+	sort.Slice(d.Buckets, func(i, j int) bool {
+		return billing.BucketPricePerMonth(d.Buckets[i]) > billing.BucketPricePerMonth(d.Buckets[j])
+	})
+}
+
 func (d *resourceMailData) SendEmail(client mailer.Client, domain, mailTemplate, title string, debugAddressees ...string) {
+	// Always sort by cost
+	d.SortByCost()
+
 	mailContent, err := generateMail(d, mailTemplate)
 	if err != nil {
 		log.Fatalln("Could not generate email:", err)
@@ -133,21 +155,34 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 	managerToMailDataMapping := initManagerToMailDataMapping(org.Managers)
 
 	// Create filters
-	generalFilter := filter.New()
-	generalFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["GeneralOlderThanDays"]))
+	instanceFilter := filter.New()
+	instanceFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-instances-older-than-days"]))
+
+	imageFilter := filter.New()
+	imageFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-images-older-than-days"]))
+
+	volumeFilter := filter.New()
+	volumeFilter.AddVolumeRule(filter.IsUnattached())
+	volumeFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-unattached-older-than-days"]))
+
+	snapshotFilter := filter.New()
+	snapshotFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-snapshots-older-than-days"]))
+
+	bucketFilter := filter.New()
+	bucketFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-buckets-older-than-days"]))
 
 	whitelistFilter := filter.New()
 	whitelistFilter.OverrideWhitelist = true
-	whitelistFilter.AddGeneralRule(filter.OlderThanXMonths(thresholds["WhitelistOlderThanMonths"]))
+	whitelistFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-whitelist-older-than-days"]))
 
 	// These only apply to instances
 	dndFilter := filter.New()
 	dndFilter.AddGeneralRule(filter.HasTag("no-not-delete"))
-	dndFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["DndOlderThanDays"]))
+	dndFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-dnd-older-than-days"]))
 
 	dndFilter2 := filter.New()
 	dndFilter2.AddGeneralRule(filter.NameContains("do-not-delete"))
-	dndFilter2.AddGeneralRule(filter.OlderThanXDays(thresholds["DndOlderThanDays"]))
+	dndFilter2.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-dnd-older-than-days"]))
 
 	for account, resources := range allCompute {
 		log.Println("Performing old resource review in", account)
@@ -157,14 +192,14 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 		// Apply filters
 		userMailData := resourceMailData{
 			Owner:     username,
-			Instances: filter.Instances(resources.Instances, generalFilter, whitelistFilter, dndFilter, dndFilter2),
-			Images:    filter.Images(resources.Images, generalFilter, whitelistFilter),
-			Volumes:   filter.Volumes(resources.Volumes, generalFilter, whitelistFilter),
-			Snapshots: filter.Snapshots(resources.Snapshots, generalFilter, whitelistFilter),
+			Instances: filter.Instances(resources.Instances, instanceFilter, whitelistFilter, dndFilter, dndFilter2),
+			Images:    filter.Images(resources.Images, imageFilter, whitelistFilter),
+			Volumes:   filter.Volumes(resources.Volumes, volumeFilter, whitelistFilter),
+			Snapshots: filter.Snapshots(resources.Snapshots, snapshotFilter, whitelistFilter),
 			Buckets:   []cloud.Bucket{},
 		}
 		if buckets, ok := allBuckets[account]; ok {
-			userMailData.Buckets = filter.Buckets(buckets, generalFilter, whitelistFilter)
+			userMailData.Buckets = filter.Buckets(buckets, bucketFilter, whitelistFilter)
 		}
 
 		// Add to the manager summary
@@ -214,7 +249,7 @@ func (c *Client) UntaggedResourcesReview(mngr cloud.ResourceManager, accountUser
 	for account, resources := range allCompute {
 		log.Printf("Performing untagged resources review in %s", account)
 		untaggedFilter := filter.New()
-		untaggedFilter.AddGeneralRule(filter.Negate(filter.HasTag("Name")))
+		untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException("Name"))
 
 		// We care about un-tagged whitelisted resources too
 		untaggedFilter.OverrideWhitelist = true
@@ -297,5 +332,27 @@ func (c *Client) MonthToDateReport(report billing.Report, accountUserMapping map
 	err = mailClient.SendEmail(title, mailContent, recipientMail)
 	if err != nil {
 		log.Printf("Failed to email %s: %s\n", recipientMail, err)
+	}
+}
+
+// MarkingDryRunReport will send an email with all the resources that would have been marked for deletion
+func (c *Client) MarkingDryRunReport(taggedResources map[string]*cloud.AllResourceCollection, accountUserMapping map[string]string) {
+	for account, resources := range taggedResources {
+		// Use a debug user here
+		mailData := resourceMailData{
+			Owner:     "cloudsweeper-test",
+			OwnerID:   account,
+			Instances: resources.Instances,
+			Images:    resources.Images,
+			Snapshots: resources.Snapshots,
+			Volumes:   resources.Volumes,
+			Buckets:   resources.Buckets,
+		}
+
+		if mailData.ResourceCount() > 0 {
+			// Send email
+			title := fmt.Sprintf("Marking Dry Run Warning. The following resources would have been marked for deletion:")
+			mailData.SendEmail(getMailClient(c), c.config.EmailDomain, markingDryRunTemplate, title)
+		}
 	}
 }

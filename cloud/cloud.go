@@ -121,6 +121,7 @@ type Bucket interface {
 	LastModified() time.Time
 	ObjectCount() int64
 	TotalSizeGB() float64
+	StorageTypeSizesGB() map[string]float64
 }
 
 // ResourceCollection encapsulates collections of multiple resources. Does not
@@ -131,6 +132,17 @@ type ResourceCollection struct {
 	Images    []Image
 	Volumes   []Volume
 	Snapshots []Snapshot
+}
+
+// AllResourceCollection encapsulates collections of all resources,
+// including buckets
+type AllResourceCollection struct {
+	Owner     string
+	Instances []Instance
+	Images    []Image
+	Volumes   []Volume
+	Snapshots []Snapshot
+	Buckets   []Bucket
 }
 
 // CSP represent a cloud service provider, such as AWS

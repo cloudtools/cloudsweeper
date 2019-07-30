@@ -54,30 +54,46 @@ var (
 
 	findResourceID = flag.String("resource-id", "", "ID of resource to find with find-resource command")
 
+	dryRun = flag.Bool("marking-dry-run", false, "Whether to perform a dry run for mark and delete (nothing will actually be marked)")
+
 	// Thresholds
 	thresholds = make(map[string]int)
 	thnames    = []string{
 		"clean-untagged-older-than-days",
-		"clean-general-older-than-months",
+		"clean-instances-older-than-days",
+		"clean-images-older-than-days",
+		"clean-snapshots-older-than-days",
 		"clean-unattatched-older-than-days",
 		"clean-bucket-not-modified-days",
 		"clean-bucket-older-than-days",
-		"notify-general-older-than-days",
-		"notify-whitelist-older-than-months",
+		"clean-keep-n-component-images",
+		"notify-instances-older-than-days",
+		"notify-images-older-than-days",
+		"notify-unattached-older-than-days",
+		"notify-snapshots-older-than-days",
+		"notify-buckets-older-than-days",
+		"notify-whitelist-older-than-days",
 		"notify-dnd-older-than-days",
 	}
 
 	// Clean thresholds
 	cleanUntaggedOlderThanDays    = flag.String("clean-untagged-older-than-days", "", "Clean untagged instances if older than X days (default: 30)")
-	cleanGeneralOlderThanMonths   = flag.String("clean-general-older-than-months", "", "Clean if older than X days (default: 6)")
+	cleanInstancesOlderThanDays   = flag.String("clean-instances-older-than-days", "", "Clean if instance is older than X days (default: 182)")
+	cleanImagesOlderThanDays      = flag.String("clean-images-older-than-days", "", "Clean if image is older than X days (default: 182)")
+	cleanSnapshotsOlderThanDays   = flag.String("clean-snapshots-older-than-days", "", "Clean if snapshot is older than X days (default: 182)")
 	cleanUnattatchedOlderThanDays = flag.String("clean-unattatched-older-than-days", "", "Clean unattached volumes older than X days (default: 30)")
 	cleanBucketNotModifiedDays    = flag.String("clean-bucket-not-modified-days", "", "Clean s3 bucket if not modified for more than X days (default: 182)")
 	cleanBucketOlderThanDays      = flag.String("clean-bucket-older-than-days", "", "Clean s3 bucket if older than X days (default: 7)")
+	cleanKeepNComponentImages     = flag.String("clean-keep-n-component-images", "", "Clean images with component-date naming that are older than the N most recent ones (default: 2)")
 
 	//  Notify thresholds
-	notifyGeneralOlderThanDays     = flag.String("notify-general-older-than-days", "", "Notify if older than X days (default: 30)")
-	notifyWhitelistOlderThanMonths = flag.String("notify-whitelist-older-than-months", "", "Notify if whitelisted is older than X months (default: 6)")
-	notifyDndOlderThanDays         = flag.String("notify-dnd-older-than-days", "", "Do not delete older than X days (default: 7)")
+	notifyInstancesOlderThanDays = flag.String("notify-instances-older-than-days", "", "Notify if instances is older than X days (default: 30)")
+	notifyImagesOlderThanDays    = flag.String("notify-images-older-than-days", "", "Notify if image is older than X days (default: 30)")
+	notifyVolumesOlderThanDays   = flag.String("notify-unattached-older-than-days", "", "Notify if volume is older than X days (default: 30)")
+	notifySnapshotsOlderThanDays = flag.String("notify-snapshots-older-than-days", "", "Notify if snapshot is older than X days (default: 30)")
+	notifyBucketsOlderThanDays   = flag.String("notify-buckets-older-than-days", "", "Notify if bucket is older than X days (default: 30)")
+	notifyWhitelistOlderThanDays = flag.String("notify-whitelist-older-than-days", "", "Notify if whitelisted is older than X days (default: 182)")
+	notifyDndOlderThanDays       = flag.String("notify-dnd-older-than-days", "", "Do not delete older than X days (default: 7)")
 )
 
 const banner = `
@@ -111,7 +127,13 @@ func main() {
 		log.Println("Marking old resources for cleanup")
 		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
-		cleanup.MarkForCleanup(mngr, thresholds)
+		taggedResources := cleanup.MarkForCleanup(mngr, thresholds, *dryRun)
+		if *dryRun {
+			client := initNotifyClient()
+			client.MarkingDryRunReport(taggedResources, org.AccountToUserMapping(csp))
+		} else {
+			log.Println("Not sending marking report since this was not a dry run")
+		}
 	case "review":
 		log.Println("Sending out old resource review")
 		org := parseOrganization(findConfig("org-file"))
