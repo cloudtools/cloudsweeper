@@ -5,6 +5,7 @@ package filter
 
 import (
 	"strings"
+	"time"
 
 	"github.com/cloudtools/cloudsweeper/cloud"
 )
@@ -17,6 +18,20 @@ func IsWhitelisted(resource cloud.Resource) bool {
 		}
 	}
 	return false
+}
+
+func ParseFormat(image cloud.Image) (name string, creationTime time.Time) {
+	nameParts := strings.Split(image.Name(), "-")
+	if len(nameParts) < 2 {
+		return "", time.Time{}
+	}
+	rawDate := nameParts[len(nameParts)-1]
+	componentName := strings.Join(nameParts[:len(nameParts)-1], "-")
+	const format = "20060102150405"
+	if parsedDate, err := time.Parse(format, rawDate); err == nil {
+		return componentName, parsedDate
+	}
+	return "", time.Time{}
 }
 
 func (f *ResourceFilter) includeResource(resource cloud.Resource) bool {
