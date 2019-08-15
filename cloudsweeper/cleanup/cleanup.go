@@ -35,39 +35,50 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 
 	for owner, res := range allResources {
 		log.Println("Marking resources for cleanup in", owner)
+
+		getThreshold := func(key string, thresholds map[string]int) int {
+			threshold, found := thresholds[key]
+			if found {
+				return threshold
+			} else {
+				log.Fatalf("Threshold '%s' not found", key)
+				return 99999
+			}
+		}
+
 		untaggedFilter := filter.New()
 		untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException("Name"))
-		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-untagged-older-than-days"]))
+		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-untagged-older-than-days", thresholds)))
 		untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
 		untaggedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 		untaggedFilter.AddVolumeRule(filter.IsUnattached())
 
 		instanceFilter := filter.New()
-		instanceFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-instances-older-than-days"]))
+		instanceFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-instances-older-than-days", thresholds)))
 		instanceFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		instanceFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		snapshotFilter := filter.New()
-		snapshotFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-snapshots-older-than-days"]))
+		snapshotFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-snapshots-older-than-days", thresholds)))
 		snapshotFilter.AddSnapshotRule(filter.IsNotInUse())
 		snapshotFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		snapshotFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		imageFilter := filter.New()
-		imageFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-images-older-than-days"]))
+		imageFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-images-older-than-days", thresholds)))
 		imageFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		imageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 		imageFilter.AddImageRule(filter.DoesNotFollowFormat())
 
 		volumeFilter := filter.New()
 		volumeFilter.AddVolumeRule(filter.IsUnattached())
-		volumeFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-unattatched-older-than-days"]))
+		volumeFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-unattatched-older-than-days", thresholds)))
 		volumeFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		volumeFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		bucketFilter := filter.New()
-		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(thresholds["clean-bucket-not-modified-days"]))
-		bucketFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-bucket-older-than-days"]))
+		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(getThreshold("clean-bucket-not-modified-days", thresholds)))
+		bucketFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-bucket-older-than-days", thresholds)))
 		bucketFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		bucketFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
@@ -145,7 +156,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		componentImageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 		componentImageFilter.AddImageRule(filter.FollowsFormat())
 
-		componentImages := getAllButNLatestComponents(res.Images, thresholds["clean-keep-n-component-images"])
+		componentImages := getAllButNLatestComponents(res.Images, getThreshold("clean-keep-n-component-images", thresholds))
 		for _, image := range filter.Images(componentImages, componentImageFilter) {
 			if _, found := alreadySelectedImages[image.ID()]; !found {
 				resourcesToTag.Images = append(resourcesToTag.Images, image)
