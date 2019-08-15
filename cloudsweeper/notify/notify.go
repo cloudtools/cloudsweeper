@@ -154,41 +154,52 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 	totalSummaryMailData := initTotalSummaryMailData(c.config.TotalSumAddresse)
 	managerToMailDataMapping := initManagerToMailDataMapping(org.Managers)
 
+	getThreshold := func(key string, thresholds map[string]int) int {
+		threshold, found := thresholds[key]
+		if found {
+			return threshold
+		} else {
+			errorText := fmt.Sprintf("Threshold '%s' not found", key)
+			log.Fatalln(errorText)
+			return 99999
+		}
+	}
+
 	// Create filters
 	instanceFilter := filter.New()
-	instanceFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-instances-older-than-days"]))
+	instanceFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-instances-older-than-days", thresholds)))
 
 	imageFilter := filter.New()
-	imageFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-images-older-than-days"]))
+	imageFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-images-older-than-days", thresholds)))
 
 	volumeFilter := filter.New()
 	volumeFilter.AddVolumeRule(filter.IsUnattached())
-	volumeFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-unattached-older-than-days"]))
+	volumeFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-unattached-older-than-days", thresholds)))
 
 	snapshotFilter := filter.New()
-	snapshotFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-snapshots-older-than-days"]))
+	snapshotFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-snapshots-older-than-days", thresholds)))
 
 	bucketFilter := filter.New()
-	bucketFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-buckets-older-than-days"]))
+	bucketFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-buckets-older-than-days", thresholds)))
 
 	whitelistFilter := filter.New()
 	whitelistFilter.OverrideWhitelist = true
-	whitelistFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-whitelist-older-than-days"]))
+	whitelistFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-whitelist-older-than-days", thresholds)))
 
 	untaggedFilter := filter.New()
 	untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException("Name"))
-	untaggedFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-untagged-older-than-days"]))
+	untaggedFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-untagged-older-than-days", thresholds)))
 	untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
 	untaggedFilter.AddVolumeRule(filter.IsUnattached())
 
 	// These only apply to instances
 	dndFilter := filter.New()
 	dndFilter.AddGeneralRule(filter.HasTag("no-not-delete"))
-	dndFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-dnd-older-than-days"]))
+	dndFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-dnd-older-than-days", thresholds)))
 
 	dndFilter2 := filter.New()
 	dndFilter2.AddGeneralRule(filter.NameContains("do-not-delete"))
-	dndFilter2.AddGeneralRule(filter.OlderThanXDays(thresholds["notify-dnd-older-than-days"]))
+	dndFilter2.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-dnd-older-than-days", thresholds)))
 
 	for account, resources := range allCompute {
 		log.Println("Performing old resource review in", account)
