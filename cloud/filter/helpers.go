@@ -5,10 +5,7 @@ package filter
 
 import (
 	"strings"
-<<<<<<< HEAD
-=======
 	"time"
->>>>>>> master
 
 	"github.com/cloudtools/cloudsweeper/cloud"
 )
@@ -23,8 +20,6 @@ func IsWhitelisted(resource cloud.Resource) bool {
 	return false
 }
 
-<<<<<<< HEAD
-=======
 func ParseFormat(image cloud.Image) (name string, creationTime time.Time) {
 	nameParts := strings.Split(image.Name(), "-")
 	if len(nameParts) < 2 {
@@ -39,7 +34,6 @@ func ParseFormat(image cloud.Image) (name string, creationTime time.Time) {
 	return "", time.Time{}
 }
 
->>>>>>> master
 func (f *ResourceFilter) includeResource(resource cloud.Resource) bool {
 	for i := range f.generalRules {
 		if !f.generalRules[i](resource) {
