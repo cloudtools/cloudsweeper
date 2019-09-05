@@ -538,7 +538,7 @@ If you want to save any of these resources, add a tag with the key <b>whiteliste
 
 <p>
 Read more about how Cloudsweeper works and how to better tag your resources at
-<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">this Wiki page</a>.
+<a href="#">this Wiki page</a>.
 </p>
 
 <h2>Old resources:</h2>
@@ -865,7 +865,7 @@ The following listed resources are missing proper <strong>env/product/role</stro
 These tags are important to help us track resource purpose and cost.
 You can always add other tags to resources, but should always include a <strong>env/product/role</strong> tag.
 You can read more about tagging rules in
-<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/4325488/Resource+Naming+and+Tagging+Requirements">this wiki</a>.
+<a href="#">this wiki</a>.
 </p>
 
 <p>
@@ -874,7 +874,7 @@ Please tag these resources appropriately.
 
 <p>
 Read more about how Cloudsweeper works and how to better tag your resources at
-<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">this Wiki page</a>.
+<a href="#">this Wiki page</a>.
 </p>
 
 <h2>Untagged resources:</h2>
