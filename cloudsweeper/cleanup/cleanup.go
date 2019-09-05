@@ -55,11 +55,12 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 
 		instanceFilter := filter.New()
 		instanceFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-instances-older-than-days", thresholds)))
+
 		instanceFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		instanceFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
-		snapshotFilter := filter.New()
-		snapshotFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-snapshots-older-than-days", thresholds)))
+
+		snapshotFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-snapshots-older-than-days"]))
 		snapshotFilter.AddSnapshotRule(filter.IsNotInUse())
 		snapshotFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		snapshotFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
@@ -73,6 +74,13 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		volumeFilter := filter.New()
 		volumeFilter.AddVolumeRule(filter.IsUnattached())
 		volumeFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-unattatched-older-than-days", thresholds)))
+		imageFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-images-older-than-days"]))
+		imageFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
+		imageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+
+		volumeFilter := filter.New()
+		volumeFilter.AddVolumeRule(filter.IsUnattached())
+		volumeFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-unattatched-older-than-days"]))
 		volumeFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		volumeFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
@@ -101,7 +109,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		}
 
 		// Tag volumes
-		for _, res := range filter.Volumes(res.Volumes, volumeFilter, untaggedFilter) {
+
 			resourcesToTag.Volumes = append(resourcesToTag.Volumes, res)
 			tagList = append(tagList, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
@@ -118,8 +126,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 			totalCost += days * costPerDay
 		}
 
-		// Tag untagged images
-		for _, res := range filter.Images(res.Images, untaggedFilter) {
+
 			resourcesToTag.Images = append(resourcesToTag.Images, res)
 			tagList = append(tagList, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
@@ -158,6 +165,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 
 		componentImages := getAllButNLatestComponents(res.Images, getThreshold("clean-keep-n-component-images", thresholds))
 		for _, image := range filter.Images(componentImages, componentImageFilter) {
+
 			if _, found := alreadySelectedImages[image.ID()]; !found {
 				resourcesToTag.Images = append(resourcesToTag.Images, image)
 				tagList = append(tagList, image)
@@ -203,8 +211,44 @@ func getAllButNLatestComponents(images []cloud.Image, componentsToKeep int) []cl
 		if !found {
 			log.Fatalln("Times not found for some reason")
 			return time.Now().AddDate(-10, 0, 0)
-		}
 
+	splitNameAndTime := func(ami cloud.Image) (name string, creationTime time.Time, err error) {
+		nameParts := strings.Split(ami.Name(), "-")
+		if len(nameParts) < 2 {
+			log.Printf("AMI %s doesn't follow the <component>-<time> format", ami.ID())
+			return "", time.Time{}, errors.New("AMI doesn't follow the correct format")
+		}
+		rawDate := nameParts[len(nameParts)-1]
+		componentName := strings.Join(nameParts[:len(nameParts)-1], "-")
+		const format = "20060102150405"
+		if parsedDate, err := time.Parse(format, rawDate); err == nil {
+			return componentName, parsedDate, nil
+		}
+		log.Printf("Could not parse time \"%s\" of AMI %s", rawDate, ami.ID())
+		return "", time.Time{}, errors.New("could not parse creation time of AMI")
+	}
+
+	for _, ami := range images {
+		componentName, creationDate, err := splitNameAndTime(ami)
+		if err != nil {
+			fmt.Printf("Got error for AMI %s: %v", ami.ID(), err)
+			continue
+		}
+		if _, found := componentDatesMap[componentName]; !found {
+			componentDatesMap[componentName] = []time.Time{}
+		}
+		componentDatesMap[componentName] = append(componentDatesMap[componentName], creationDate)
+	}
+
+ := func(componentName string) time.Time {
+		times, found := componentDatesMap[componentName]
+		if !found {
+			log.Fatalln("Times not found for some reason")
+			return time.Now().AddDate(-10, 0, 0)
+		}
+		if componentsToKeep > len(times) {
+			componentsToKeep = len(times)
+		}
 		sort.Slice(times, func(i, j int) bool {
 			// Sort times so that newest are first
 			return times[i].After(times[j])
@@ -224,6 +268,23 @@ func getAllButNLatestComponents(images []cloud.Image, componentsToKeep int) []cl
 		if creationDate.Before(threshold) {
 			// This AMI is too old, mark it
 			resourcesToTag = append(resourcesToTag, image)
+
+
+		threshold := times[componentsToKeep-1]
+		return threshold
+	}
+
+	for _, ami := range images {
+		componentName, creationDate, err := splitNameAndTime(ami)
+		if err != nil {
+			log.Printf("Got error for AMI %s: %v", ami.ID(), err)
+			continue
+		}
+		threshold := findThreshold(componentName)
+		if creationDate.Before(threshold) {
+			// This AMI is too old, mark it
+			resourcesToTag = append(resourcesToTag, ami)
+
 		}
 	}
 	return resourcesToTag

@@ -67,7 +67,6 @@ var (
 		"clean-bucket-not-modified-days",
 		"clean-bucket-older-than-days",
 		"clean-keep-n-component-images",
-		"notify-untagged-older-than-days",
 		"notify-instances-older-than-days",
 		"notify-images-older-than-days",
 		"notify-unattached-older-than-days",
@@ -76,9 +75,9 @@ var (
 		"notify-whitelist-older-than-days",
 		"notify-dnd-older-than-days",
 	}
-
-	// Clean thresholds
 	cleanUntaggedOlderThanDays    = flag.String("clean-untagged-older-than-days", "", "Clean untagged resources if older than X days (default: 30)")
+anUntaggedOlderThanDays    = flag.String("clean-untagged-older-than-days", "", "Clean untagged instances if older than X days (default: 30)")
+ master
 	cleanInstancesOlderThanDays   = flag.String("clean-instances-older-than-days", "", "Clean if instance is older than X days (default: 182)")
 	cleanImagesOlderThanDays      = flag.String("clean-images-older-than-days", "", "Clean if image is older than X days (default: 182)")
 	cleanSnapshotsOlderThanDays   = flag.String("clean-snapshots-older-than-days", "", "Clean if snapshot is older than X days (default: 182)")
@@ -89,6 +88,7 @@ var (
 
 	//  Notify thresholds
 	notifyUntaggedOlderThanDays  = flag.String("notify-untagged-older-than-days", "", "Notify if untagged resource is older than X days (default: 14)")
+
 	notifyInstancesOlderThanDays = flag.String("notify-instances-older-than-days", "", "Notify if instances is older than X days (default: 30)")
 	notifyImagesOlderThanDays    = flag.String("notify-images-older-than-days", "", "Notify if image is older than X days (default: 30)")
 	notifyVolumesOlderThanDays   = flag.String("notify-unattached-older-than-days", "", "Notify if volume is older than X days (default: 30)")

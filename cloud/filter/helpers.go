@@ -5,7 +5,6 @@ package filter
 
 import (
 	"strings"
-	"time"
 
 	"github.com/cloudtools/cloudsweeper/cloud"
 )
