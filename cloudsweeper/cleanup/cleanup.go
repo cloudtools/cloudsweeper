@@ -4,11 +4,8 @@
 package cleanup
 
 import (
-	"errors"
-	"fmt"
 	"log"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/cloudtools/cloudsweeper/cloud"
@@ -38,37 +35,50 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 
 	for owner, res := range allResources {
 		log.Println("Marking resources for cleanup in", owner)
+
+		getThreshold := func(key string, thresholds map[string]int) int {
+			threshold, found := thresholds[key]
+			if found {
+				return threshold
+			} else {
+				log.Fatalf("Threshold '%s' not found", key)
+				return 99999
+			}
+		}
+
 		untaggedFilter := filter.New()
 		untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException("Name"))
-		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-untagged-older-than-days"]))
+		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-untagged-older-than-days", thresholds)))
 		untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
 		untaggedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+		untaggedFilter.AddVolumeRule(filter.IsUnattached())
 
 		instanceFilter := filter.New()
-		instanceFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-instances-older-than-days"]))
+		instanceFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-instances-older-than-days", thresholds)))
 		instanceFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		instanceFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		snapshotFilter := filter.New()
-		snapshotFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-snapshots-older-than-days"]))
+		snapshotFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-snapshots-older-than-days", thresholds)))
 		snapshotFilter.AddSnapshotRule(filter.IsNotInUse())
 		snapshotFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		snapshotFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		imageFilter := filter.New()
-		imageFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-images-older-than-days"]))
+		imageFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-images-older-than-days", thresholds)))
 		imageFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		imageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+		imageFilter.AddImageRule(filter.DoesNotFollowFormat())
 
 		volumeFilter := filter.New()
 		volumeFilter.AddVolumeRule(filter.IsUnattached())
-		volumeFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-unattatched-older-than-days"]))
+		volumeFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-unattatched-older-than-days", thresholds)))
 		volumeFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		volumeFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		bucketFilter := filter.New()
-		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(thresholds["clean-bucket-not-modified-days"]))
-		bucketFilter.AddGeneralRule(filter.OlderThanXDays(thresholds["clean-bucket-older-than-days"]))
+		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(getThreshold("clean-bucket-not-modified-days", thresholds)))
+		bucketFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-bucket-older-than-days", thresholds)))
 		bucketFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		bucketFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
@@ -91,7 +101,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		}
 
 		// Tag volumes
-		for _, res := range filter.Volumes(res.Volumes, volumeFilter) {
+		for _, res := range filter.Volumes(res.Volumes, volumeFilter, untaggedFilter) {
 			resourcesToTag.Volumes = append(resourcesToTag.Volumes, res)
 			tagList = append(tagList, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
@@ -108,8 +118,8 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 			totalCost += days * costPerDay
 		}
 
-		// Tag images
-		for _, res := range filter.Images(res.Images, imageFilter, untaggedFilter) {
+		// Tag untagged images
+		for _, res := range filter.Images(res.Images, untaggedFilter) {
 			resourcesToTag.Images = append(resourcesToTag.Images, res)
 			tagList = append(tagList, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
@@ -132,9 +142,22 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 			alreadySelectedImages[image.ID()] = true
 		}
 
-		// Tag old AMIs using the component-date pattern
-		componentImagesToTag := getAllButNLatestComponents(res.Images, thresholds["clean-keep-n-component-images"])
-		for _, image := range componentImagesToTag {
+		// Tag images that DO NOT follow the component-date pattern
+		for _, image := range filter.Images(res.Images, imageFilter) {
+			if _, found := alreadySelectedImages[image.ID()]; !found {
+				resourcesToTag.Images = append(resourcesToTag.Images, image)
+				tagList = append(tagList, image)
+			}
+		}
+
+		// Tag images that DO follow the component-date pattern
+		componentImageFilter := filter.New()
+		componentImageFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
+		componentImageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+		componentImageFilter.AddImageRule(filter.FollowsFormat())
+
+		componentImages := getAllButNLatestComponents(res.Images, getThreshold("clean-keep-n-component-images", thresholds))
+		for _, image := range filter.Images(componentImages, componentImageFilter) {
 			if _, found := alreadySelectedImages[image.ID()]; !found {
 				resourcesToTag.Images = append(resourcesToTag.Images, image)
 				tagList = append(tagList, image)
@@ -167,28 +190,8 @@ func getAllButNLatestComponents(images []cloud.Image, componentsToKeep int) []cl
 	resourcesToTag := []cloud.Image{}
 	componentDatesMap := map[string][]time.Time{}
 
-	splitNameAndTime := func(ami cloud.Image) (name string, creationTime time.Time, err error) {
-		nameParts := strings.Split(ami.Name(), "-")
-		if len(nameParts) < 2 {
-			log.Printf("AMI %s doesn't follow the <component>-<time> format", ami.ID())
-			return "", time.Time{}, errors.New("AMI doesn't follow the correct format")
-		}
-		rawDate := nameParts[len(nameParts)-1]
-		componentName := strings.Join(nameParts[:len(nameParts)-1], "-")
-		const format = "20060102150405"
-		if parsedDate, err := time.Parse(format, rawDate); err == nil {
-			return componentName, parsedDate, nil
-		}
-		log.Printf("Could not parse time \"%s\" of AMI %s", rawDate, ami.ID())
-		return "", time.Time{}, errors.New("could not parse creation time of AMI")
-	}
-
-	for _, ami := range images {
-		componentName, creationDate, err := splitNameAndTime(ami)
-		if err != nil {
-			fmt.Printf("Got error for AMI %s: %v", ami.ID(), err)
-			continue
-		}
+	for _, image := range images {
+		componentName, creationDate := filter.ParseFormat(image)
 		if _, found := componentDatesMap[componentName]; !found {
 			componentDatesMap[componentName] = []time.Time{}
 		}
@@ -201,29 +204,26 @@ func getAllButNLatestComponents(images []cloud.Image, componentsToKeep int) []cl
 			log.Fatalln("Times not found for some reason")
 			return time.Now().AddDate(-10, 0, 0)
 		}
-		if componentsToKeep > len(times) {
-			componentsToKeep = len(times)
-		}
 
 		sort.Slice(times, func(i, j int) bool {
 			// Sort times so that newest are first
 			return times[i].After(times[j])
 		})
 
-		threshold := times[componentsToKeep-1]
+		minimumIndex := componentsToKeep
+		if minimumIndex > len(times) {
+			minimumIndex = len(times)
+		}
+		threshold := times[minimumIndex-1]
 		return threshold
 	}
 
-	for _, ami := range images {
-		componentName, creationDate, err := splitNameAndTime(ami)
-		if err != nil {
-			log.Printf("Got error for AMI %s: %v", ami.ID(), err)
-			continue
-		}
+	for _, image := range images {
+		componentName, creationDate := filter.ParseFormat(image)
 		threshold := findThreshold(componentName)
 		if creationDate.Before(threshold) {
 			// This AMI is too old, mark it
-			resourcesToTag = append(resourcesToTag, ami)
+			resourcesToTag = append(resourcesToTag, image)
 		}
 	}
 	return resourcesToTag

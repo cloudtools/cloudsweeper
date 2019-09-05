@@ -238,6 +238,26 @@ func IsNotInUse() func(cloud.Snapshot) bool {
 	}
 }
 
+// Below are image rules
+
+// Checks whether or not an image follows the <component>-<date> format
+func FollowsFormat() func(cloud.Image) bool {
+	return func(s cloud.Image) bool {
+		name, creationTime := ParseFormat(s)
+		if (name != "" && creationTime != time.Time{}) {
+			return true
+		}
+		return false
+	}
+}
+
+// DoesNotFollowFormat is the opposite of FollowsFormat
+func DoesNotFollowFormat() func(cloud.Image) bool {
+	return func(s cloud.Image) bool {
+		return !(FollowsFormat())(s)
+	}
+}
+
 // Below are bucket rules
 
 // NotModifiedInXDays returns bucket which have not had any modification
