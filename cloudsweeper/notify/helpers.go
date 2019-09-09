@@ -113,6 +113,20 @@ func extraTemplateFunctions() template.FuncMap {
 				return ""
 			}
 		},
+		"productname": func(res cloud.Resource) string {
+			product, exist := res.Tags()["product"]
+			if exist {
+				return product
+			}
+			return ""
+		},
+		"rolename": func(res cloud.Resource) string {
+			role, exist := res.Tags()["role"]
+			if exist {
+				return role
+			}
+			return ""
+		},
 		"maybeRealName": func(account string, accountToUser map[string]string) string {
 			if name, ok := accountToUser[account]; ok {
 				return name
