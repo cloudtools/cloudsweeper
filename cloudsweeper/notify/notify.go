@@ -20,12 +20,12 @@ import (
 	"sort"
 	"time"
 
-	"github.com/cloudtools/cloudsweeper/mailer"
+	"github.com/agaridata/cloudsweeper/mailer"
 
-	"github.com/cloudtools/cloudsweeper/cloud"
-	"github.com/cloudtools/cloudsweeper/cloud/billing"
-	"github.com/cloudtools/cloudsweeper/cloud/filter"
-	cs "github.com/cloudtools/cloudsweeper/cloudsweeper"
+	"github.com/agaridata/cloudsweeper/cloud"
+	"github.com/agaridata/cloudsweeper/cloud/billing"
+	"github.com/agaridata/cloudsweeper/cloud/filter"
+	cs "github.com/agaridata/cloudsweeper/cloudsweeper"
 )
 
 // Client is used to perform the notify actions. It must be

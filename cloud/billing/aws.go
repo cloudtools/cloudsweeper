@@ -16,8 +16,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/agaridata/cloudsweeper/cloud"
+
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/cloudtools/cloudsweeper/cloud"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"

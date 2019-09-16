@@ -4,7 +4,7 @@
 package filter
 
 import (
-	"github.com/cloudtools/cloudsweeper/cloud"
+	"github.com/agaridata/cloudsweeper/cloud"
 )
 
 // New will create a new resource filter ready to use

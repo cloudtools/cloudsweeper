@@ -9,10 +9,10 @@ import (
 	"html/template"
 	"time"
 
-	"github.com/cloudtools/cloudsweeper/cloud"
-	"github.com/cloudtools/cloudsweeper/cloud/billing"
-	"github.com/cloudtools/cloudsweeper/cloud/filter"
-	"github.com/cloudtools/cloudsweeper/mailer"
+	"github.com/agaridata/cloudsweeper/cloud"
+	"github.com/agaridata/cloudsweeper/cloud/billing"
+	"github.com/agaridata/cloudsweeper/cloud/filter"
+	"github.com/agaridata/cloudsweeper/mailer"
 )
 
 var emailEdgeCases = map[string]string{} // Use this map to fix bad mappings between usernames and email aliases

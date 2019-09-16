@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/cloudtools/cloudsweeper/cloud"
-	"github.com/cloudtools/cloudsweeper/cloudsweeper"
+	"github.com/agaridata/cloudsweeper/cloud"
+	"github.com/agaridata/cloudsweeper/cloudsweeper"
 )
 
 const foundBannerTemplate = `

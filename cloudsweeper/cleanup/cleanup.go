@@ -8,9 +8,9 @@ import (
 	"sort"
 	"time"
 
-	"github.com/cloudtools/cloudsweeper/cloud"
-	"github.com/cloudtools/cloudsweeper/cloud/billing"
-	"github.com/cloudtools/cloudsweeper/cloud/filter"
+	"github.com/agaridata/cloudsweeper/cloud"
+	"github.com/agaridata/cloudsweeper/cloud/billing"
+	"github.com/agaridata/cloudsweeper/cloud/filter"
 )
 
 const (

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cloudtools/cloudsweeper/cloud"
+	"github.com/agaridata/cloudsweeper/cloud"
 )
 
 func TestAddingFilters(t *testing.T) {

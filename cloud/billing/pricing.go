@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/pricing"
-	"github.com/cloudtools/cloudsweeper/cloud"
+	"github.com/agaridata/cloudsweeper/cloud"
 )
 
 const (

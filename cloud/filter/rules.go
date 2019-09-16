@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudtools/cloudsweeper/cloud"
+	"github.com/agaridata/cloudsweeper/cloud"
 )
 
 const (

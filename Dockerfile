@@ -1,8 +1,8 @@
 # STEP 1 build executable binary
 FROM golang:1.10-alpine3.7 as builder
 
-ADD . $GOPATH/src/github.com/cloudtools/cloudsweeper
-WORKDIR $GOPATH/src/github.com/cloudtools/cloudsweeper
+ADD . $GOPATH/src/github.com/agaridata/cloudsweeper
+WORKDIR $GOPATH/src/github.com/agaridata/cloudsweeper
 
 RUN apk -U upgrade && \
     apk add --no-cache -U git && \

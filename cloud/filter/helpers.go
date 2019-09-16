@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cloudtools/cloudsweeper/cloud"
+	"github.com/agaridata/cloudsweeper/cloud"
 )
 
 // IsWhitelisted checks if the given resource has a whitelisting tag

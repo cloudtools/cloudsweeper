@@ -8,9 +8,9 @@ import (
 	"log"
 	"strings"
 
-	"github.com/cloudtools/cloudsweeper/cloudsweeper"
+	"github.com/agaridata/cloudsweeper/cloudsweeper"
 
-	"github.com/cloudtools/cloudsweeper/cloud"
+	"github.com/agaridata/cloudsweeper/cloud"
 )
 
 type awsResourceType int

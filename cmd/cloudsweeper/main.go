@@ -11,13 +11,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/cloudtools/cloudsweeper/cloud"
-	"github.com/cloudtools/cloudsweeper/cloud/billing"
-	cs "github.com/cloudtools/cloudsweeper/cloudsweeper"
-	"github.com/cloudtools/cloudsweeper/cloudsweeper/cleanup"
-	"github.com/cloudtools/cloudsweeper/cloudsweeper/find"
-	"github.com/cloudtools/cloudsweeper/cloudsweeper/notify"
-	"github.com/cloudtools/cloudsweeper/cloudsweeper/setup"
+	"github.com/agaridata/cloudsweeper/cloud"
+	"github.com/agaridata/cloudsweeper/cloud/billing"
+	cs "github.com/agaridata/cloudsweeper/cloudsweeper"
+	"github.com/agaridata/cloudsweeper/cloudsweeper/cleanup"
+	"github.com/agaridata/cloudsweeper/cloudsweeper/find"
+	"github.com/agaridata/cloudsweeper/cloudsweeper/notify"
+	"github.com/agaridata/cloudsweeper/cloudsweeper/setup"
 )
 
 const (
