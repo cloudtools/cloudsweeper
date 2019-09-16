@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"strconv"
 	"time"
 
 	"github.com/agaridata/cloudsweeper/cloud"
@@ -49,6 +50,46 @@ func getMailClient(notifyClient *Client) mailer.Client {
 	from := notifyClient.config.MailFrom
 	displayName := notifyClient.config.DisplayName
 	return mailer.NewClient(username, password, displayName, from, server, port)
+}
+
+func timeUntilEarliestDeletion(resourceCollection cloud.AllResourceCollection) string {
+
+	// Initialize to something bigger than time to deletion
+	earliestTime := time.Now().AddDate(0, 0, 99999)
+
+	resources := []cloud.Resource{}
+	for _, res := range resourceCollection.Instances {
+		resources = append(resources, res.(cloud.Resource))
+	}
+	for _, res := range resourceCollection.Images {
+		resources = append(resources, res.(cloud.Resource))
+	}
+	for _, res := range resourceCollection.Snapshots {
+		resources = append(resources, res.(cloud.Resource))
+	}
+	for _, res := range resourceCollection.Volumes {
+		resources = append(resources, res.(cloud.Resource))
+	}
+	for _, res := range resourceCollection.Buckets {
+		resources = append(resources, res.(cloud.Resource))
+	}
+
+	for _, res := range resources {
+		tempTag, exists := res.Tags()["cloudsweeper-delete-at"]
+		if !exists {
+			continue
+		}
+		tempTime, err := time.Parse(time.RFC3339, tempTag)
+		if err != nil {
+			continue
+		}
+		if earliestTime.After(tempTime) {
+			earliestTime = tempTime
+		}
+	}
+
+	hours := int(time.Until(earliestTime).Hours())
+	return strconv.Itoa(hours)
 }
 
 func accumulatedCost(res cloud.Resource) float64 {
@@ -138,6 +179,27 @@ func extraTemplateFunctions() template.FuncMap {
 				return key
 			}
 			return fmt.Sprintf("%s: %s", key, val)
+		},
+		"deletedate": func(res cloud.Resource, format string) string {
+			tag, exist := res.Tags()["cloudsweeper-delete-at"]
+			if !exist {
+				return ""
+			}
+			t, err := time.Parse(time.RFC3339, tag)
+			if err != nil {
+				return ""
+			}
+			return t.Format(format)
+		},
+		// TODO: This isn't pretty whatsoever
+		"timeUntilDelete": func(instances []cloud.Instance, images []cloud.Image, snapshots []cloud.Snapshot, volumes []cloud.Volume, buckets []cloud.Bucket) string {
+			allResources := cloud.AllResourceCollection{}
+			allResources.Instances = instances
+			allResources.Images = images
+			allResources.Snapshots = snapshots
+			allResources.Volumes = volumes
+			allResources.Buckets = buckets
+			return timeUntilEarliestDeletion(allResources)
 		},
 	}
 }

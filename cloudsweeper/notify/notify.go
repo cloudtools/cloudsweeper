@@ -173,11 +173,12 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 	imageFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-images-older-than-days", thresholds)))
 
 	volumeFilter := filter.New()
-	volumeFilter.AddVolumeRule(filter.IsUnattached())
 	volumeFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-unattached-older-than-days", thresholds)))
+	volumeFilter.AddVolumeRule(filter.IsUnattached())
 
 	snapshotFilter := filter.New()
 	snapshotFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-snapshots-older-than-days", thresholds)))
+	snapshotFilter.AddSnapshotRule(filter.IsNotInUse())
 
 	bucketFilter := filter.New()
 	bucketFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-buckets-older-than-days", thresholds)))
@@ -238,7 +239,7 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 		totalSummaryMailData.Buckets = append(totalSummaryMailData.Buckets, userMailData.Buckets...)
 
 		if userMailData.ResourceCount() > 0 {
-			title := fmt.Sprintf("You have %d old resources to review (%s)", userMailData.ResourceCount(), time.Now().Format("2006-01-02"))
+			title := fmt.Sprintf("Review Notification (%d resources) (%s)", userMailData.ResourceCount(), time.Now().Format("2006-01-02"))
 			userMailData.SendEmail(getMailClient(c), c.config.EmailDomain, reviewMailTemplate, title)
 		}
 	}
@@ -259,16 +260,16 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 }
 
 // UntaggedResourcesReview will look for resources without any tags, and
-// send out a mail encouraging to tag tag them
+// send out a mail encouraging people to tag them
 func (c *Client) UntaggedResourcesReview(mngr cloud.ResourceManager, accountUserMapping map[string]string) {
-	// We only care about untagged resources in EC2
 	allCompute := mngr.AllResourcesPerAccount()
+	allBuckets := mngr.BucketsPerAccount()
 	for account, resources := range allCompute {
 		log.Printf("Performing untagged resources review in %s", account)
 		untaggedFilter := filter.New()
 		untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException("Name"))
 
-		// We care about un-tagged whitelisted resources too
+		// We care about untagged whitelisted resources too
 		untaggedFilter.OverrideWhitelist = true
 
 		username := accountUserMapping[account]
@@ -276,16 +277,18 @@ func (c *Client) UntaggedResourcesReview(mngr cloud.ResourceManager, accountUser
 			Owner:     username,
 			OwnerID:   account,
 			Instances: filter.Instances(resources.Instances, untaggedFilter),
-			// Only report on instances for now
-			//Images:    filter.Images(resources.Images, untaggedFilter),
+			Images:    filter.Images(resources.Images, untaggedFilter),
 			//Snapshots: filter.Snapshots(resources.Snapshots, untaggedFilter),
 			//Volumes:   filter.Volumes(resources.Volumes, untaggedFilter),
 			Buckets: []cloud.Bucket{},
 		}
+		if buckets, ok := allBuckets[account]; ok {
+			mailData.Buckets = filter.Buckets(buckets, untaggedFilter)
+		}
 
 		if mailData.ResourceCount() > 0 {
 			// Send mail
-			title := fmt.Sprintf("You have %d un-tagged resources to review (%s)", mailData.ResourceCount(), time.Now().Format("2006-01-02"))
+			title := fmt.Sprintf("Untagged Notification (%d resources) (%s)", mailData.ResourceCount(), time.Now().Format("2006-01-02"))
 			// You can add some debug email address to ensure it works
 			// debugAddressees := []string{"ben@example.com"}
 			// mailData.SendEmail(getMailClient(c), c.config.EmailDomain, untaggedMailTemplate, title, debugAddressees...)
@@ -321,7 +324,7 @@ func (c *Client) DeletionWarning(hoursInAdvance int, mngr cloud.ResourceManager,
 
 		if mailData.ResourceCount() > 0 {
 			// Send email
-			title := fmt.Sprintf("Deletion warning, %d resources are cleaned up within %d hours", mailData.ResourceCount(), hoursInAdvance)
+			title := fmt.Sprintf("Deletion Warning (%d resources)", mailData.ResourceCount())
 			mailData.SendEmail(getMailClient(c), c.config.EmailDomain, deletionWarningTemplate, title)
 		}
 	}
@@ -368,7 +371,7 @@ func (c *Client) MarkingDryRunReport(taggedResources map[string]*cloud.AllResour
 
 		if mailData.ResourceCount() > 0 {
 			// Send email
-			title := fmt.Sprintf("Marking Dry Run Warning. The following resources would have been marked for deletion:")
+			title := fmt.Sprintf("Dry Run Notification (%d resources)", mailData.ResourceCount())
 			mailData.SendEmail(getMailClient(c), c.config.EmailDomain, markingDryRunTemplate, title)
 		}
 	}
