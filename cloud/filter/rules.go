@@ -36,10 +36,11 @@ func Negate(funcToNegate func(r cloud.Resource) bool) func(cloud.Resource) bool 
 	}
 }
 
-// TaggedForCleanup checks if resource is already tagged for cleanup
+// TaggedForCleanup checks if resource is already tagged for any type of cleanup
 func TaggedForCleanup() func(cloud.Resource) bool {
 	return func(r cloud.Resource) bool {
-		return HasTag(DeleteTagKey)(r)
+		isTaggedForCleanup := HasTag(DeleteTagKey)(r) || HasTag(ExpiryTagKey)(r) || HasTag(LifetimeTagKey)(r)
+		return isTaggedForCleanup
 	}
 }
 

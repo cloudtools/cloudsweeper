@@ -63,7 +63,7 @@ var (
 		"clean-instances-older-than-days",
 		"clean-images-older-than-days",
 		"clean-snapshots-older-than-days",
-		"clean-unattatched-older-than-days",
+		"clean-unattached-older-than-days",
 		"clean-bucket-not-modified-days",
 		"clean-bucket-older-than-days",
 		"clean-keep-n-component-images",
@@ -78,14 +78,14 @@ var (
 	}
 
 	// Clean thresholds
-	cleanUntaggedOlderThanDays    = flag.String("clean-untagged-older-than-days", "", "Clean untagged resources if older than X days (default: 30)")
-	cleanInstancesOlderThanDays   = flag.String("clean-instances-older-than-days", "", "Clean if instance is older than X days (default: 182)")
-	cleanImagesOlderThanDays      = flag.String("clean-images-older-than-days", "", "Clean if image is older than X days (default: 182)")
-	cleanSnapshotsOlderThanDays   = flag.String("clean-snapshots-older-than-days", "", "Clean if snapshot is older than X days (default: 182)")
-	cleanUnattatchedOlderThanDays = flag.String("clean-unattatched-older-than-days", "", "Clean unattached volumes older than X days (default: 30)")
-	cleanBucketNotModifiedDays    = flag.String("clean-bucket-not-modified-days", "", "Clean s3 bucket if not modified for more than X days (default: 182)")
-	cleanBucketOlderThanDays      = flag.String("clean-bucket-older-than-days", "", "Clean s3 bucket if older than X days (default: 7)")
-	cleanKeepNComponentImages     = flag.String("clean-keep-n-component-images", "", "Clean images with component-date naming that are older than the N most recent ones (default: 2)")
+	cleanUntaggedOlderThanDays   = flag.String("clean-untagged-older-than-days", "", "Clean untagged resources if older than X days (default: 30)")
+	cleanInstancesOlderThanDays  = flag.String("clean-instances-older-than-days", "", "Clean if instance is older than X days (default: 182)")
+	cleanImagesOlderThanDays     = flag.String("clean-images-older-than-days", "", "Clean if image is older than X days (default: 182)")
+	cleanSnapshotsOlderThanDays  = flag.String("clean-snapshots-older-than-days", "", "Clean if snapshot is older than X days (default: 182)")
+	cleanUnattachedOlderThanDays = flag.String("clean-unattached-older-than-days", "", "Clean unattached volumes older than X days (default: 30)")
+	cleanBucketNotModifiedDays   = flag.String("clean-bucket-not-modified-days", "", "Clean s3 bucket if not modified for more than X days (default: 182)")
+	cleanBucketOlderThanDays     = flag.String("clean-bucket-older-than-days", "", "Clean s3 bucket if older than X days (default: 7)")
+	cleanKeepNComponentImages    = flag.String("clean-keep-n-component-images", "", "Clean images with component-date naming that are older than the N most recent ones (default: 2)")
 
 	//  Notify thresholds
 	notifyUntaggedOlderThanDays  = flag.String("notify-untagged-older-than-days", "", "Notify if untagged resource is older than X days (default: 14)")
@@ -116,17 +116,17 @@ func main() {
 	log.Printf("Running against %s...\n", csp)
 	switch getPositionalCmd() {
 	case "cleanup":
-		log.Println("Cleaning up old resources")
+		log.Println("Entering cleanup mode")
 		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		cleanup.PerformCleanup(mngr)
 	case "reset":
-		log.Println("Resetting all tags")
+		log.Println("Entering reset mode")
 		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		cleanup.ResetCloudsweeper(mngr)
 	case "mark-for-cleanup":
-		log.Println("Marking old resources for cleanup")
+		log.Println("Entering 'mark-for-cleanup' mode")
 		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		taggedResources := cleanup.MarkForCleanup(mngr, thresholds, *dryRun)
@@ -137,19 +137,19 @@ func main() {
 			log.Println("Not sending marking report since this was not a dry run")
 		}
 	case "review":
-		log.Println("Sending out old resource review")
+		log.Println("Entering 'review' mode")
 		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		client := initNotifyClient()
 		client.OldResourceReview(mngr, org, csp, thresholds)
 	case "warn":
-		log.Println("Sending out cleanup warning")
+		log.Println("Entering 'warn' mode")
 		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		client := initNotifyClient()
 		client.DeletionWarning(findConfigInt("warning-hours"), mngr, org.AccountToUserMapping(csp))
 	case "billing-report":
-		log.Println("Generating month-to-date billing report for", csp)
+		log.Println("Entering 'billing-report' mode", csp)
 		var reporter billing.Reporter
 		if csp == cloud.AWS {
 			billingAccount := findConfig("billing-account")
@@ -173,7 +173,7 @@ func main() {
 		client := initNotifyClient()
 		client.MonthToDateReport(report, mapping, sortTagKey != "")
 	case "find-untagged":
-		log.Println("Finding untagged resources")
+		log.Println("Entering 'find-untagged' mode")
 		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		mapping := org.AccountToUserMapping(csp)
@@ -182,9 +182,9 @@ func main() {
 	case "find-resource":
 		id := *findResourceID
 		if id == "" {
-			log.Fatalln("Must specify a resource ID to find, using --resource-id=<ID>")
+			log.Fatalln("Must specify a resource ID to find using --resource-id=<ID>")
 		}
-		log.Printf("Finding resource with ID %s", id)
+		log.Printf("Entering 'find-resource' mode (Resource ID: %s)", id)
 		org := parseOrganization(findConfig("org-file"))
 		mngr := initManager(csp, org)
 		client, err := find.Init(mngr, org, csp)
@@ -196,11 +196,12 @@ func main() {
 			log.Fatal(err)
 		}
 	case "setup":
-		log.Println("Running cloudsweeper setup")
+		log.Println("Running Cloudsweeper setup")
 		setup.PerformSetup(findConfig("aws-master-arn"))
 	default:
 		log.Fatalln("Please supply a command")
 	}
+	log.Println("Finished running")
 }
 
 func initManager(csp cloud.CSP, org *cs.Organization) cloud.ResourceManager {

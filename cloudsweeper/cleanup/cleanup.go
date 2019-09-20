@@ -72,7 +72,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 
 		volumeFilter := filter.New()
 		volumeFilter.AddVolumeRule(filter.IsUnattached())
-		volumeFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-unattatched-older-than-days", thresholds)))
+		volumeFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-unattached-older-than-days", thresholds)))
 		volumeFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		volumeFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 

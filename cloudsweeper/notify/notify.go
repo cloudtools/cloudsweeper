@@ -193,14 +193,10 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 	untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
 	untaggedFilter.AddVolumeRule(filter.IsUnattached())
 
-	// These only apply to instances
+	// This only applies to instances
 	dndFilter := filter.New()
-	dndFilter.AddGeneralRule(filter.HasTag("no-not-delete"))
+	dndFilter.AddGeneralRule(filter.HasTag("cloudsweeper-do-not-delete"))
 	dndFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-dnd-older-than-days", thresholds)))
-
-	dndFilter2 := filter.New()
-	dndFilter2.AddGeneralRule(filter.NameContains("do-not-delete"))
-	dndFilter2.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-dnd-older-than-days", thresholds)))
 
 	for account, resources := range allCompute {
 		log.Println("Performing old resource review in", account)
@@ -210,7 +206,7 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 		// Apply filters
 		userMailData := resourceMailData{
 			Owner:     username,
-			Instances: filter.Instances(resources.Instances, instanceFilter, whitelistFilter, dndFilter, dndFilter2, untaggedFilter),
+			Instances: filter.Instances(resources.Instances, instanceFilter, whitelistFilter, dndFilter, untaggedFilter),
 			Images:    filter.Images(resources.Images, imageFilter, whitelistFilter, untaggedFilter),
 			Volumes:   filter.Volumes(resources.Volumes, volumeFilter, whitelistFilter, untaggedFilter),
 			Snapshots: filter.Snapshots(resources.Snapshots, snapshotFilter, whitelistFilter, untaggedFilter),
