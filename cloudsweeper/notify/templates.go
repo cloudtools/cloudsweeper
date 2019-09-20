@@ -6,41 +6,27 @@ package notify
 const reviewMailTemplate = `<h1>Hello {{ .Owner -}},</h1>
 
 <p>
-In a weekly review, Cloudsweeper has detected resources that may be out of use, based upon their age
+Cloudsweeper suspects that some of these resources could be unused. 
+Please review, and either tag or delete them.
 </p>
 
-<p><b>Please review and choose from one of two options:</b></p>
+<p>If you want to delete a resource, either remove its
+<b>cloudsweeper-whitelisted</b> tag or delete it manually.</p>
+
+<p>
+Conversely, if you want to keep a resource around for a longer time, then
+add any of the following tags:
+</p>
 
 <ol>
-	<li>Manually delete old resources no longer in use</li>
-	<li>Wait for Cloudsweeper to delete these items for you (if you signed up for Cloudsweeper services)</li>
+	<li><b>cloudsweeper-whitelisted: (Resource stays around indefinitely.)</li>
+	<li><b>cloudsweeper-expiry</b>: <i>YYYY-MM-DD</i> (Deletion occurs after the specified date.)</li>
+	<li><b>cloudsweeper-lifetime</b>: days-<i>N</i> (Deletion occurs <i>N</i> days after resource was created.)</li>
 </ol>
 
 <p>
-Whitelisting and cleanup info:
-</p>
-
-<p>
-If you are signed up for Cloudsweeper and whitelisted some items, they are marked in green and will not
-be deleted. <b>Please review them in case they no longer should be whitelisted</b>.
-</p>
-
-<p>
-Conversely, if you see a resource here that you know that you want to keep for a longer time, then please
-whitelist it: add a tag with the key "cloudsweeper-whitelisted" to it.
-</p>
-
-<p>
-To schedule automated clean up, please add one of the following two types of tags (key: value) to your resource:
-<br />
-"<b>cloudsweeper-lifetime</b>: days-x", where x is the amount of days to keep the resource
-<br />
-"<b>cloudsweeper-expiry</b>: YYYY-MM-DD", to clean a resource up after the specified date, e.g. 2018-01-30
-</p>
-
-<p>
-Read more about how Cloudsweeper works and how to better tag your resources at
-<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">this Wiki page</a>.
+Read more about how Cloudsweeper works and how to better tag your resources 
+<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">here</a>.
 </p>
 
 <h2>Old resources:</h2>
@@ -531,20 +517,28 @@ hours. To see the specific time(s), observe the deletion date column.</h2>
 
 <p>
 Unless you take action, the resources listed below will be cleaned up
-from your account within the next {{ .HoursInAdvance }} hours. <b>Make sure
-you don't need to keep any of these resources</b>
+from your account shortly.
 </p>
 
 <p>
-If you want to save any of these resources, add a tag with the key <b>whitelisted</b>
+If you want to save any of these resources from deletion,
+add a tag with the key <b>cloudsweeper-whitelisted</b> to it.
 </p>
+
+<p>If you only want to keep the resource around for a while, first delete
+its <b>cloudsweeper-delete-at</b> tag. Then add one of the following tags to it:</p>
+
+<ol>
+	<li><b>cloudsweeper-expiry</b>: <i>YYYY-MM-DD</i> (Deletion occurs after the specified date.)</li>
+	<li><b>cloudsweeper-lifetime</b>: days-<i>N</i> (Deletion occurs <i>N</i> days after resource was created.)</li>
+</ol>
 
 <p>
-Read more about how Cloudsweeper works and how to better tag your resources at
-<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">this Wiki page</a>.
+Read more about how Cloudsweeper works and how to better tag your resources 
+<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">here</a>.
 </p>
 
-<h2>Old resources:</h2>
+<h2>Marked resources:</h2>
 {{ if gt (len .Instances) 0 }}
 	<h3>Instances</h3>
 	<table style="width: 100%;">
@@ -712,14 +706,14 @@ const markingDryRunTemplate = `<h1>Hello {{ .Owner -}},</h1>
 <h2>These resources would have been marked for deletion if this was not a dry run.</h2>
 
 <p>This was most likely done as a test. If you want to avoid seeing one of these
-resources in a future email, add a <b>cloudsweeper-whitelisted</b> tag to your resource.</p>
-
+resources in a future email, add a Cloudsweeper tag to your resource.</p>
 
 <p>
-If you want to save any of these resources, add a tag with the key <b>whitelisted</b>
+Read more about how Cloudsweeper works and how to better tag your resources 
+<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">here</a>.
 </p>
 
-<h2>Old resources:</h2>
+<h2>Marked resources:</h2>
 {{ if gt (len .Instances) 0 }}
 	<h3>Instances</h3>
 	<table style="width: 100%;">
@@ -875,20 +869,14 @@ Your loyal Cloudsweeper
 const untaggedMailTemplate = `<h1>Hello {{ .Owner -}},</h1>
 
 <p>
-The following listed resources are missing proper <strong>env/product/role</strong> tags.
-These tags are important to help us track resource purpose and cost.
-You can always add other tags to resources, but should always include a <strong>env/product/role</strong> tag.
-You can read more about tagging rules in
-<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/4325488/Resource+Naming+and+Tagging+Requirements">this wiki</a>.
+The following resources are not properly tagged. Tags are an important way of tracking the purposes and costs of resources. 
+You are free to add other tags, but you should always include env, product, and role tags. 
+You can read more about these tags <a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/4325488/Resource+Naming+and+Tagging+Requirements">here</a>.
 </p>
 
 <p>
-Please tag these resources appropriately.
-</p>
-
-<p>
-Read more about how Cloudsweeper works and how to better tag your resources at
-<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">this Wiki page</a>.
+Read more about how Cloudsweeper works and how to better tag your resources 
+<a href="https://agaridata.atlassian.net/wiki/spaces/EN/pages/808189987/Cloudsweeper">here</a>.
 </p>
 
 <h2>Untagged resources:</h2>
