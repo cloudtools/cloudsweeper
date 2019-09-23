@@ -19,7 +19,7 @@ add any of the following tags:
 </p>
 
 <ol>
-	<li><b>cloudsweeper-whitelisted: (Resource stays around indefinitely.)</li>
+	<li><b>cloudsweeper-whitelisted</b>: (Resource stays around indefinitely.)</li>
 	<li><b>cloudsweeper-expiry</b>: <i>YYYY-MM-DD</i> (Deletion occurs after the specified date.)</li>
 	<li><b>cloudsweeper-lifetime</b>: days-<i>N</i> (Deletion occurs <i>N</i> days after resource was created.)</li>
 </ol>
