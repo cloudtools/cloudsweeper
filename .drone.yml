@@ -2,9 +2,6 @@ kind: pipeline
 name: build
 type: docker
 
-image_pull_secrets:
-  - dockerconfigjson
-
 steps:
   - name: build cloudsweeper
     image: plugins/docker
