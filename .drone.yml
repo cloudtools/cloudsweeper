@@ -1,0 +1,20 @@
+kind: pipeline
+name: build
+type: docker
+
+image_pull_secrets:
+  - dockerconfigjson
+
+steps:
+  - name: docker
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+      repo: quay.io/agari/cloudsweeper
+      tags: latest
+    when:
+      event: [push, tag]
+      branch: master
