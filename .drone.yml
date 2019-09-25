@@ -6,7 +6,7 @@ image_pull_secrets:
   - dockerconfigjson
 
 steps:
-  - name: docker
+  - name: build cloudsweeper
     image: plugins/docker
     settings:
       username:
