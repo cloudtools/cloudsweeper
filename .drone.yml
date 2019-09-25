@@ -11,6 +11,7 @@ steps:
       password:
         from_secret: docker_password
       repo: quay.io/agari/cloudsweeper
+      registry: quay.io
       tags: latest
     when:
       event: [push, tag]
