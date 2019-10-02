@@ -266,7 +266,7 @@ func (c *Client) UntaggedResourcesReview(mngr cloud.ResourceManager, accountUser
 		if len(tags) == 0 {
 			untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException("Name"))
 		} else {
-			untaggedFilter.AddGeneralRule(filter.Negate(filter.HasRequiredTags(tags)))
+			untaggedFilter.AddGeneralRule(filter.Negate(filter.HasTags(tags)))
 		}
 
 		// We care about untagged whitelisted resources too
