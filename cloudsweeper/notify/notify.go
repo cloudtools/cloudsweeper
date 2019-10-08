@@ -195,7 +195,7 @@ func (c *Client) OldResourceReview(mngr cloud.ResourceManager, org *cs.Organizat
 
 	// This only applies to instances
 	dndFilter := filter.New()
-	dndFilter.AddGeneralRule(filter.HasTag("cloudsweeper-do-not-delete"))
+	dndFilter.AddGeneralRule(filter.Negate(filter.HasTag("cloudsweeper-do-not-delete")))
 	dndFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("notify-dnd-older-than-days", thresholds)))
 
 	for account, resources := range allCompute {
