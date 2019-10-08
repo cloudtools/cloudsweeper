@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	releaseTag         = "Release"
 	totalCostThreshold = 10.0
 )
 
@@ -55,31 +54,26 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 
 		instanceFilter := filter.New()
 		instanceFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-instances-older-than-days", thresholds)))
-		instanceFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		instanceFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		snapshotFilter := filter.New()
 		snapshotFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-snapshots-older-than-days", thresholds)))
 		snapshotFilter.AddSnapshotRule(filter.IsNotInUse())
-		snapshotFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		snapshotFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		imageFilter := filter.New()
 		imageFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-images-older-than-days", thresholds)))
-		imageFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		imageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 		imageFilter.AddImageRule(filter.DoesNotFollowFormat())
 
 		volumeFilter := filter.New()
 		volumeFilter.AddVolumeRule(filter.IsUnattached())
 		volumeFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-unattached-older-than-days", thresholds)))
-		volumeFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		volumeFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		bucketFilter := filter.New()
 		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(getThreshold("clean-bucket-not-modified-days", thresholds)))
 		bucketFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-bucket-older-than-days", thresholds)))
-		bucketFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		bucketFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
 		timeToDelete := time.Now().AddDate(0, 0, 4)
@@ -152,7 +146,6 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 
 		// Tag images that DO follow the component-date pattern
 		componentImageFilter := filter.New()
-		componentImageFilter.AddGeneralRule(filter.Negate(filter.HasTag(releaseTag)))
 		componentImageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 		componentImageFilter.AddImageRule(filter.FollowsFormat())
 
