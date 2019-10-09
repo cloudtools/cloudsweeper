@@ -15,6 +15,7 @@ import (
 
 const (
 	totalCostThreshold = 10.0
+	nameTag            = nameTag
 )
 
 // MarkForCleanup will look for resources that should be automatically
@@ -45,17 +46,21 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 			}
 		}
 
-		timeToDelete := time.Now().AddDate(0, 0, 4)
+		// Deletion thresholds
+		timeToDeleteGeneral := time.Now().AddDate(0, 0, 4)
+		timeToDeleteUnnamedInstances := time.Now().AddDate(0, 0, 1)
+
 		resourcesToTag := cloud.AllResourceCollection{}
 		resourcesToTag.Owner = owner
 		// Store a separate list of all resources since I couldn't for the life of me figure out how to
 		// pass a []Image to a function that takes []Resource without explicitly converting everything...
-		tagList := []cloud.Resource{}
+		tagListGeneral := []cloud.Resource{}
+		tagListUnnamedInstances := []cloud.Resource{}
 		totalCost := 0.0
 
 		// General filters
 		untaggedFilter := filter.New()
-		untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException("Name"))
+		untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException(nameTag))
 		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-untagged-older-than-days", thresholds)))
 		untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
 		untaggedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
@@ -66,9 +71,30 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		instanceFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-instances-older-than-days", thresholds)))
 		instanceFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
+		noNameFilter := filter.New()
+		noNameFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-untagged-older-than-days", thresholds))) // TODO: Remove?
+		noNameFilter.AddGeneralRule(filter.IsUntaggedWithException(nameTag))
+		noNameFilter.AddGeneralRule(filter.Negate(filter.HasTag(nameTag)))
+		noNameFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+
+		// Helper map to avoid duplicated images
+		alreadySelectedInstances := map[string]bool{}
+
+		// Unnamed instances (without tags)
+		for _, res := range filter.Instances(res.Instances, noNameFilter) {
+			resourcesToTag.Instances = append(resourcesToTag.Instances, res)
+			tagListUnnamedInstances = append(tagListUnnamedInstances, res)
+			alreadySelectedInstances[res.ID()] = true
+			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
+			costPerDay := billing.ResourceCostPerDay(res)
+			totalCost += days * costPerDay
+		}
+
+		// General case
 		for _, res := range filter.Instances(res.Instances, instanceFilter, untaggedFilter) {
 			resourcesToTag.Instances = append(resourcesToTag.Instances, res)
-			tagList = append(tagList, res)
+			tagListGeneral = append(tagListGeneral, res)
+			alreadySelectedInstances[res.ID()] = true
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
 			totalCost += days * costPerDay
@@ -82,7 +108,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 
 		for _, res := range filter.Volumes(res.Volumes, volumeFilter, untaggedFilter) {
 			resourcesToTag.Volumes = append(resourcesToTag.Volumes, res)
-			tagList = append(tagList, res)
+			tagListGeneral = append(tagListGeneral, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
 			totalCost += days * costPerDay
@@ -96,7 +122,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 
 		for _, res := range filter.Snapshots(res.Snapshots, snapshotFilter, untaggedFilter) {
 			resourcesToTag.Snapshots = append(resourcesToTag.Snapshots, res)
-			tagList = append(tagList, res)
+			tagListGeneral = append(tagListGeneral, res)
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
 			totalCost += days * costPerDay
@@ -111,7 +137,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		if buck, ok := allBuckets[owner]; ok {
 			for _, res := range filter.Buckets(buck, bucketFilter, untaggedFilter) {
 				resourcesToTag.Buckets = append(resourcesToTag.Buckets, res)
-				tagList = append(tagList, res)
+				tagListGeneral = append(tagListGeneral, res)
 				totalCost += billing.BucketPricePerMonth(res)
 			}
 		}
@@ -132,7 +158,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		// Untagged images
 		for _, res := range filter.Images(res.Images, untaggedFilter) {
 			resourcesToTag.Images = append(resourcesToTag.Images, res)
-			tagList = append(tagList, res)
+			tagListGeneral = append(tagListGeneral, res)
 			alreadySelectedImages[res.ID()] = true
 			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 			costPerDay := billing.ResourceCostPerDay(res)
@@ -143,7 +169,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		for _, res := range filter.Images(res.Images, unformattedImageFilter) {
 			if _, found := alreadySelectedImages[res.ID()]; !found {
 				resourcesToTag.Images = append(resourcesToTag.Images, res)
-				tagList = append(tagList, res)
+				tagListGeneral = append(tagListGeneral, res)
 				alreadySelectedImages[res.ID()] = true
 				days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 				costPerDay := billing.ResourceCostPerDay(res)
@@ -156,7 +182,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		for _, res := range filter.Images(formattedImages, formattedImageFilter) {
 			if _, found := alreadySelectedImages[res.ID()]; !found {
 				resourcesToTag.Images = append(resourcesToTag.Images, res)
-				tagList = append(tagList, res)
+				tagListGeneral = append(tagListGeneral, res)
 				alreadySelectedImages[res.ID()] = true
 				days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
 				costPerDay := billing.ResourceCostPerDay(res)
@@ -169,12 +195,23 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		} else if totalCost < totalCostThreshold {
 			log.Printf("%s: Skipping the tagging of resources, total cost $%.2f is less than $%.2f", owner, totalCost, totalCostThreshold)
 		} else {
-			for _, res := range tagList {
-				err := res.SetTag(filter.DeleteTagKey, timeToDelete.Format(time.RFC3339), true)
+			// Tag special cases
+			for _, res := range tagListUnnamedInstances {
+				err := res.SetTag(filter.DeleteTagKey, timeToDeleteUnnamedInstances.Format(time.RFC3339), true)
 				if err != nil {
 					log.Printf("%s: Failed to tag %s for deletion: %s\n", owner, res.ID(), err)
 				} else {
-					log.Printf("%s: Marked %s for deletion at %s\n", owner, res.ID(), timeToDelete)
+					log.Printf("%s: Marked %s for deletion at %s\n", owner, res.ID(), timeToDeleteUnnamedInstances)
+				}
+			}
+
+			// Tag general cases
+			for _, res := range tagListGeneral {
+				err := res.SetTag(filter.DeleteTagKey, timeToDeleteGeneral.Format(time.RFC3339), true)
+				if err != nil {
+					log.Printf("%s: Failed to tag %s for deletion: %s\n", owner, res.ID(), err)
+				} else {
+					log.Printf("%s: Marked %s for deletion at %s\n", owner, res.ID(), timeToDeleteGeneral)
 				}
 			}
 		}
