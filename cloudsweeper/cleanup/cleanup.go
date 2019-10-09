@@ -45,39 +45,7 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 			}
 		}
 
-		untaggedFilter := filter.New()
-		untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException("Name"))
-		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-untagged-older-than-days", thresholds)))
-		untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
-		untaggedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
-		untaggedFilter.AddVolumeRule(filter.IsUnattached())
-
-		instanceFilter := filter.New()
-		instanceFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-instances-older-than-days", thresholds)))
-		instanceFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
-
-		snapshotFilter := filter.New()
-		snapshotFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-snapshots-older-than-days", thresholds)))
-		snapshotFilter.AddSnapshotRule(filter.IsNotInUse())
-		snapshotFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
-
-		imageFilter := filter.New()
-		imageFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-images-older-than-days", thresholds)))
-		imageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
-		imageFilter.AddImageRule(filter.DoesNotFollowFormat())
-
-		volumeFilter := filter.New()
-		volumeFilter.AddVolumeRule(filter.IsUnattached())
-		volumeFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-unattached-older-than-days", thresholds)))
-		volumeFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
-
-		bucketFilter := filter.New()
-		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(getThreshold("clean-bucket-not-modified-days", thresholds)))
-		bucketFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-bucket-older-than-days", thresholds)))
-		bucketFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
-
 		timeToDelete := time.Now().AddDate(0, 0, 4)
-
 		resourcesToTag := cloud.AllResourceCollection{}
 		resourcesToTag.Owner = owner
 		// Store a separate list of all resources since I couldn't for the life of me figure out how to
@@ -85,7 +53,19 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 		tagList := []cloud.Resource{}
 		totalCost := 0.0
 
-		// Tag instances
+		// General filters
+		untaggedFilter := filter.New()
+		untaggedFilter.AddGeneralRule(filter.IsUntaggedWithException("Name"))
+		untaggedFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-untagged-older-than-days", thresholds)))
+		untaggedFilter.AddSnapshotRule(filter.IsNotInUse())
+		untaggedFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+		untaggedFilter.AddVolumeRule(filter.IsUnattached())
+
+		// INSTANCES
+		instanceFilter := filter.New()
+		instanceFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-instances-older-than-days", thresholds)))
+		instanceFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+
 		for _, res := range filter.Instances(res.Instances, instanceFilter, untaggedFilter) {
 			resourcesToTag.Instances = append(resourcesToTag.Instances, res)
 			tagList = append(tagList, res)
@@ -94,7 +74,12 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 			totalCost += days * costPerDay
 		}
 
-		// Tag volumes
+		// VOLUMES
+		volumeFilter := filter.New()
+		volumeFilter.AddVolumeRule(filter.IsUnattached())
+		volumeFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-unattached-older-than-days", thresholds)))
+		volumeFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+
 		for _, res := range filter.Volumes(res.Volumes, volumeFilter, untaggedFilter) {
 			resourcesToTag.Volumes = append(resourcesToTag.Volumes, res)
 			tagList = append(tagList, res)
@@ -103,7 +88,12 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 			totalCost += days * costPerDay
 		}
 
-		// Tag snapshots
+		// SNAPSHOTS
+		snapshotFilter := filter.New()
+		snapshotFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-snapshots-older-than-days", thresholds)))
+		snapshotFilter.AddSnapshotRule(filter.IsNotInUse())
+		snapshotFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+
 		for _, res := range filter.Snapshots(res.Snapshots, snapshotFilter, untaggedFilter) {
 			resourcesToTag.Snapshots = append(resourcesToTag.Snapshots, res)
 			tagList = append(tagList, res)
@@ -112,16 +102,12 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 			totalCost += days * costPerDay
 		}
 
-		// Tag untagged images
-		for _, res := range filter.Images(res.Images, untaggedFilter) {
-			resourcesToTag.Images = append(resourcesToTag.Images, res)
-			tagList = append(tagList, res)
-			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
-			costPerDay := billing.ResourceCostPerDay(res)
-			totalCost += days * costPerDay
-		}
+		// BUCKETS
+		bucketFilter := filter.New()
+		bucketFilter.AddBucketRule(filter.NotModifiedInXDays(getThreshold("clean-bucket-not-modified-days", thresholds)))
+		bucketFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-bucket-older-than-days", thresholds)))
+		bucketFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
 
-		// Tag buckets
 		if buck, ok := allBuckets[owner]; ok {
 			for _, res := range filter.Buckets(buck, bucketFilter, untaggedFilter) {
 				resourcesToTag.Buckets = append(resourcesToTag.Buckets, res)
@@ -130,30 +116,51 @@ func MarkForCleanup(mngr cloud.ResourceManager, thresholds map[string]int, dryRu
 			}
 		}
 
+		// IMAGES
+		unformattedImageFilter := filter.New()
+		unformattedImageFilter.AddGeneralRule(filter.OlderThanXDays(getThreshold("clean-images-older-than-days", thresholds)))
+		unformattedImageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+		unformattedImageFilter.AddImageRule(filter.DoesNotFollowFormat())
+
+		formattedImageFilter := filter.New()
+		formattedImageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
+		formattedImageFilter.AddImageRule(filter.FollowsFormat())
+
 		// Helper map to avoid duplicated images
 		alreadySelectedImages := map[string]bool{}
-		for _, image := range resourcesToTag.Images {
-			alreadySelectedImages[image.ID()] = true
+
+		// Untagged images
+		for _, res := range filter.Images(res.Images, untaggedFilter) {
+			resourcesToTag.Images = append(resourcesToTag.Images, res)
+			tagList = append(tagList, res)
+			alreadySelectedImages[res.ID()] = true
+			days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
+			costPerDay := billing.ResourceCostPerDay(res)
+			totalCost += days * costPerDay
 		}
 
-		// Tag images that DO NOT follow the component-date pattern
-		for _, image := range filter.Images(res.Images, imageFilter) {
-			if _, found := alreadySelectedImages[image.ID()]; !found {
-				resourcesToTag.Images = append(resourcesToTag.Images, image)
-				tagList = append(tagList, image)
+		// Images NOT following the component-date pattern
+		for _, res := range filter.Images(res.Images, unformattedImageFilter) {
+			if _, found := alreadySelectedImages[res.ID()]; !found {
+				resourcesToTag.Images = append(resourcesToTag.Images, res)
+				tagList = append(tagList, res)
+				alreadySelectedImages[res.ID()] = true
+				days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
+				costPerDay := billing.ResourceCostPerDay(res)
+				totalCost += days * costPerDay
 			}
 		}
 
-		// Tag images that DO follow the component-date pattern
-		componentImageFilter := filter.New()
-		componentImageFilter.AddGeneralRule(filter.Negate(filter.TaggedForCleanup()))
-		componentImageFilter.AddImageRule(filter.FollowsFormat())
-
-		componentImages := getAllButNLatestComponents(res.Images, getThreshold("clean-keep-n-component-images", thresholds))
-		for _, image := range filter.Images(componentImages, componentImageFilter) {
-			if _, found := alreadySelectedImages[image.ID()]; !found {
-				resourcesToTag.Images = append(resourcesToTag.Images, image)
-				tagList = append(tagList, image)
+		// Images following the component-date pattern
+		formattedImages := getAllButNLatestComponents(res.Images, getThreshold("clean-keep-n-component-images", thresholds))
+		for _, res := range filter.Images(formattedImages, formattedImageFilter) {
+			if _, found := alreadySelectedImages[res.ID()]; !found {
+				resourcesToTag.Images = append(resourcesToTag.Images, res)
+				tagList = append(tagList, res)
+				alreadySelectedImages[res.ID()] = true
+				days := time.Now().Sub(res.CreationTime()).Hours() / 24.0
+				costPerDay := billing.ResourceCostPerDay(res)
+				totalCost += days * costPerDay
 			}
 		}
 
